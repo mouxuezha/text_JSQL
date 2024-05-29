@@ -33,7 +33,8 @@ class MyWidget(QtWidgets.QWidget):
         # self.step_signal = QtCore.Signal(int) # 这个用来刷新的，下一步把窗口里的所有东西都刷新一遍。
         self.step_signal[int].connect(self.update_all) 
 
-    def reset_all(self):
+    def reset_all(self,time_delay=0.01):
+        time.sleep(time_delay)
         self.text.setText("小弈人混-人机互动界面")
         self.dialog.setText("在此处输入人类作战意图，并点击按钮下达指令...")
         self.flag_order_renewed = False
