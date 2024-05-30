@@ -19,7 +19,7 @@ class command_processor:
         self.text_transfer = text_transfer()
         self.model_communication = model_communication()
         self.__init_dialog_box()
-
+        self.__init_env()
         self.status= {}
         pass
     
