@@ -5,6 +5,14 @@ import sys
 import random
 import numpy as np
 
+def get_states(env):
+    result = env.GetCurrentStatus()
+    while (env.statusparser(result) == None):
+        env.Step()
+        result = env.GetCurrentStatus()
+    redState, blueState = env.statusparser(result)
+    return redState, blueState
+
 def auto_save_file_name(log_folder = r'E:\XXH\auto_test'):
     # xxh 0909 for auto test
     log_file = log_folder + r'\auto_test_log' + str(0) + r'.txt'

@@ -2,3 +2,4 @@ numpy
 matplotlib
 pyside6
 xlrd
+qianfan

@@ -1,8 +1,8 @@
 # 这个是主函数，到时候就运行这个就完事了。
-import agent_guize.agent as Agent
-import agent_guize.Env as Env
+from agent_guize.agent import Agent
+from agent_guize.Env import Env
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
-import text_transfer.text_transfer as text_transfer
+from text_transfer.text_transfer import text_transfer
 import model_communication.model_communication as model_communication
 from dialog_box import MyWidget
 
