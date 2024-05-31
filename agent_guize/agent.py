@@ -8,7 +8,7 @@ import sys, os
 import xlrd
 import time
 from enum import Enum
-from base_agent import BaseAgent
+from agent_guize.base_agent import BaseAgent
 import queue
 
 class Agent(BaseAgent):
@@ -39,9 +39,9 @@ class Agent(BaseAgent):
     
     def deploy(self):
         print("deploy unfinished yet, using status_demo")
-        pass 
+        return {} 
 
     def step(self, status):
         print("deploy unfinished yet, using status_demo")
-        pass
+        return {} 
         

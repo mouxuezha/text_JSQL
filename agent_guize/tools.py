@@ -45,6 +45,10 @@ def auto_save(log_file, tips, cur_redState, cur_blueState):
     return 0
 
 def auto_state_filter(state_dic):
+    if len(state_dic) == 0:
+        strbuffer = "debug, no state"
+        dic_key_list = [] 
+        return strbuffer, dic_key_list 
     # for auto_test
     strbuffer = 'state recorded: '
     dic_key_list = list(state_dic.keys())

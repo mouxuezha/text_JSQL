@@ -201,3 +201,27 @@ class Env():
             return None
         result = json.loads(result)
         return result
+
+class Env_demo():
+    def __init__(self, ip, port):
+        # 这东西存在的意义只是为了调试的时候不报错。
+        print("Env_demo initialized for debug.")
+        pass 
+
+    def Reset(self):
+        return {"0":0} 
+
+    def Step(self, Action):
+        return {"0":0} 
+
+    def SetRender(self, render=True):
+        pass 
+
+    def GetCurrentResult(self):
+        return {"0":0} 
+    
+    def GetCurrentStatus(self):
+        return {"0":0} 
+    
+    def statusparser(self, result):
+        return None, None

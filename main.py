@@ -1,13 +1,15 @@
 # 这个是主函数，到时候就运行这个就完事了。
 from agent_guize.agent import Agent
-from agent_guize.Env import Env
+from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer
-import model_communication.model_communication as model_communication
+from model_communication.model_communication import model_communication
 from dialog_box import MyWidget
 
 import json
 import time 
+
+from PySide6 import QtCore, QtWidgets, QtGui
 
 class command_processor:
     
@@ -21,10 +23,13 @@ class command_processor:
         self.__init_dialog_box()
         self.__init_env()
         self.status= {}
+
+        self.log_file = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\overall_result.txt'
         pass
     
     def __init_dialog_box(self):
         # 初始化对话框
+        app = QtWidgets.QApplication([])
         self.dialog_box = MyWidget()
         self.dialog_box.resize(800, 300)
         self.dialog_box.show()
@@ -32,7 +37,8 @@ class command_processor:
     
     def __init_env(self):
         self.max_episode_len = 1145 
-        self.env = Env(self.max_episode_len)
+        # self.env = Env(self.max_episode_len)
+        self.env = Env_demo(114, 514)
 
 
     def run_one_step(self):
@@ -46,7 +52,7 @@ class command_processor:
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str_new)
 
         # 把文本发给大模型，获取返回来的文本
-        response_str = self.model_communication.interact_with_LLM(status_str_new)
+        response_str = self.model_communication.communicate_with_model(status_str_new)
 
         # 把文本里面的命令提取出来
         commands = self.text_transfer.text_to_commands(response_str)
@@ -99,12 +105,12 @@ class command_processor:
     def main_loop(self):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
         timestep = 0 # 每个episode的步数
-        log_file = auto_save_file_name(log_folder=r'E:\XXH\auto_test')
+        log_file = auto_save_file_name(log_folder=r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test')
         
         # 训练环境初始化，并返回红蓝方舰船编号
         print("begin resetting")
         shipIDlist = self.env.Reset()
-        shipIDlist = json.loads(shipIDlist)
+        # shipIDlist = json.loads(shipIDlist)
 
         redAgent = self.redAgent
         blueAgent = self.blueAgent
@@ -119,9 +125,11 @@ class command_processor:
 
         # 舰船射前部署
         act = []
-        print("shipIDList ", shipIDlist)
-        act += redAgent.deploy(shipIDlist['RedShipID'])
-        act += blueAgent.deploy(shipIDlist['BlueShipID'])
+        # print("shipIDList ", shipIDlist)
+        # act += redAgent.deploy(shipIDlist['RedShipID'])
+        # act += blueAgent.deploy(shipIDlist['BlueShipID'])
+        act += redAgent.deploy()
+        act += blueAgent.deploy()
         action = {"Action": act}
         print("action ", action)
         self.env.Step(Action = action)
@@ -129,14 +137,14 @@ class command_processor:
         # 获取红蓝方态势信息
         cur_redState, cur_blueState = get_states(self.env)
         tips = '\n start main loop: \n'
-        cur_redState_str, start_redState_list = auto_state_filter(cur_redState)
-        cur_blueState_str, start_blueState_list = auto_state_filter(cur_blueState)
-        auto_save(log_file, tips, cur_redState_str, cur_blueState_str)
+        # cur_redState_str, start_redState_list = auto_state_filter(cur_redState)
+        # cur_blueState_str, start_blueState_list = auto_state_filter(cur_blueState)
+        # auto_save(log_file, tips, cur_redState_str, cur_blueState_str)
 
         # 开搞之前存一下本次测试的配置，xxh0920
         strbuffer = "\n\n现在是" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "，开始执行测试。\n 测试配置：\n"
 
-        auto_save_overall(strbuffer)
+        auto_save_overall(strbuffer, log_file=self.log_file)
 
         # 智能体与环境交互生成训练数据
         while True:
@@ -195,3 +203,8 @@ class command_processor:
                 auto_save_overall(blueScore_str + '\n' + redScore_str)
                 break        
         pass 
+
+if __name__ == "__main__":
+    # 这个是总的测试的了
+    shishi = command_processor()
+    shishi.main_loop()
