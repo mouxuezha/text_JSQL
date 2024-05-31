@@ -1,3 +1,7 @@
+.vscode
+model_communication/AK.txt
+model_communication/SK.txt
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
