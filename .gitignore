@@ -1,6 +1,7 @@
 .vscode
 model_communication/AK.txt
 model_communication/SK.txt
+model_communication/log.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
