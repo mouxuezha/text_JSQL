@@ -1,5 +1,7 @@
 # 这个是主函数，到时候就运行这个就完事了。
 from agent_guize.agent import Agent
+from agent_guize.enemy_AI.blue_agent import BlueAgent
+from agent_guize.me_AI.red_agent import RedAgent
 from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer
@@ -8,22 +10,23 @@ from dialog_box import MyWidget
 
 import json
 import time 
+import argparse
 
 from PySide6 import QtCore, QtWidgets, QtGui
 
 class command_processor:
     
     def __init__(self):
-        # self.agent = agent()
-        self.redAgent = Agent("Red")
-        self.blueAgent = Agent("Blue")
+        self.args = self.__init_net()
+        self.__init_env()
+        self.__init_agent()
 
         self.text_transfer = text_transfer()
         self.model_communication = model_communication()
         self.__init_dialog_box()
         self.__init_env()
         self.status= {}
-
+        self.runnig_location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test"
         self.log_file = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\overall_result.txt'
         pass
     
@@ -36,10 +39,27 @@ class command_processor:
         pass
     
     def __init_env(self):
-        self.max_episode_len = 1145 
-        # self.env = Env(self.max_episode_len)
-        self.env = Env_demo(114, 514)
+        self.max_episode_len = self.args.ip.max_episode_len
+        self.env = Env(self.args.ip, self.args.args.port)
 
+    def __init_net(self):
+        parser = argparse.ArgumentParser(description='Provide arguments for agent.')
+        parser.add_argument("--ip", type=str, default="127.0.0.1", help="Ip to connect")
+        # parser.add_argument("--ip", type=str, default="192.168.43.93", help="Ip to connect")
+        parser.add_argument("--port", type=str, default=20001, help="port to connect")
+        parser.add_argument("--epochs", type=int, default=200, help="Number of training epochs to run")  # 设置训练轮次数
+        parser.add_argument("--max-episode-len", type=int, default=3000, help="maximum episode length")
+        net_args = parser.parse_args()
+        return net_args
+
+    def __init_agent(self):
+        # 这里面应该不要含有需要给后端发东西的内容，以便调试。
+        self.redAgent = RedAgent()
+        self.blueAgent = BlueAgent()
+        self.red_deploy_location = self.runnig_location + r'\guize\reddeploy'
+        self.blue_deploy_location = self.runnig_location + r'\guize\bluedeploy'
+        # self.redAgent.set_deploy_folder(self.red_deploy_location)
+        # self.blueAgent.set_deploy_folder(self.blue_deploy_location)        
 
     def run_one_step(self):
         # 从agent把态势拿出来
@@ -110,7 +130,7 @@ class command_processor:
         # 训练环境初始化，并返回红蓝方舰船编号
         print("begin resetting")
         shipIDlist = self.env.Reset()
-        # shipIDlist = json.loads(shipIDlist)
+        shipIDlist = json.loads(shipIDlist)
 
         redAgent = self.redAgent
         blueAgent = self.blueAgent
@@ -123,13 +143,10 @@ class command_processor:
         u = []
         s_next = []
 
-        # 舰船射前部署
         act = []
         # print("shipIDList ", shipIDlist)
-        # act += redAgent.deploy(shipIDlist['RedShipID'])
-        # act += blueAgent.deploy(shipIDlist['BlueShipID'])
-        act += redAgent.deploy()
-        act += blueAgent.deploy()
+        act += redAgent.deploy(shipIDlist['RedShipID'])
+        act += blueAgent.deploy(shipIDlist['BlueShipID'])
         action = {"Action": act}
         print("action ", action)
         self.env.Step(Action = action)
@@ -137,9 +154,9 @@ class command_processor:
         # 获取红蓝方态势信息
         cur_redState, cur_blueState = get_states(self.env)
         tips = '\n start main loop: \n'
-        # cur_redState_str, start_redState_list = auto_state_filter(cur_redState)
-        # cur_blueState_str, start_blueState_list = auto_state_filter(cur_blueState)
-        # auto_save(log_file, tips, cur_redState_str, cur_blueState_str)
+        cur_redState_str, start_redState_list = auto_state_filter(cur_redState)
+        cur_blueState_str, start_blueState_list = auto_state_filter(cur_blueState)
+        auto_save(log_file, tips, cur_redState_str, cur_blueState_str)
 
         # 开搞之前存一下本次测试的配置，xxh0920
         strbuffer = "\n\n现在是" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "，开始执行测试。\n 测试配置：\n"
