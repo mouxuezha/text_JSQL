@@ -17,6 +17,9 @@ from PySide6 import QtCore, QtWidgets, QtGui
 class command_processor:
     
     def __init__(self):
+        self.runnig_location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test"
+        self.log_file = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\overall_result.txt'
+
         self.args = self.__init_net()
         self.__init_env()
         self.__init_agent()
@@ -25,9 +28,9 @@ class command_processor:
         self.model_communication = model_communication()
         self.__init_dialog_box()
         self.__init_env()
-        self.status= {}
-        self.runnig_location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test"
-        self.log_file = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\overall_result.txt'
+        self.status= {} # 这个是我方的
+        self.detected_state = {} # 这个是敌方的
+        self.timestep = 0 
         pass
     
     def __init_dialog_box(self):
@@ -39,8 +42,8 @@ class command_processor:
         pass
     
     def __init_env(self):
-        self.max_episode_len = self.args.ip.max_episode_len
-        self.env = Env(self.args.ip, self.args.args.port)
+        self.max_episode_len = self.args.max_episode_len
+        self.env = Env(self.args.ip, self.args.port)
 
     def __init_net(self):
         parser = argparse.ArgumentParser(description='Provide arguments for agent.')
@@ -63,13 +66,13 @@ class command_processor:
 
     def run_one_step(self):
         # 从agent把态势拿出来
-        self.status= self.redAgent.get_status()
+        self.status, self.detected_state= self.redAgent.get_status()
 
         # 把态势转成大模型能看懂的文本形式
         status_str = self.text_transfer.status_to_text(self.status)
 
         # 检测是否人混的干预，有的话也弄进去
-        flag_human_intervene, status_str_new = self.human_intervene_check(status_str_new)
+        flag_human_intervene, status_str_new = self.human_intervene_check(status_str)
 
         # 把文本发给大模型，获取返回来的文本
         response_str = self.model_communication.communicate_with_model(status_str_new)
@@ -105,10 +108,10 @@ class command_processor:
 
         pass 
 
-    def human_intervene_check(self):
+    def human_intervene_check(self, status_str):
         # 输入输出怎么做还两说呢，整个窗口？然后用信号槽机制实现人输入的这个异步，可行。
         command_str = "none"
-
+        
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
         if self.dialog_box.flag_order_renewed:
             
@@ -120,11 +123,15 @@ class command_processor:
         else:
             # 那就是窗口那头没有下过命令，那就先不管了
             pass
+
+        # 然后还得把接收到的态势显示出来才行
+        self.dialog_box.get_status_str(status_str,self.timestep)
+
         return self.dialog_box.flag_order_renewed, command_str
     
     def main_loop(self):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
-        timestep = 0 # 每个episode的步数
+        self.timestep = 0 # 每个episode的步数
         log_file = auto_save_file_name(log_folder=r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test')
         
         # 训练环境初始化，并返回红蓝方舰船编号
@@ -170,12 +177,12 @@ class command_processor:
             action = {"Action": act}
             # 红蓝方智能体产生动作
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
-            if timestep % 30 == 0:
+            if self.timestep % 30 == 0:
                 self.run_one_step()
             else:
                 self.run_one_step_shadow
-
-            act += redAgent.Gostep_abstract_state(cur_redState)
+            shishi = input("debug pause")
+            act += redAgent.Gostep_abstract_state()
             act += blueAgent.step(cur_blueState)
 
             self.env.Step(Action = action)
@@ -192,28 +199,28 @@ class command_processor:
             blueState_diff_str, blueState_diff_num = auto_state_compare2(cur_blueState_list, next_blueState_list)
             if blueState_diff_num>0:
                 # 说明在这一帧有蓝方装备被摧毁，值得写一条日志。
-                strbuffer = "在第"+str(timestep)+"帧有"+str(blueState_diff_num)+"个目标被摧毁，是" + blueState_diff_str
+                strbuffer = "在第"+str(self.timestep)+"帧有"+str(blueState_diff_num)+"个目标被摧毁，是" + blueState_diff_str
                 auto_save_overall(strbuffer)
             # 红方就先不写了，不然全是导弹子弹被摧毁，乱的一B
 
             # 记录每一轮运行的日志。面向过程编程还是难受，应该一开始就别偷懒。
-            tips = '\n timestep now: ' + str(timestep) + '\n'
+            tips = '\n timestep now: ' + str(self.timestep) + '\n'
             tips = tips + auto_state_compare(cur_blueState_list, start_blueState_list)
             auto_save(log_file, tips, cur_redState_str, cur_blueState_str)
-            timestep += 1
+            self.timestep += 1
 
             cur_redState = next_redState
             cur_blueState = next_blueState
 
             # 一个对战回合结束进入下一回合
-            if timestep > self.max_episode_len:
+            if self.timestep > self.max_episode_len:
                 # 获取当前分数
                 cur_result = json.loads(self.env.GetCurrentResult())
                 blueScore_str = "blueScore: " + str(cur_result["blueScore"])
                 redScore_str = "redScore: " + str(cur_result["redScore"])
                 print(redScore_str)
                 print(blueScore_str)
-                tips = '\n get result: timestep =' + str(timestep) + '\n'
+                tips = '\n get result: timestep =' + str(self.timestep) + '\n'
                 # auto_save(log_file, tips, cur_result)
                 auto_save(log_file, tips, redScore_str, blueScore_str)
                 # result = env.Terminal()

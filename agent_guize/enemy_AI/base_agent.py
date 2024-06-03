@@ -1,5 +1,5 @@
 from agent_guize.enemy_AI.related_pkgs import *
-from agent_guize.enemy_AI.agent_2 import Agent
+from agent_guize.enemy_AI.agent import Agent
 from agent_guize.enemy_AI.unit_agent import UnitAgent
 from agent_guize.enemy_AI.unit_controler import PatrolControler, FollowControler, name2controler
 import agent_guize.enemy_AI.constant as const

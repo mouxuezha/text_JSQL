@@ -40,12 +40,13 @@ class MyWidget(QtWidgets.QWidget):
         self.flag_order_renewed = False
     
     def get_status_str(self,status_str,step_num):
-        if self.step_num == step_num:
+        if self.step_num == step_num and self.step_num>100 :
             pass # 以防万一
         else:
             self.step_num = step_num
             self.text.setText(status_str)
             self.step_signal.emit(step_num)
+
         
     @QtCore.Slot()
     def renew_order(self):

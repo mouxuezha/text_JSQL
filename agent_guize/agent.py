@@ -1325,7 +1325,7 @@ class Agent(object):
 
     def get_status(self):
         # 这个是新加的，用于接大模型
-        return self.my_state, self.enemy_state
+        return self.status , self.detected_state 
 
     def update_detectinfo(self, detectinfo):
         # 处理一下缓存的探测。
