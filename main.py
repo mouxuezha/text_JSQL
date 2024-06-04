@@ -6,17 +6,18 @@ from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer
 from model_communication.model_communication import model_communication
-from dialog_box import MyWidget
 
 import json
 import time 
 import argparse
+import sys 
 
 from PySide6 import QtCore, QtWidgets, QtGui
 
-class command_processor:
+class command_processor(QtCore.QThread):
     
-    def __init__(self):
+    def __init__(self,dialog_box):
+        super().__init__()
         self.runnig_location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test"
         self.log_file = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\overall_result.txt'
 
@@ -26,20 +27,22 @@ class command_processor:
 
         self.text_transfer = text_transfer()
         self.model_communication = model_communication()
-        self.__init_dialog_box()
+        # self.__init_dialog_box()
+        self.dialog_box = dialog_box
         self.__init_env()
         self.status= {} # 这个是我方的
         self.detected_state = {} # 这个是敌方的
         self.timestep = 0 
         pass
     
-    def __init_dialog_box(self):
-        # 初始化对话框
-        app = QtWidgets.QApplication([])
-        self.dialog_box = MyWidget()
-        self.dialog_box.resize(800, 300)
-        self.dialog_box.show()
-        pass
+    # def __init_dialog_box(self):
+    #     # 初始化对话框
+    #     app = QtWidgets.QApplication([])
+    #     self.dialog_box = MyWidget()
+    #     self.dialog_box.resize(800, 300)
+    #     self.dialog_box.show()
+    #     sys.exit(app.exec())
+    #     pass
     
     def __init_env(self):
         self.max_episode_len = self.args.max_episode_len
@@ -63,6 +66,16 @@ class command_processor:
         self.blue_deploy_location = self.runnig_location + r'\guize\bluedeploy'
         # self.redAgent.set_deploy_folder(self.red_deploy_location)
         # self.blueAgent.set_deploy_folder(self.blue_deploy_location)        
+    
+    def run(self):
+        # 这个是Qthread要求实现的主循环
+        while True:
+            if self.dialog_box.p_status == "on":
+                print("command_processor is running")
+                self.main_loop()
+            else:
+                print("command_processor is off")
+                pass
 
     def run_one_step(self):
         # 从agent把态势拿出来
@@ -109,6 +122,7 @@ class command_processor:
         pass 
 
     def human_intervene_check(self, status_str):
+        # 2024年6月4日09:34:20这个看起来不对，得重新写一下才对。
         # 输入输出怎么做还两说呢，整个窗口？然后用信号槽机制实现人输入的这个异步，可行。
         command_str = "none"
         
@@ -180,8 +194,8 @@ class command_processor:
             if self.timestep % 30 == 0:
                 self.run_one_step()
             else:
-                self.run_one_step_shadow
-            shishi = input("debug pause")
+                self.run_one_step_shadow()
+                
             act += redAgent.Gostep_abstract_state()
             act += blueAgent.step(cur_blueState)
 
@@ -228,7 +242,8 @@ class command_processor:
                 break        
         pass 
 
+
 if __name__ == "__main__":
-    # 这个是总的测试的了
+    # # 这个是总的测试的了
     shishi = command_processor()
     shishi.main_loop()

@@ -5,7 +5,7 @@ import time
 
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtWidgets import QDialog 
-
+from main import command_processor
 class MyWidget(QtWidgets.QWidget):
     step_signal = QtCore.Signal(int) # 这个用来刷新的，下一步把窗口里的所有东西都刷新一遍。
     def __init__(self):
@@ -14,8 +14,11 @@ class MyWidget(QtWidgets.QWidget):
         self.order_now = "none"
         self.flag_order_renewed = False
         self.step_num = 0
+        self.p_status ="off"
+        self.p = command_processor(self)
 
         self.button = QtWidgets.QPushButton("下达命令")
+        self.button2 = QtWidgets.QPushButton("开始")
         self.text = QtWidgets.QLabel("小弈人混-人机互动界面",
                                      alignment=QtCore.Qt.AlignCenter)
         # self.dialog = QtWidgets.QDialog()
@@ -27,11 +30,13 @@ class MyWidget(QtWidgets.QWidget):
         self.layout.addWidget(self.text)
         self.layout.addWidget(self.dialog)
         self.layout.addWidget(self.button)
+        self.layout.addWidget(self.button2)
 
         # 然后是定义信号和槽相关的内容，没几个所以不另开函数了
         self.button.clicked.connect(self.renew_order)
         # self.step_signal = QtCore.Signal(int) # 这个用来刷新的，下一步把窗口里的所有东西都刷新一遍。
         self.step_signal[int].connect(self.update_all) 
+        self.button2.clicked.connect(self.click_button)
 
     def reset_all(self,time_delay=0.01):
         time.sleep(time_delay)
@@ -57,11 +62,25 @@ class MyWidget(QtWidgets.QWidget):
         # print(self.order_now)
         # time.sleep(3)
         # widget.get_status_str("小弈人混-人机互动界面测试114514",114)
+        # self.get_status_str("小弈人混-人机互动界面测试114514",114)
 
     @QtCore.Slot(int)
     def update_all(self):
         pass
-
+    
+    @QtCore.Slot()
+    def click_button(self):
+        if self.p_status == "off":
+            self.p_status = "on"
+            self.p.start()
+            self.button2.setText("停止")
+        elif self.p_status == "on":
+            self.p_status = "off"
+            self.p.terminate()
+            self.button2.setText("开始")
+        else:
+            raise Exception("p_status error")
+        
 if __name__ == "__main__":
     # 注意：这部分带了Qt的东西似乎不支持调试，只能直接运行，慎之。
     app = QtWidgets.QApplication([])
