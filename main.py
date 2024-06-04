@@ -83,16 +83,18 @@ class command_processor(QtCore.QThread):
 
         # 把态势转成大模型能看懂的文本形式
         status_str = self.text_transfer.status_to_text(self.status)
+        detected_str = self.text_transfer.detected_to_text(self.detected_state)
 
         # 检测是否人混的干预，有的话也弄进去
-        flag_human_intervene, status_str_new = self.human_intervene_check(status_str)
-
+        flag_human_intervene, status_str_new = self.human_intervene_check(status_str + detected_str)
+        
+        all_str = status_str + detected_str + status_str_new
         # 把文本发给大模型，获取返回来的文本
         if status_str_new=="test":
             # 说明是在单独调试这个
             response_str = "test"
         else:
-            response_str = self.model_communication.communicate_with_model(status_str_new)
+            response_str = self.model_communication.communicate_with_model(all_str)
 
         # 把文本里面的命令提取出来
         commands = self.text_transfer.text_to_commands(response_str)
@@ -109,10 +111,13 @@ class command_processor(QtCore.QThread):
 
         # 把态势转成大模型能看懂的文本形式
         status_str = self.text_transfer.status_to_text(self.status)
+        # 敌方的情况也得转，
+        detected_str = self.text_transfer.detected_to_text(self.detected_state)
 
         # 检测是否人混的干预，有的话弄进去看
-        flag_human_intervene, status_str_new = self.human_intervene_check(status_str)
-
+        flag_human_intervene, status_str_new = self.human_intervene_check(status_str + detected_str)
+        
+        all_str = status_str + detected_str + status_str_new
         if flag_human_intervene:
             # 那就是在shadow step里面执行人混的干预了。
             # 把文本发给大模型，获取返回来的文本
@@ -120,7 +125,7 @@ class command_processor(QtCore.QThread):
                 # 说明是在单独调试这个
                 response_str = "test"
             else:
-                response_str = self.model_communication.communicate_with_model(status_str_new)
+                response_str = self.model_communication.communicate_with_model(all_str)
 
             # 把文本里面的命令提取出来
             commands = self.text_transfer.text_to_commands(response_str)
@@ -197,6 +202,9 @@ class command_processor(QtCore.QThread):
 
         auto_save_overall(strbuffer, log_file=self.log_file)
 
+        # 先和大模型互动一波，讲讲规则什么的。
+        self.the_embrace()
+
         # 智能体与环境交互生成训练数据
         while True:
             self.env.SetRender(True) # 训练界面可视化：False --> 关闭
@@ -253,6 +261,18 @@ class command_processor(QtCore.QThread):
                 # result = env.Terminal()
                 auto_save_overall(blueScore_str + '\n' + redScore_str, log_file=self.log_file)
                 break        
+        pass 
+
+    def the_embrace(self):
+        # 先和大模型互动一波，讲讲规则什么的。
+        all_str = self.text_transfer.get_initial_prompt()
+        all_str += self.text_transfer.get_order_guize()
+        all_str += "准备好了吗？"
+
+        response_str = self.model_communication.communicate_with_model(all_str)
+
+        print(response_str)
+
         pass 
 
 class MyWidget_debug:

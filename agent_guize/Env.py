@@ -62,10 +62,10 @@ class Env():
         return dataBuffer[0]
     def _send(self, message):
         try:
-            print("send", message)
+            # print("send", message)
             self.client.send(str(message).encode('utf-8'))
             result = self._recv()
-            print("recv", result)
+            # print("recv", result) # 这个关了，不然满屏输出乱七八糟，抓不到重点了
             # with open("message.txt", "a+") as f:
             #     f.write("========================\n")
             #     f.write("agent send:\n")
