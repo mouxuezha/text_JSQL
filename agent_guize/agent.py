@@ -330,7 +330,7 @@ class Agent(object):
                                                     my_abstract_state["target_LLA"], my_abstract_state["flag_state"])
                 elif my_abstract_state["abstract_state"] == "circle":
                     self.__handle_circle(my_ID, my_abstract_state["target_LLA"], my_abstract_state["R"])
-        pass
+        return self.act
 
     def Inint_abstract_state(self, status):
         # 初始化一下，先全都搞成就地隐蔽。
@@ -1775,7 +1775,7 @@ class Agent(object):
             self.set_circle(min2_ID, target_LLA, R=0.01)
 
     def set_commands(self, command_list:list):
-        print("unfinished yet")
+        print("set_commands: unfinished yet")
         # 首先把这些个command加入到queue里面去。增加一个键值对，当前时间。
         for coomand_single in command_list:
             coomand_single["step_num"] = self.num

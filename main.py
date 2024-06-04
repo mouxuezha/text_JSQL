@@ -88,7 +88,11 @@ class command_processor(QtCore.QThread):
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str)
 
         # 把文本发给大模型，获取返回来的文本
-        response_str = self.model_communication.communicate_with_model(status_str_new)
+        if status_str_new=="test":
+            # 说明是在单独调试这个
+            response_str = "test"
+        else:
+            response_str = self.model_communication.communicate_with_model(status_str_new)
 
         # 把文本里面的命令提取出来
         commands = self.text_transfer.text_to_commands(response_str)
@@ -100,14 +104,23 @@ class command_processor(QtCore.QThread):
     
     def run_one_step_shadow(self):
         # 这个对应env里面的shadow step。好像也没有什么需要执行的逻辑
+        # 从agent把态势拿出来
+        self.status, self.detected_state= self.redAgent.get_status()
+
+        # 把态势转成大模型能看懂的文本形式
+        status_str = self.text_transfer.status_to_text(self.status)
 
         # 检测是否人混的干预，有的话弄进去看
-        flag_human_intervene, status_str_new = self.human_intervene_check(status_str_new)
+        flag_human_intervene, status_str_new = self.human_intervene_check(status_str)
 
         if flag_human_intervene:
             # 那就是在shadow step里面执行人混的干预了。
             # 把文本发给大模型，获取返回来的文本
-            response_str = self.model_communication.interact_with_LLM(status_str_new)
+            if status_str_new=="test":
+                # 说明是在单独调试这个
+                response_str = "test"
+            else:
+                response_str = self.model_communication.communicate_with_model(status_str_new)
 
             # 把文本里面的命令提取出来
             commands = self.text_transfer.text_to_commands(response_str)
@@ -195,7 +208,7 @@ class command_processor(QtCore.QThread):
                 self.run_one_step()
             else:
                 self.run_one_step_shadow()
-                
+
             act += redAgent.Gostep_abstract_state()
             act += blueAgent.step(cur_blueState)
 
@@ -214,13 +227,13 @@ class command_processor(QtCore.QThread):
             if blueState_diff_num>0:
                 # 说明在这一帧有蓝方装备被摧毁，值得写一条日志。
                 strbuffer = "在第"+str(self.timestep)+"帧有"+str(blueState_diff_num)+"个目标被摧毁，是" + blueState_diff_str
-                auto_save_overall(strbuffer)
+                auto_save_overall(strbuffer, log_file=self.log_file)
             # 红方就先不写了，不然全是导弹子弹被摧毁，乱的一B
 
             # 记录每一轮运行的日志。面向过程编程还是难受，应该一开始就别偷懒。
             tips = '\n timestep now: ' + str(self.timestep) + '\n'
             tips = tips + auto_state_compare(cur_blueState_list, start_blueState_list)
-            auto_save(log_file, tips, cur_redState_str, cur_blueState_str)
+            auto_save(self.log_file, tips, cur_redState_str, cur_blueState_str)
             self.timestep += 1
 
             cur_redState = next_redState
@@ -236,14 +249,29 @@ class command_processor(QtCore.QThread):
                 print(blueScore_str)
                 tips = '\n get result: timestep =' + str(self.timestep) + '\n'
                 # auto_save(log_file, tips, cur_result)
-                auto_save(log_file, tips, redScore_str, blueScore_str)
+                auto_save(self.log_file, tips, redScore_str, blueScore_str)
                 # result = env.Terminal()
-                auto_save_overall(blueScore_str + '\n' + redScore_str)
+                auto_save_overall(blueScore_str + '\n' + redScore_str, log_file=self.log_file)
                 break        
         pass 
 
+class MyWidget_debug:
+    def __init__(self):
+        # 这个是用来隔离一下，单独debug一下main_loop的
+        self.timestep = 0
+        self.flag_order_renewed = True
+        self.order_now = "test"
+    
+    def get_status_str(self,status_str, timestep):
+        # 获取当前状态
+        pass
 
+    def reset_all(self, canshu=0):
+        # 重置所有状态
+        pass
+    
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    shishi = command_processor()
+    shishi_debug = MyWidget_debug()
+    shishi = command_processor(shishi_debug)
     shishi.main_loop()

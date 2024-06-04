@@ -13,7 +13,7 @@ def get_states(env):
     redState, blueState = env.statusparser(result)
     return redState, blueState
 
-def auto_save_file_name(log_folder = r'E:\XXH\auto_test'):
+def auto_save_file_name(log_folder = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test'):
     # xxh 0909 for auto test
     log_file = log_folder + r'\auto_test_log' + str(0) + r'.txt'
     for i in range(114514): # 生成一个不会重复的文件名
@@ -23,7 +23,7 @@ def auto_save_file_name(log_folder = r'E:\XXH\auto_test'):
             break
     return log_file
 
-def auto_save_check_index(log_folder = r'E:\XXH\auto_test'):
+def auto_save_check_index(log_folder = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test'):
     # xxh 0912 for auto test
     log_file = log_folder + r'\auto_test_log' + str(0) + r'.txt'
     for i in range(114514): # 生成一个不会重复的文件名
@@ -93,7 +93,7 @@ def auto_target_estimage(target_unit_type,modify_index):
         ID_target = target_unit_type + '_' + str(modify_index)
     return ID_target
 
-def auto_save_overall(str_buffer, log_file = r'E:\XXH\auto_test\overall_result.txt'):
+def auto_save_overall(str_buffer, log_file = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test\overall_result.txt'):
     file = open(log_file, 'a')
     file.write(str_buffer + '\n')
     file.close()
