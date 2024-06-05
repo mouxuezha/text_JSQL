@@ -3,3 +3,9 @@ matplotlib
 pyside6
 xlrd
 qianfan
+langchain
+langchain_community
+dotenv
+httpx
+httpx-sse
+PyJWT
