@@ -1782,7 +1782,32 @@ class Agent(object):
             self.commands_queue.put(coomand_single)
         
         # 然后开始执行，具体的逻辑还得想想。
+        # 拿出第一个，如果是这一步的，就给它执行了，如果不是，就结束退出。
+        if len(self.commands_queue)==0:
+            return # 没有什么命令，直接溜了溜了。
+        
+        for i in range(114514): # 原则上这里应该是个while，但是保险起见防止死循环。
+            # 看一下第一个
+            coomand_single = self.commands_queue[0]
+            if coomand_single["step_num"] <= self.num:
+                # 执行
+                self.set_commands_single(coomand_single)
+
         pass
+
+    def set_commands_single(self,comand_single):
+        # 这个是真的要开始解析命令了。
+        if comand_single["type"] == "move":
+            target_LLA = [comand_single['x'], comand_single['y'], 0 ] 
+            self.set_move_and_attack(comand_single["obj_id"],target_LLA)
+             
+        elif comand_single["type"] == "stop":
+            self.set_open_fire(comand_single["obj_id"])
+            # self.set_stop(comand_single["obj_id"])
+            pass 
+        else:
+            raise Exception("undefined comand type in set_commands_single, G.")
+        
 class landform_type(Enum):
     # 要比较优先级的，还是整个枚举类好了。
     construction = 0

@@ -71,7 +71,7 @@ class text_transfer(object):
     
     def get_initial_prompt(self):
         print("get_initial_prompt unfinished yet,return a demo")
-        initial_prompt = "请作为兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮和无人机等装备，步兵下车后作战，我方需要攻取位于经纬度坐标(2.68,39.74)的夺控点。在每一步，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。"
+        initial_prompt = "请作为兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮和无人机等装备，步兵下车后作战，我方需要攻取位于经纬度坐标(2.68,39.74)的夺控点的，地图范围为。在每一步，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。"
         # 还需要一些描述地图的prompt
         return initial_prompt
     
