@@ -1783,12 +1783,13 @@ class Agent(object):
         
         # 然后开始执行，具体的逻辑还得想想。
         # 拿出第一个，如果是这一步的，就给它执行了，如果不是，就结束退出。
-        if len(self.commands_queue)==0:
-            return # 没有什么命令，直接溜了溜了。
-        
+
         for i in range(114514): # 原则上这里应该是个while，但是保险起见防止死循环。
+            if len(self.commands_queue.queue)==0:
+                return # 没有什么命令，直接溜了溜了。
+        
             # 看一下第一个
-            coomand_single = self.commands_queue[0]
+            coomand_single = self.commands_queue.queue[0]
             if coomand_single["step_num"] <= self.num:
                 # 执行
                 self.set_commands_single(coomand_single)

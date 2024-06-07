@@ -77,7 +77,7 @@ class command_processor(QtCore.QThread):
                 print("command_processor is off")
                 pass
 
-    def run_one_step(self):
+    def run_one_step(self,additional_str=""):
         # 从agent把态势拿出来
         self.status, self.detected_state= self.redAgent.get_status()
 
@@ -88,11 +88,12 @@ class command_processor(QtCore.QThread):
         # 检测是否人混的干预，有的话也弄进去
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str + detected_str)
         
-        all_str = status_str + detected_str + status_str_new
+        all_str = additional_str + status_str + detected_str + status_str_new + "，请按照格式给出指令。" 
         # 把文本发给大模型，获取返回来的文本
         if status_str_new=="test":
             # 说明是在单独调试这个
-            response_str = "test"
+            # response_str = self.model_communication.communicate_with_model_debug(all_str)
+            response_str = self.model_communication.communicate_with_model(all_str)
         else:
             response_str = self.model_communication.communicate_with_model(all_str)
 
@@ -106,6 +107,9 @@ class command_processor(QtCore.QThread):
     
     def run_one_step_shadow(self):
         # 这个对应env里面的shadow step。好像也没有什么需要执行的逻辑
+        # 讲道理，这里面就干脆别搞跟大模型的互动了，不然要堵塞的，也不方便调试。
+        # 但是显示可以搞。
+        # 确切地说是有人类干预就和大模型互动，没有就别互动。
         # 从agent把态势拿出来
         self.status, self.detected_state= self.redAgent.get_status()
 
@@ -117,7 +121,7 @@ class command_processor(QtCore.QThread):
         # 检测是否人混的干预，有的话弄进去看
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str + detected_str)
         
-        all_str = status_str + detected_str + status_str_new
+        
         if flag_human_intervene:
             # 那就是在shadow step里面执行人混的干预了。
             # 把文本发给大模型，获取返回来的文本
@@ -125,6 +129,7 @@ class command_processor(QtCore.QThread):
                 # 说明是在单独调试这个
                 response_str = "test"
             else:
+                all_str = status_str + detected_str + status_str_new + "，请按照格式给出指令。"
                 response_str = self.model_communication.communicate_with_model(all_str)
 
             # 把文本里面的命令提取出来
@@ -202,8 +207,8 @@ class command_processor(QtCore.QThread):
 
         auto_save_overall(strbuffer, log_file=self.log_file)
 
-        # 先和大模型互动一波，讲讲规则什么的。
-        self.the_embrace()
+        # # 先和大模型互动一波，讲讲规则什么的。
+        # self.the_embrace()
 
         # 智能体与环境交互生成训练数据
         while True:
@@ -213,11 +218,15 @@ class command_processor(QtCore.QThread):
             # 红蓝方智能体产生动作
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
             if self.timestep % 30 == 0:
-                self.run_one_step()
+                if self.timestep == 0:
+                    additional_str = self.the_embrace()
+                else:
+                    additional_str = ""
+                self.run_one_step(additional_str=additional_str)
             else:
                 self.run_one_step_shadow()
 
-            act += redAgent.Gostep_abstract_state()
+            act += redAgent.step(cur_redState)
             act += blueAgent.step(cur_blueState)
 
             self.env.Step(Action = action)
@@ -264,16 +273,22 @@ class command_processor(QtCore.QThread):
         pass 
 
     def the_embrace(self):
-        # 先和大模型互动一波，讲讲规则什么的。
+        # 先和大模型互动一波，讲讲规则什么的。这个也是从run_one_step衍生出来的。
         all_str = self.text_transfer.get_initial_prompt()
         all_str += self.text_transfer.get_order_guize()
+
         all_str += "准备好了吗？"
 
-        response_str = self.model_communication.communicate_with_model(all_str)
+        # response_str = self.model_communication.communicate_with_model(all_str)
+        # print(response_str)
+        
+        # # 把文本里面的命令提取出来
+        # commands = self.text_transfer.text_to_commands(response_str)
 
-        print(response_str)
+        # # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
+        # self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
+        return all_str
 
-        pass 
 
 class MyWidget_debug:
     def __init__(self):

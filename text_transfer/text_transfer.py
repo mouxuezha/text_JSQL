@@ -46,32 +46,36 @@ class text_transfer(object):
 
 
     def text_to_commands(self, text:str):
-        print("text_to_commands unfinished yet,return a demo")
         
         commands = []
         for command_type in self.command_type_list:
             if command_type == "move":
                 index_list = self.find_all_str(text, command_type)
-                for index in index_list:
-                    # 还要把坐标抠出来
-                    sub_str = text.find(text, index + 1)
-                    x = float(self.cut_from_str(sub_str, "x=", ","))
-                    y = float(self.cut_from_str(sub_str, "y=", ","))
-                    obj_id = self.cut_from_str(sub_str, "obj_id=", ",")
-                    command_single = {"type": command_type, "obj_id": obj_id, "x": x, "y": y}
-                    commands.append(command_single)
+                for i in range(len(index_list)):
+                    sub_str = text[index_list[i]:-1]
+                    try:
+                        x = float(self.cut_from_str(sub_str, "x=", ","))
+                        y = float(self.cut_from_str(sub_str, "y=", "]"))
+                        obj_id = self.cut_from_str(sub_str, "obj_id=", ",")
+                        command_single = {"type": command_type, "obj_id": obj_id, "x": x, "y": y}
+                        commands.append(command_single)
+                    except:
+                        print("G in one move command")
             elif command_type == "stop":
                 index_list = self.find_all_str(text, command_type)
-                for index in index_list:
-                    sub_str = text.find(text, index + 1)
-                    obj_id = self.cut_from_str(sub_str, "obj_id=", ",")
-                    command_single = {"type": command_type, "obj_id": obj_id}
-                    commands.append(command_single)
+                for i in range(len(index_list)):
+                    sub_str = text[index_list[i]:-1]
+                    try:
+                        obj_id = self.cut_from_str(sub_str, "obj_id=", ",")
+                        command_single = {"type": command_type, "obj_id": obj_id}
+                        commands.append(command_single)
+                    except:
+                        print("G in one stop command")
         return commands
     
     def get_initial_prompt(self):
         print("get_initial_prompt unfinished yet,return a demo")
-        initial_prompt = "请作为兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮和无人机等装备，步兵下车后作战，我方需要攻取位于经纬度坐标(2.68,39.74)的夺控点的，地图范围为。在每一步，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。"
+        initial_prompt = "请作为兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮和无人机等装备，步兵下车后作战，我方需要攻取位于经纬度坐标(2.68,39.74)的夺控点的，地图范围为经度2.60到2.80，纬度范围为39.65到39.85。在每一步，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。"
         # 还需要一些描述地图的prompt
         return initial_prompt
     
@@ -93,8 +97,10 @@ class text_transfer(object):
         # 需要把数字从字符串中抠出来
         # 先找到数字的起始位置
         index_qian = text.find(str_qian)
-        index_hou = text.find(str_hou)
-        number_str = text[index_qian+1:index_hou]
+        sub_str = text[index_qian+len(str_qian):]
+        index_hou = sub_str.find(str_hou)
+        # index_hou = text.find(str_hou)
+        number_str = sub_str[0:index_hou]
         # number_float = float(number_str)
         return number_str
     
@@ -118,3 +124,10 @@ class type_transfer(object):
             else:
                 unit_type_zhongwen = "其他"
         return unit_type_zhongwen
+    
+if __name__ == "__main__":
+    # 测试一下
+    text_demo = "好的，按照你的格式给出作战指令：1. [move, ArmoredTruck_ZTL100_0, x=2.59, y=39.72], 移动我方无人战车ArmoredTruck_ZTL100_0到(2.59,39.72)处。2. [move, ArmoredTruck_ZTL100_1, x=2.59, y=39.72], 移动我方无人战车ArmoredTruck_ZTL100_1到(2.59,39.72)处。3. [move, Howitzer_C100_0, x=2.59, y=39.72], 移动我方自行迫榴炮Howitzer_C100_0到(2.59,39.72)处。4. [move, Infantry0, x=2.59, y=39.72], 移动我方步兵Infantry0到(2.59,39.72)处。5. [move, Infantry1, x=2.59, y=39.72], 移动我方步兵Infantry1到(2.59,39.72)处。6. [move, MainBattleTank_ZTZ100_0, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_0到(2.59,39.72)处。7. [move, MainBattleTank_ZTZ100_1, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_1到(2.59,39.72)处。8. [move, MainBattleTank_ZTZ100_2, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_2到(2.59,39.72)处。9. [move, MainBattleTank_ZTZ100_3, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_3到(2.59,39.72)处。10. [move, ShipboardCombat_plane0, x=2.59, y=39.72], 移动我方无人机ShipboardCombat_plane0到(2.59,39.72)处。...接下来的指令按照上述格式，给出每一步行动的指令..."
+    shishi = text_transfer()
+    commands = shishi.text_to_commands(text_demo)
+    pass 
