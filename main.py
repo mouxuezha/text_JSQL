@@ -6,6 +6,7 @@ from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer
 from model_communication.model_communication import model_communication
+from model_communication.model_comm_langchain import ModelCommLangchain
 
 import json
 import time 
@@ -18,15 +19,16 @@ class command_processor(QtCore.QThread):
     
     def __init__(self,dialog_box):
         super().__init__()
-        self.runnig_location = r"C:\Users\徐骁翰\Desktop\2024ldjs\EnglishMulu\auto_test"
-        self.log_file = r'C:\Users\徐骁翰\Desktop\2024ldjs\EnglishMulu\overall_result.txt'
+        self.runnig_location = r"auto_test"
+        self.log_file = r'overall_result.txt'
 
         self.args = self.__init_net()
         self.__init_env()
         self.__init_agent()
 
         self.text_transfer = text_transfer()
-        self.model_communication = model_communication()
+        # self.model_communication = model_communication()
+        self.model_communication = ModelCommLangchain()
         # self.__init_dialog_box()
         self.dialog_box = dialog_box
         self.__init_env()
@@ -170,7 +172,7 @@ class command_processor(QtCore.QThread):
     def main_loop(self):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
         self.timestep = 0 # 每个episode的步数
-        log_file = auto_save_file_name(log_folder=self.runnig_location)
+        log_file = auto_save_file_name(log_folder=r'auto_test')
         
         # 训练环境初始化，并返回红蓝方舰船编号
         print("begin resetting")
