@@ -1,1 +1,0 @@
-model_communication: using qianfan
