@@ -14,9 +14,9 @@ class text_transfer(object):
         status_str = ""
         for obj_id in list(status.keys()):
             unit_status = status[obj_id]
-            lon = unit_status["VehicleState"]["lon"]
-            lat = unit_status["VehicleState"]["lat"]
-            alt = unit_status["VehicleState"]["alt"]
+            lon = round(unit_status["VehicleState"]["lon"], 5) 
+            lat = round(unit_status["VehicleState"]["lat"], 5)
+            alt = round(unit_status["VehicleState"]["alt"], 5)
             unit_type_zhongwen = self.type_transfer.unit_type_transfer(unit_status["UnitType"])
             if unit_type_zhongwen == "其他":
                 # 什么BMC3那些就别拿进来了
@@ -31,9 +31,9 @@ class text_transfer(object):
         detected_str = ""
         for obj_id in list(detected_state.keys()):
             detected_status = detected_state[obj_id]
-            lon = detected_status["targetLon"]
-            lat = detected_status["targetLat"]
-            alt = detected_status["targetAlt"]
+            lon = round(detected_status["targetLon"], 5)
+            lat = round(detected_status["targetLat"], 5)
+            alt = round(detected_status["targetAlt"], 5)
             detected_type_zhongwen = self.type_transfer.unit_type_transfer(detected_status["unitType"])
             if detected_type_zhongwen == "其他":
                 continue
@@ -66,7 +66,7 @@ class text_transfer(object):
                 for i in range(len(index_list)):
                     sub_str = text[index_list[i]:-1]
                     try:
-                        obj_id = self.cut_from_str(sub_str, "obj_id=", ",")
+                        obj_id = self.cut_from_str(sub_str, "obj_id=", "]")
                         command_single = {"type": command_type, "obj_id": obj_id}
                         commands.append(command_single)
                     except:
@@ -75,7 +75,7 @@ class text_transfer(object):
     
     def get_initial_prompt(self):
         print("get_initial_prompt unfinished yet,return a demo")
-        initial_prompt = "请作为兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮和无人机等装备，步兵下车后作战，我方需要攻取位于经纬度坐标(2.68,39.74)的夺控点的，地图范围为经度2.60到2.80，纬度范围为39.65到39.85。在每一步，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。"
+        initial_prompt = "请作为兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮、无人突击车和无人机、导弹发射车等装备，步兵下车后作战，我方需要攻取位于经纬度坐标(2.68,39.74)的夺控点，要将陆战装备移动到夺控点处并消灭夺控点附近敌人，地图范围为经度2.60到2.80，纬度范围为39.65到39.85，导弹发射车不能机动。在每一步，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。"
         # 还需要一些描述地图的prompt
         return initial_prompt
     

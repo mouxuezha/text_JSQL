@@ -18,8 +18,8 @@ class command_processor(QtCore.QThread):
     
     def __init__(self,dialog_box):
         super().__init__()
-        self.runnig_location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test"
-        self.log_file = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\overall_result.txt'
+        self.runnig_location = r"C:\Users\徐骁翰\Desktop\2024ldjs\EnglishMulu\auto_test"
+        self.log_file = r'C:\Users\徐骁翰\Desktop\2024ldjs\EnglishMulu\overall_result.txt'
 
         self.args = self.__init_net()
         self.__init_env()
@@ -129,7 +129,7 @@ class command_processor(QtCore.QThread):
                 # 说明是在单独调试这个
                 response_str = "test"
             else:
-                all_str = status_str + detected_str + status_str_new + "，请按照格式给出指令。"
+                all_str = status_str + detected_str + status_str_new + "现在为第{self.timestep}步，请按照格式给出指令。"
                 response_str = self.model_communication.communicate_with_model(all_str)
 
             # 把文本里面的命令提取出来
@@ -169,7 +169,7 @@ class command_processor(QtCore.QThread):
     def main_loop(self):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
         self.timestep = 0 # 每个episode的步数
-        log_file = auto_save_file_name(log_folder=r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test')
+        log_file = auto_save_file_name(log_folder=self.runnig_location)
         
         # 训练环境初始化，并返回红蓝方舰船编号
         print("begin resetting")
@@ -217,11 +217,13 @@ class command_processor(QtCore.QThread):
             action = {"Action": act}
             # 红蓝方智能体产生动作
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
-            if self.timestep % 30 == 0:
-                if self.timestep == 0:
-                    additional_str = self.the_embrace()
-                else:
-                    additional_str = ""
+            if self.timestep % 50 == 0:
+                # if self.timestep == 0:
+                #     additional_str = self.the_embrace()
+                # else:
+                #     additional_str = ""
+                # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
+                additional_str = self.the_embrace()
                 self.run_one_step(additional_str=additional_str)
             else:
                 self.run_one_step_shadow()
@@ -294,7 +296,7 @@ class MyWidget_debug:
     def __init__(self):
         # 这个是用来隔离一下，单独debug一下main_loop的
         self.timestep = 0
-        self.flag_order_renewed = True
+        self.flag_order_renewed = False
         self.order_now = "test"
     
     def get_status_str(self,status_str, timestep):

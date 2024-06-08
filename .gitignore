@@ -2,7 +2,7 @@
 model_communication/AK.txt
 model_communication/SK.txt
 model_communication/log.txt
-
+.history
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
