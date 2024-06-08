@@ -148,7 +148,7 @@ class command_processor(QtCore.QThread):
     def human_intervene_check(self, status_str):
         # 2024年6月4日09:34:20这个看起来不对，得重新写一下才对。
         # 输入输出怎么做还两说呢，整个窗口？然后用信号槽机制实现人输入的这个异步，可行。
-        command_str = "none"
+        command_str = "test"
         
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
         if self.dialog_box.flag_order_renewed:
@@ -218,7 +218,7 @@ class command_processor(QtCore.QThread):
             action = {"Action": act}
             # 红蓝方智能体产生动作
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
-            if self.timestep % 50 == 0:
+            if self.timestep % 300 == 0:
                 # if self.timestep == 0:
                 #     additional_str = self.the_embrace()
                 # else:

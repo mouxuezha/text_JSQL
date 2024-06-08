@@ -49,7 +49,10 @@ class model_communication():
     def communicate_with_model_single(self,message):
         # 由于文心有长度限制，连续走多轮调用会报错，所以这里采取一个丑陋的变通处理，每一步都只输入initiate和当前态势，重开一个序列。
         self.__init_AKSK()
-        resp_str = self.communicate_with_model(message)
+        try:
+            resp_str = self.communicate_with_model(message)
+        except:
+            resp_str = "文心寄了，下一轮看运气罢。"
         return resp_str
 
     def load_txt(self,file_name):

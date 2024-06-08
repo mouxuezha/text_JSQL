@@ -1777,9 +1777,9 @@ class Agent(object):
     def set_commands(self, command_list:list):
         print("set_commands: unfinished yet")
         # 首先把这些个command加入到queue里面去。增加一个键值对，当前时间。
-        for coomand_single in command_list:
-            coomand_single["step_num"] = self.num
-            self.commands_queue.put(coomand_single)
+        for comand_single in command_list:
+            comand_single["step_num"] = self.num
+            self.commands_queue.put(comand_single)
         
         # 然后开始执行，具体的逻辑还得想想。
         # 拿出第一个，如果是这一步的，就给它执行了，如果不是，就结束退出。
@@ -1789,10 +1789,11 @@ class Agent(object):
                 return # 没有什么命令，直接溜了溜了。
         
             # 看一下第一个
-            coomand_single = self.commands_queue.queue[0]
-            if coomand_single["step_num"] <= self.num:
+            comand_single = self.commands_queue.queue[0]
+            if comand_single["step_num"] <= self.num:
                 # 执行
-                self.set_commands_single(coomand_single)
+                comand_single = self.commands_queue.get()
+                self.set_commands_single(comand_single)
 
         pass
 
