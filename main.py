@@ -93,7 +93,8 @@ class command_processor(QtCore.QThread):
         if status_str_new=="test":
             # 说明是在单独调试这个
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
-            response_str = self.model_communication.communicate_with_model(all_str)
+            # response_str = self.model_communication.communicate_with_model(all_str)
+            response_str = self.model_communication.communicate_with_model_single(all_str)
         else:
             response_str = self.model_communication.communicate_with_model(all_str)
 
