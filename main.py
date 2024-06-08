@@ -28,7 +28,7 @@ class command_processor(QtCore.QThread):
 
         self.text_transfer = text_transfer()
         # self.model_communication = model_communication()
-        self.model_communication = ModelCommLangchain()
+        self.model_communication = ModelCommLangchain(model_name="zhipu")
         # self.__init_dialog_box()
         self.dialog_box = dialog_box
         self.__init_env()
@@ -95,8 +95,8 @@ class command_processor(QtCore.QThread):
         if status_str_new=="test":
             # 说明是在单独调试这个
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
-            # response_str = self.model_communication.communicate_with_model(all_str)
-            response_str = self.model_communication.communicate_with_model_single(all_str)
+            response_str = self.model_communication.communicate_with_model(all_str)
+            # response_str = self.model_communication.communicate_with_model_single(all_str)
         else:
             response_str = self.model_communication.communicate_with_model(all_str)
 
