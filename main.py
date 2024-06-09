@@ -27,14 +27,15 @@ class command_processor(QtCore.QThread):
         self.__init_agent()
 
         self.text_transfer = text_transfer()
-        # self.model_communication = model_communication()
-        self.model_communication = ModelCommLangchain(model_name="zhipu")
+        self.model_communication = model_communication()
+        # self.model_communication = ModelCommLangchain(model_name="zhipu")
         # self.__init_dialog_box()
         self.dialog_box = dialog_box
         self.__init_env()
         self.status= {} # 这个是我方的
         self.detected_state = {} # 这个是敌方的
         self.timestep = 0 
+        self.flag_human_interact = False #这个用来标志当前时间步是否引入人类交互。
         pass
     
     # def __init_dialog_box(self):
@@ -95,8 +96,8 @@ class command_processor(QtCore.QThread):
         if status_str_new=="test":
             # 说明是在单独调试这个
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
-            response_str = self.model_communication.communicate_with_model(all_str)
-            # response_str = self.model_communication.communicate_with_model_single(all_str)
+            # response_str = self.model_communication.communicate_with_model(all_str)
+            response_str = self.model_communication.communicate_with_model_single(all_str)
         else:
             response_str = self.model_communication.communicate_with_model(all_str)
 
@@ -151,13 +152,18 @@ class command_processor(QtCore.QThread):
         # 2024年6月4日09:34:20这个看起来不对，得重新写一下才对。
         # 输入输出怎么做还两说呢，整个窗口？然后用信号槽机制实现人输入的这个异步，可行。
         command_str = "test"
-        
+
+        print("debug: human_intervene_check reached")
+        print(self.dialog_box.flag_order_renewed)
+        time.sleep(0.1)
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
         if self.dialog_box.flag_order_renewed:
             
             # 把人类的命令读出来
-            command_str = self.dialog_box.order_now
-            
+            command_str = "现在我的具体意图是：" + self.dialog_box.order_now
+
+            self.flag_human_interact = True
+            # 外面不能直接用self.dialog_box.flag_order_renewed，因为服从于界面的逻辑，这个变量得重置
             # 刷新一下窗口并重置标志位。考虑一下是不是需要延时。
             self.dialog_box.reset_all(0.02)
         else:
@@ -167,7 +173,7 @@ class command_processor(QtCore.QThread):
         # 然后还得把接收到的态势显示出来才行
         self.dialog_box.get_status_str(status_str,self.timestep)
 
-        return self.dialog_box.flag_order_renewed, command_str
+        return self.flag_human_interact , command_str
     
     def main_loop(self):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
@@ -218,6 +224,8 @@ class command_processor(QtCore.QThread):
             self.env.SetRender(True) # 训练界面可视化：False --> 关闭
             act = []
             action = {"Action": act}
+            self.flag_human_interact = False
+
             # 红蓝方智能体产生动作
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
             if self.timestep % 300 == 0:

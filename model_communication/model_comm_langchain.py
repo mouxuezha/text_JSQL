@@ -60,6 +60,7 @@ class ModelCommLangchain():
         return
     
 if __name__ == '__main__':
-    communication = ModelCommLangchain(model_name='qianfan')
+    # communication = ModelCommLangchain(model_name='qianfan')
+    communication = ModelCommLangchain(model_name='zhipu')
     # communication.communicate_with_model('你好')
     communication.communicate_with_model('VScode如何远程连接服务器？')
