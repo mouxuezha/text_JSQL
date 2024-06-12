@@ -5,6 +5,7 @@ from agent_guize.me_AI.red_agent import RedAgent
 from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer
+from text_transfer.stage_prompt import StagePrompt
 from model_communication.model_communication import model_communication
 from model_communication.model_comm_langchain import ModelCommLangchain
 
@@ -27,6 +28,7 @@ class command_processor(QtCore.QThread):
         self.__init_agent()
 
         self.text_transfer = text_transfer()
+        self.stage_prompt = StagePrompt()
         self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
         # self.__init_dialog_box()
@@ -90,8 +92,11 @@ class command_processor(QtCore.QThread):
 
         # 检测是否人混的干预，有的话也弄进去
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str + detected_str)
+
+        # 增加态势阶段的提示。
+        stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
         
-        all_str = additional_str + status_str + detected_str + status_str_new + "，请按照格式给出指令。" 
+        all_str = additional_str + status_str + detected_str + status_str_new + stage_str + "，请按照格式给出指令。" 
         # 把文本发给大模型，获取返回来的文本
         if status_str_new=="test":
             # 说明是在单独调试这个
@@ -125,7 +130,9 @@ class command_processor(QtCore.QThread):
         # 检测是否人混的干预，有的话弄进去看
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str + detected_str)
         
-        
+        # 增加态势阶段的提示。
+        stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+
         if flag_human_intervene:
             # 那就是在shadow step里面执行人混的干预了。
             # 把文本发给大模型，获取返回来的文本
@@ -133,7 +140,7 @@ class command_processor(QtCore.QThread):
                 # 说明是在单独调试这个
                 response_str = "test"
             else:
-                all_str = status_str + detected_str + status_str_new + "现在为第{self.timestep}步，请按照格式给出指令。"
+                all_str = status_str + detected_str + status_str_new + stage_str + "请按照格式给出指令。"
                 response_str = self.model_communication.communicate_with_model(all_str)
 
             # 把文本里面的命令提取出来
@@ -229,12 +236,12 @@ class command_processor(QtCore.QThread):
             # 红蓝方智能体产生动作
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
             if self.timestep % 300 == 0:
-                # if self.timestep == 0:
-                #     additional_str = self.the_embrace()
-                # else:
-                #     additional_str = ""
-                # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
-                additional_str = self.the_embrace()
+                if self.timestep == 0:
+                    additional_str = self.the_embrace()
+                else:
+                    additional_str = ""
+                # # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
+                # additional_str = self.the_embrace()
                 self.run_one_step(additional_str=additional_str)
             else:
                 self.run_one_step_shadow()

@@ -25,9 +25,9 @@ class ModelCommLangchain():
     def __init__(self, model_name='qianfan'):
         self.log_model_communication_name = r"log.txt"
         load_dotenv()
-        # xxh试图解决我这边调不起glm的临时措施：
-        ZK = self.load_txt(r'model_communication\ZK.txt')
-        MODEL_KWARGS["zhipu"]["zhipuai_api_key"] = ZK
+        # # xxh试图解决我这边调不起glm的临时措施：
+        # ZK = self.load_txt(r'model_communication\ZK.txt')
+        # MODEL_KWARGS["zhipu"]["zhipuai_api_key"] = ZK
         chat_model = CHAT_MODELS[model_name](**MODEL_KWARGS[model_name])
         self.chain = ConversationChain(
             llm = chat_model,
