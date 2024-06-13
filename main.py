@@ -8,6 +8,7 @@ from text_transfer.text_transfer import text_transfer, text_demo
 from text_transfer.stage_prompt import StagePrompt
 from model_communication.model_communication import model_communication
 from model_communication.model_comm_langchain import ModelCommLangchain
+from dialog_box.dialog_box_debug import *
 
 import json
 import time 
@@ -386,26 +387,12 @@ class command_processor(QtCore.QThread):
             self.redAgent.set_commands(command_list)
         else:
             pass 
-
-class MyWidget_debug:
-    def __init__(self):
-        # 这个是用来隔离一下，单独debug一下main_loop的
-        self.timestep = 0
-        self.flag_order_renewed = False
-        self.order_now = "test"
-    
-    def get_status_str(self,status_str, timestep):
-        # 获取当前状态
-        pass
-
-    def reset_all(self, canshu=0):
-        # 重置所有状态
-        pass
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
     flag = 0
-    shishi_debug = MyWidget_debug()
+    # shishi_debug = MyWidget_debug()
+    shishi_debug = MyWidget_debug2()
     shishi = command_processor(shishi_debug)
     if flag == 0:
         shishi.main_loop()

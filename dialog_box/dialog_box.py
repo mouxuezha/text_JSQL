@@ -51,6 +51,9 @@ class MyWidget(QtWidgets.QWidget):
             self.step_num = step_num
             self.text.setText(status_str)
             self.step_signal.emit(step_num)
+    
+    def get_human_order(self):
+        return self.order_now
 
         
     @QtCore.Slot()
@@ -80,7 +83,7 @@ class MyWidget(QtWidgets.QWidget):
             self.button2.setText("开始")
         else:
             raise Exception("p_status error")
-        
+     
 if __name__ == "__main__":
     # 注意：这部分带了Qt的东西似乎不支持调试，只能直接运行，慎之。
     app = QtWidgets.QApplication([])
