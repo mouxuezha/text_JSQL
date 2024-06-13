@@ -9,3 +9,5 @@ dotenv
 httpx
 httpx-sse
 PyJWT
+openai
+dashscope
