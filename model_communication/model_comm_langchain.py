@@ -10,7 +10,7 @@ from langchain.chains.conversation.memory import ConversationSummaryMemory, Conv
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 
-from prompts import PROMPT_TEMPLATES
+from text_transfer.prompts import PROMPT_TEMPLATES
 
 
 CHAT_MODELS = {
@@ -48,7 +48,7 @@ MODEL_KWARGS = {
 
 class ModelCommLangchain():
     def __init__(self, model_name='qianfan'):
-        self.log_model_communication_name = r"log.txt"
+        self.log_model_communication_name = r"auto_test\log.txt"
         load_dotenv()
         chat_model = CHAT_MODELS[model_name](**MODEL_KWARGS[model_name])
         system_template = PROMPT_TEMPLATES['llm_chat']['embrace']

@@ -29,8 +29,10 @@ class command_processor(QtCore.QThread):
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt()
-        self.model_communication = model_communication()
+        self.LLM_model = "moon" # 这里可以改，默认是qianfan,还有智谱啥的
+        # self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
+        self.model_communication = ModelCommLangchain(model_name=self.LLM_model)
         # self.__init_dialog_box()
         self.dialog_box = dialog_box
         self.__init_env()
@@ -128,14 +130,14 @@ class command_processor(QtCore.QThread):
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
         
-        all_str = additional_str + status_str + detected_str + status_str_new + stage_str + "，请按照格式给出指令。" 
+        all_str = status_str + detected_str + status_str_new + stage_str +additional_str + "\n 请按照格式给出指令。" 
         # 把文本发给大模型，获取返回来的文本
         if status_str_new=="test":
             # 说明是在单独调试这个
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
-            # response_str = self.model_communication.communicate_with_model(all_str)
+            response_str = self.model_communication.communicate_with_model(all_str)
             # response_str = self.model_communication.communicate_with_model_single(all_str)
-            response_str = text_demo
+            # response_str = text_demo
         else:
             response_str = self.model_communication.communicate_with_model(all_str)
 
@@ -284,10 +286,16 @@ class command_processor(QtCore.QThread):
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
             if self.flag_fupan == False:
                 if self.timestep % 300 == 0:
+                    additional_str = ""
                     if self.timestep == 0:
-                        additional_str = self.the_embrace()
+                        # additional_str = self.the_embrace()            
+                        if self.LLM_model =="qianfan":
+                            # 只要思想肯滑坡，办法总比困难多。
+                            additional_str = self.the_embrace()            
+                        pass 
                     else:
-                        additional_str = ""
+                        pass
+                        # additional_str = ""
                     # # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
                     # additional_str = self.the_embrace()
                     self.run_one_step(additional_str=additional_str)
@@ -396,7 +404,7 @@ class MyWidget_debug:
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 1
+    flag = 0
     shishi_debug = MyWidget_debug()
     shishi = command_processor(shishi_debug)
     if flag == 0:
