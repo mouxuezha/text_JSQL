@@ -4,7 +4,7 @@ from agent_guize.enemy_AI.blue_agent import BlueAgent
 from agent_guize.me_AI.red_agent import RedAgent
 from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
-from text_transfer.text_transfer import text_transfer
+from text_transfer.text_transfer import text_transfer, text_demo
 from text_transfer.stage_prompt import StagePrompt
 from model_communication.model_communication import model_communication
 from model_communication.model_comm_langchain import ModelCommLangchain
@@ -12,7 +12,7 @@ from model_communication.model_comm_langchain import ModelCommLangchain
 import json
 import time 
 import argparse
-import sys 
+import sys,os,pickle
 
 from PySide6 import QtCore, QtWidgets, QtGui
 
@@ -38,6 +38,10 @@ class command_processor(QtCore.QThread):
         self.detected_state = {} # 这个是敌方的
         self.timestep = 0 
         self.flag_human_interact = False #这个用来标志当前时间步是否引入人类交互。
+
+        # 搞一个用来存复盘的东西。
+        self.fupan_pkl = {} # {timestep: {"command":command_list, "all_str":all_str, "response_str":response_str} }
+        self.flag_fupan = False # 用来标记当前是否在复盘。
         pass
     
     # def __init_dialog_box(self):
@@ -70,7 +74,31 @@ class command_processor(QtCore.QThread):
         self.red_deploy_location = self.runnig_location + r'\guize\reddeploy'
         self.blue_deploy_location = self.runnig_location + r'\guize\bluedeploy'
         # self.redAgent.set_deploy_folder(self.red_deploy_location)
-        # self.blueAgent.set_deploy_folder(self.blue_deploy_location)        
+        # self.blueAgent.set_deploy_folder(self.blue_deploy_location)
+
+    def add_fupan_info(self, time_step, command, all_str, response_str):
+        fupan_step = {"command":command, "all_str":all_str, "response_str":response_str}
+        self.fupan_pkl[time_step] = fupan_step
+
+    def save_fupan_info(self):
+        # 这么搞其实有风险，每存一次都会生成一个不一样的。但是先不管了
+        log_file = self.runnig_location + r'\auto_test_log' + str(0) + r'.pkl'
+        for i in range(114514): # 生成一个不会重复的文件名
+            if os.path.exists(log_file):
+                log_file = self.runnig_location + r'\auto_test_log' + str(i+1) + r'.pkl'
+            else:
+                break         
+        
+        # 然后把复盘信息存进去
+        pickle.dump(self.fupan_pkl, open(log_file, 'wb'))
+    
+    def load_fupan_info(self, log_file_name_relative):
+
+        # 读取特定的复盘文件。
+        log_file = self.runnig_location + log_file_name_relative
+        self.fupan_pkl = pickle.load(open(log_file, 'rb'))
+        pass
+
     
     def run(self):
         # 这个是Qthread要求实现的主循环
@@ -102,7 +130,8 @@ class command_processor(QtCore.QThread):
             # 说明是在单独调试这个
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
             # response_str = self.model_communication.communicate_with_model(all_str)
-            response_str = self.model_communication.communicate_with_model_single(all_str)
+            # response_str = self.model_communication.communicate_with_model_single(all_str)
+            response_str = text_demo
         else:
             response_str = self.model_communication.communicate_with_model(all_str)
 
@@ -182,7 +211,7 @@ class command_processor(QtCore.QThread):
 
         return self.flag_human_interact , command_str
     
-    def main_loop(self):
+    def main_loop(self,fupan_name=""):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
         self.timestep = 0 # 每个episode的步数
         log_file = auto_save_file_name(log_folder=r'auto_test')
@@ -226,6 +255,18 @@ class command_processor(QtCore.QThread):
         # # 先和大模型互动一波，讲讲规则什么的。
         # self.the_embrace()
 
+        # 如果是复盘就按照复盘模式跑，如果不是就按照正常的模式跑
+        if fupan_name != "":
+            # 先读取复盘文件
+            self.load_fupan_info(fupan_name)
+            # 然后改标志位
+            self.flag_fupan = True
+        else:
+            # 正常模式
+            self.flag_fupan = False
+            pass
+
+
         # 智能体与环境交互生成训练数据
         while True:
             self.env.SetRender(True) # 训练界面可视化：False --> 关闭
@@ -234,17 +275,20 @@ class command_processor(QtCore.QThread):
             self.flag_human_interact = False
 
             # 红蓝方智能体产生动作
-            act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
-            if self.timestep % 300 == 0:
-                if self.timestep == 0:
-                    additional_str = self.the_embrace()
+            # act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
+            if self.flag_fupan == False:
+                if self.timestep % 300 == 0:
+                    if self.timestep == 0:
+                        additional_str = self.the_embrace()
+                    else:
+                        additional_str = ""
+                    # # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
+                    # additional_str = self.the_embrace()
+                    self.run_one_step(additional_str=additional_str)
                 else:
-                    additional_str = ""
-                # # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
-                # additional_str = self.the_embrace()
-                self.run_one_step(additional_str=additional_str)
+                    self.run_one_step_shadow()
             else:
-                self.run_one_step_shadow()
+                self.run_one_step_fupan()
 
             act += redAgent.step(cur_redState)
             act += blueAgent.step(cur_blueState)
@@ -308,7 +352,22 @@ class command_processor(QtCore.QThread):
         # # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
         # self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
         return all_str
+    
+    def run_one_step_fupan(self):
+        timestep = self.timestep # 先把当前的timestep获取出来。
 
+        # 然后从复盘文件里面读。
+        if timestep in self.fupan_pkl:
+            # 那就是说明这一帧交互过了。
+            # 那就来一遍
+            all_str = self.fupan_pkl[timestep]["all_str"]
+            command_list = self.fupan_pkl[timestep]["command"]
+            response_str = self.fupan_pkl[timestep]["response_str"]
+
+            # 然后执行一遍
+            self.redAgent.set_commands(command_list)
+        else:
+            pass 
 
 class MyWidget_debug:
     def __init__(self):
