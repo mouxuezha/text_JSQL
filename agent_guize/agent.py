@@ -555,7 +555,7 @@ class Agent(object):
         # 然后该打的打完了，就继续move呗
         attacker_LLA = self.__get_LLA(attacker_ID)
         jvli = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
-                             attacker_LLA[0], attacker_LLA[1], attacker_LLA[2])  # 这里alt两个用成一样的，防止最后结束不了。
+                             attacker_LLA[0], attacker_LLA[1], target_LLA[2])  # 这里alt两个用成一样的，防止最后结束不了。
         if jvli > 10:
             # 那就是还没到，那就继续移动
             if self.abstract_state[attacker_ID]["flag_moving"] == False:
@@ -563,7 +563,8 @@ class Agent(object):
                 self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
                 self.abstract_state[attacker_ID]["flag_moving"] = True
             if (self.abstract_state[attacker_ID]["jvli"] == jvli) and (self.num>100):
-                self.__finish_abstract_state(attacker_ID)
+                # self.__finish_abstract_state(attacker_ID)
+                pass 
             else:
                 self.abstract_state[attacker_ID]["jvli"] = jvli
         else:
