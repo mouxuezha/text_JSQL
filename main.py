@@ -41,6 +41,7 @@ class command_processor(QtCore.QThread):
         self.detected_state = {} # 这个是敌方的
         self.timestep = 0 
         self.flag_human_interact = False #这个用来标志当前时间步是否引入人类交互。
+        self.human_order = "" # 这个用来常态化地存人类交互指令，以防人类意图只出现一帧就被盖了
 
         # 搞一个用来存复盘的东西。
         self.fupan_pkl = {} # {timestep: {"command":command_list, "all_str":all_str, "response_str":response_str} }
@@ -206,6 +207,7 @@ class command_processor(QtCore.QThread):
             
             # 把人类的命令读出来
             command_str = "现在我的具体意图是：" + self.dialog_box.order_now
+            self.human_order = command_str
 
             self.flag_human_interact = True
             # 外面不能直接用self.dialog_box.flag_order_renewed，因为服从于界面的逻辑，这个变量得重置
@@ -213,6 +215,7 @@ class command_processor(QtCore.QThread):
             self.dialog_box.reset_all(0.02)
         else:
             # 那就是窗口那头没有下过命令，那就先不管了
+            command_str = self.human_order
             pass
 
         # 然后还得把接收到的态势显示出来才行
