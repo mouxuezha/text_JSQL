@@ -10,7 +10,7 @@ class text_transfer(object):
         pass
 
     def status_to_text(self, status):
-        print("status_to_text unfinished yet,return a demo")
+        # print("status_to_text unfinished yet,return a demo")
         status_str = ""
         for obj_id in list(status.keys()):
             unit_status = status[obj_id]

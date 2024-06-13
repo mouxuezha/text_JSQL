@@ -92,9 +92,13 @@ class command_processor(QtCore.QThread):
         # 然后把复盘信息存进去
         pickle.dump(self.fupan_pkl, open(log_file, 'wb'))
     
-    def load_fupan_info(self, log_file_name_relative):
+    def load_fupan_info(self, log_file_name_relative:str):
 
         # 读取特定的复盘文件。
+        if log_file_name_relative.find('pkl') == -1:
+            log_file_name_relative = log_file_name_relative + r'.pkl'
+        if log_file_name_relative.find('\\') == -1:
+            log_file_name_relative = '\\' + log_file_name_relative
         log_file = self.runnig_location + log_file_name_relative
         self.fupan_pkl = pickle.load(open(log_file, 'rb'))
         pass
@@ -140,6 +144,8 @@ class command_processor(QtCore.QThread):
 
         # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
         self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
+
+        self.add_fupan_info(self.timestep, commands, all_str, response_str)
         
         pass
     
@@ -275,7 +281,7 @@ class command_processor(QtCore.QThread):
             self.flag_human_interact = False
 
             # 红蓝方智能体产生动作
-            # act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
+            act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
             if self.flag_fupan == False:
                 if self.timestep % 300 == 0:
                     if self.timestep == 0:
@@ -290,7 +296,7 @@ class command_processor(QtCore.QThread):
             else:
                 self.run_one_step_fupan()
 
-            act += redAgent.step(cur_redState)
+            # act += redAgent.step(cur_redState)
             act += blueAgent.step(cur_blueState)
 
             self.env.Step(Action = action)
@@ -334,6 +340,10 @@ class command_processor(QtCore.QThread):
                 # result = env.Terminal()
                 auto_save_overall(blueScore_str + '\n' + redScore_str, log_file=self.log_file)
                 break        
+        
+        if self.flag_fupan == False:
+            # 如果不是复盘状态，那就存一下
+            self.save_fupan_info()
         pass 
 
     def the_embrace(self):
@@ -386,6 +396,10 @@ class MyWidget_debug:
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
+    flag = 1
     shishi_debug = MyWidget_debug()
     shishi = command_processor(shishi_debug)
-    shishi.main_loop()
+    if flag == 0:
+        shishi.main_loop()
+    elif flag == 1:
+        shishi.main_loop(fupan_name=r"auto_test_log0")
