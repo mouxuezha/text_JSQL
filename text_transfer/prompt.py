@@ -6,12 +6,11 @@ from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, Sy
 # 以qianfan为例 写functioncall
 import qianfan
 import re
-
+#  使用方法 先调用  generate_prompt 生成 system prompt  之后LLM和后端平台展开多轮对话 调用generate_dialog 来将输入的态势简单封装一下
+#  之后就可以发给LLM了
 
 class PromptJSQL:
     def __init__(self):  
-
-
         #  以下这些只发送给LLM 一次
         self.role_template = """
         你是一个兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮和无人机等装备。这次陆战推演场景一共有{self.total_num}步，
@@ -24,7 +23,6 @@ class PromptJSQL:
             3.基于这些信息，你需要去判断我方装备需要执行哪些动作，这些动作包括集结、移动和开火。
             再次强调一下，我们的目标是夺取夺控点，也就是指挥我方装备机动到夺控点所在的坐标。 
         """
-        
         # 加入态势的垂直知识模板
         self.prompt_taishi_explain = {
             "detected_status": """
@@ -149,8 +147,6 @@ class PromptJSQL:
             敌方obj_id为MainBattleTank_ZTZ200_2的坦克位置在(2.68984,39.7)处 
             敌方obj_id为Infantry5的步兵位置在(2.68618,39.7006)处 
         """)
-
-
         # 这部分是给输出指令结果的例子
         self.output_example1 = """
         \n\n
@@ -196,7 +192,7 @@ class PromptJSQL:
         # 敌我双方部署点信息
         self.our_deploy_point = None
         self.enemy_deploy_point = None
-        self.prompt_template = #f"{instruction}\n\n{output_format}\n\n{examples}\n\n用户输入:\n__INPUT__"
+        #self.prompt_template = #f"{instruction}\n\n{output_format}\n\n{examples}\n\n用户输入:\n__INPUT__"
 
     # def _get_completion(self, prompt, model = "qianfan"):
     #     messages = [{"role": "user", "content": prompt}]
@@ -213,7 +209,7 @@ class PromptJSQL:
         add_prompt = add_prompt.replace("__OUR_STATUS_EXPLAIN__", our_status_explain)
         return add_prompt
     
-    def add_our_status(self, prompt, our_status):  # 传入prompt_taishi["our_status"]
+    def add_our_status(self, prompt, our_status):    # 传入prompt_taishi["our_status"]
         add_prompt = prompt.replace("__OUR_STATUS__", our_status)
         return add_prompt
     
@@ -239,20 +235,23 @@ class PromptJSQL:
         prompt_templates["sys_prompt"] =  self.role_template + self.cot_template 
         prompt_templates["background_prompt"] = self.prompt_background + self.prompt_map_background
         prompt_templates["parsestatus_prompt"] = self.add_detected_info_explain(self.prompt_taishi_explain["detected_status"], \
-                  self.input_example1,  self.prompt_detect_status_explain)
+                  self.input_example1,  self.prompt_detect_status_explain) + \
+                  self.add_our_info_explain(self.prompt_taishi_explain["our_status"] + \
+                  self.input_example1,  self.prompt_our_status_explain)
         prompt_templates["test_example"] = self.get_example_input_output(self.prompt_taishi_explain["our_status"], 
                 self.output_example1,   self.prompt_our_status_explain)
         prompt_templates["output_prompt"] = self.output_format + self.prompt_action_explain
 
         return prompt_templates
-        
-
-
+    def generate_dialog(self, our_status, detect_status):
+        dialog = self.add_our_status(our_status) + "\n\n" + self.add_enemy_status(detect_status)
+        return dialog
+    
     def run_prompt(self):
         pass
-
     def set_num(self, num):
         self.num = num      #用于设定当前是推演到第几帧
     def set_deploy_points(self, our_point, enemy_point):
         self.our_deploy_point = our_point
         self.enemy_deploy_point = enemy_point
+        
