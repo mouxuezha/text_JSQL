@@ -28,13 +28,13 @@ class MyWidget_debug2:
     def get_status_str(self,status_str, timestep):
         # 获取当前状态
         if timestep == 114:
-            self.order_now = "请命令步兵战车停止突击，掩护步兵前来汇合"
+            self.order_now = "请命令无人机向地图区域西南方向移动以敌情。"
             self.flag_order_renewed = True
-        elif timestep == 514 :
-            self.order_now = "请命令无人机探测西南方向敌情"
+        elif timestep == 333 :
+            self.order_now = "请命令步兵战车放下步兵，并向夺控点附近搜索前进"
             self.flag_order_renewed = True
         elif timestep == 2000:
-            self.order_now = "请命令我方单位进行适当分散部署，以防遭到打击。"
+            self.order_now = "请命令我方单位进行适当的移动以分散部署位置，以防遭到打击。"
             self.flag_order_renewed = True
         pass
 

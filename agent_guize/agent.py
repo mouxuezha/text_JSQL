@@ -284,7 +284,11 @@ class Agent(object):
                     abstract_state_new[attacker_ID] = self.abstract_state[attacker_ID]
                 except:
                     # 这个是用来处理新增加的单位的，主要是用于步兵上下车。
-                    abstract_state_new[attacker_ID] = {"abstract_state": "none"}
+                    # 设成跟随的似乎好点。先假设之前的跟随还好使。
+                    che_status = self.select_by_type("WheeledCmobatTruck")
+                    che_ID_list = list(che_status.keys())
+                    # abstract_state_new[attacker_ID] = {"abstract_state": "none"}
+                    self.set_follow_and_defend(attacker_ID,che_ID_list[0] )
             else:
                 # 下车之后的步兵在filtered_status有在abstract_state没有，得更新进去
                 abstract_state_new[attacker_ID] = {}
@@ -1800,14 +1804,51 @@ class Agent(object):
 
     def set_commands_single(self,comand_single):
         # 这个是真的要开始解析命令了。
+        obj_id = comand_single["obj_id"]
         if comand_single["type"] == "move":
             target_LLA = [comand_single['x'], comand_single['y'], 0 ] 
-            self.set_move_and_attack(comand_single["obj_id"],target_LLA)
+            if "WheeledCmobatTruck_ZB100" in obj_id:
+                # 说明是步战车，步战车要走接兵的逻辑。
+                for i in range(5): # 丑陋的字符串拼接操作，毫无通用性可言，鉴定为拉。
+                    if ("_"+str(i)) in obj_id:
+                        # 说明就是这个编号，
+                        bing_id = "Infantry" + str(i)
+                        self.set_charge_and_xiache(obj_id, bing_id, target_LLA)
+            elif "Infantry" in obj_id:
+                # 步兵的话就是前面一定步数不做行动，后面再做行动。或者说，正在等上车的话就不做行动。
+                for i in range(5): # 丑陋的字符串拼接操作，毫无通用性可言，鉴定为拉。
+                    if str(i) in obj_id:
+                        # 说明对应的是这个车。
+                        che_id = "WheeledCmobatTruck" + "_ZB100_"+str(i)
+                        if self.abstract_state[che_id]["abstract_state"] == "charge_and_xiache":
+                            self.set_none(obj_id)
+                        else:
+                            # 那就是说现在不需要上下车，那就冲。
+                            self.set_move_and_attack(obj_id, target_LLA)
+                    else:
+                        # 说明对应的不是这个车，那就无事发生。
+                        pass 
+            else:
+                # 除了车和步兵以外的情况，那就走呗，move。            
+                self.set_move_and_attack(obj_id, target_LLA)
              
         elif comand_single["type"] == "stop":
             self.set_open_fire(comand_single["obj_id"])
             # self.set_stop(comand_single["obj_id"])
             pass 
+        elif comand_single["type"] == "off_board":
+            # 这里要投机取巧了，不想新加抽象状态了，而是在当前抽象状态的基础上直接改变量。
+            if "WheeledCmobatTruck" in obj_id:
+                target_LLA = self.__get_LLA(obj_id)
+                if "next" in self.abstract_state[obj_id]:
+                    if self.abstract_state[obj_id]["next"]["abstract_state"] == "charge_and_xiache":
+                        # 另一种情况。其实这个应该是更广泛的情况。它在走，但是charge_and_xiache是在next里面。
+                        self.__finish_abstract_state(obj_id)
+                if self.abstract_state[obj_id]["abstract_state"] == "charge_and_xiache":
+                    # 改抽象状态，让它觉得现在可以下车了，从而实现下车。
+                    self.abstract_state[obj_id]["target_LLA"] = target_LLA
+                    self.abstract_state[obj_id]["flag_state"] = 3
+                
         else:
             raise Exception("undefined comand type in set_commands_single, G.")
         
