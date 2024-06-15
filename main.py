@@ -14,6 +14,7 @@ import json
 import time 
 import argparse
 import sys,os,pickle
+from importlib import import_module
 
 from PySide6 import QtCore, QtWidgets, QtGui
 
@@ -79,6 +80,57 @@ class command_processor(QtCore.QThread):
         self.blue_deploy_location = self.runnig_location + r'\guize\bluedeploy'
         # self.redAgent.set_deploy_folder(self.red_deploy_location)
         # self.blueAgent.set_deploy_folder(self.blue_deploy_location)
+    def get_agent_out(self,role="blue",location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\太初"):
+        # 这个是搞一个方便地装载外部agent的接口。从去年劳动竞赛的craft manager的基础上开发出来的。
+        if role == "blue":
+            blue_location = location + r'\python1\AI'
+            # blue_name = 'BlueAgent'
+            blue_name = 'blue_agent'
+            agent_out = self.import_certain_file(blue_location,blue_name)
+            self.blueAgent = agent_out.BlueAgent()
+        elif role == "red":
+            red_location = location + r'\python1\AI'
+            # red_name = 'RedAgent'
+            red_name = 'red_agent'
+            agent_out = self.import_certain_file(red_location,red_name)
+            self.redAgent = agent_out.RedAgent()    
+        # return agent_out
+        pass 
+
+    def import_certain_file(self, location, name):
+
+        # 行吧，用点阳间的方式。
+        # sys.path.append(location)
+        sys.path.insert(0, location)
+        try:
+            sys.path.append(location+ r"\AI")
+            # sys.path.insert(0, location+r"\AI")
+            try:
+                shishi = import_module(name=name)
+            except:
+                shishi = import_module(name="AI."+name)
+            del sys.path[0]
+            # del sys.path[-1]
+        except:
+            print("Craft_Manager: attention, other file included")
+            # sys.path.append(location + r"\AI")
+            # sys.path.append(location)
+            # sys.path.append(location + r"\agent")
+            sys.path.insert(0, location + r"\AI")
+            sys.path.insert(0, location)
+            sys.path.insert(0, location + r"\agent")
+            shishi = import_module(name=name)
+            # del sys.path[-1]
+            # del sys.path[-1]
+            # del sys.path[-1]
+            del sys.path[0]
+            del sys.path[0]
+            del sys.path[0]
+        del sys.path[0]
+        del sys.path[0]
+        del sys.path[-1]
+
+        return shishi
 
     def add_fupan_info(self, time_step, command, all_str, response_str):
         fupan_step = {"command":command, "all_str":all_str, "response_str":response_str}
@@ -393,11 +445,17 @@ class command_processor(QtCore.QThread):
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 0
+    flag = 2
     # shishi_debug = MyWidget_debug()
     shishi_debug = MyWidget_debug2()
     shishi = command_processor(shishi_debug)
     if flag == 0:
+        # 这个是单跑这个不跑dialog box，拟似人混，启动！
         shishi.main_loop()
     elif flag == 1:
+        # 这个是加载并运行特定复盘文件。
         shishi.main_loop(fupan_name=r"auto_test_log0")
+    elif flag == 2:
+        # 这个是加载特定的AI，然后再来运行。
+        shishi.get_agent_out(role="blue",location=r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\太初")
+        shishi.main_loop()

@@ -1820,11 +1820,15 @@ class Agent(object):
                     if str(i) in obj_id:
                         # 说明对应的是这个车。
                         che_id = "WheeledCmobatTruck" + "_ZB100_"+str(i)
-                        if self.abstract_state[che_id]["abstract_state"] == "charge_and_xiache":
-                            self.set_none(obj_id)
-                        else:
-                            # 那就是说现在不需要上下车，那就冲。
-                            self.set_move_and_attack(obj_id, target_LLA)
+                        try:
+                            if self.abstract_state[che_id]["abstract_state"] == "charge_and_xiache":
+                                self.set_none(obj_id)
+                            else:
+                                # 那就是说现在不需要上下车，那就冲。
+                                self.set_move_and_attack(obj_id, target_LLA)
+                        except:
+                            # 这里这个异常处理是为了防止复盘的时候跑出来的结果由于随机性导致不一样导致复盘命令变化
+                            pass 
                     else:
                         # 说明对应的不是这个车，那就无事发生。
                         pass 
