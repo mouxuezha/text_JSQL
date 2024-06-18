@@ -294,8 +294,16 @@ class PromptJSQL:
         
         """
 
+        # 这部分是给输入的例子
+        input_example1 = """
+
+        
+
+        """
+
+
         # 这部分是给输出指令结果的例子
-        output_examples = """
+        output_example1 = """
         \n\n
         1.  **当前阶段**： 当前是第300帧，处在早期阶段
         2.  **红方（我方）策略**： [向夺控点前进] 
@@ -366,11 +374,17 @@ class PromptJSQL:
         return add_prompt
     
     # background info 里面 
-    def background_info(self, background_info):
-        pass
+    def add_background_info(self, prompt, background_info):
+        return prompt+background_info
+
+    def get_example_input_output(self):
+        eg = """
+             下面是一个输入输出的例子，
 
 
-    # 
+        """
+
+
     def run_prompt(self):
         pass
 
