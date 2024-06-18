@@ -26,6 +26,9 @@ class MyWidget_debug2:
         self.order_now = ""
     
     def get_status_str(self,status_str, timestep):
+        # 这个是总开关
+        return 
+
         # 获取当前状态
         if timestep == 114:
             self.order_now = "请命令无人机向地图区域西南方向移动以敌情。"
@@ -36,6 +39,8 @@ class MyWidget_debug2:
         elif timestep == 2000:
             self.order_now = "请命令我方单位进行适当的移动以分散部署位置，以防遭到打击。"
             self.flag_order_renewed = True
+        
+        
         pass
 
     def get_human_order(self):

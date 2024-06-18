@@ -359,6 +359,10 @@ class command_processor(QtCore.QThread):
                     self.run_one_step_shadow()
             else:
                 self.run_one_step_fupan()
+            
+            if (self.timestep % 100 == 0) and (self.timestep>500):
+                # 每100步就存一下日志
+                self.text_transfer.get_num_commands()
 
             # act += redAgent.step(cur_redState)
             act += blueAgent.step(cur_blueState)
@@ -445,7 +449,7 @@ class command_processor(QtCore.QThread):
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 2
+    flag = 0
     # shishi_debug = MyWidget_debug()
     shishi_debug = MyWidget_debug2()
     shishi = command_processor(shishi_debug)

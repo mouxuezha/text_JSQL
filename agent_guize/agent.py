@@ -1780,7 +1780,7 @@ class Agent(object):
             self.set_circle(min2_ID, target_LLA, R=0.01)
 
     def set_commands(self, command_list:list):
-        print("set_commands: unfinished yet")
+        # print("set_commands: unfinished yet")
         # 首先把这些个command加入到queue里面去。增加一个键值对，当前时间。
         for comand_single in command_list:
             comand_single["step_num"] = self.num
@@ -1834,8 +1834,7 @@ class Agent(object):
                         pass 
             else:
                 # 除了车和步兵以外的情况，那就走呗，move。            
-                self.set_move_and_attack(obj_id, target_LLA)
-             
+                self.set_move_and_attack(obj_id, target_LLA)             
         elif comand_single["type"] == "stop":
             self.set_open_fire(comand_single["obj_id"])
             # self.set_stop(comand_single["obj_id"])
