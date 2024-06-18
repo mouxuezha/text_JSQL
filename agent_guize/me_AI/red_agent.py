@@ -178,7 +178,7 @@ class RedAgent(Agent):
             self.Inint_abstract_state(self.status)  # 别的先就地隐蔽起来
 
         # self.step1(status)
-        self.step1_1_1(status)
+        # self.step1_1_1(status)  # 为了搞大模型辅助，先把这个关了看看情况。
         # self.step1_2(status)
         # self.step1_3(status)
         # self.step1_4(status)

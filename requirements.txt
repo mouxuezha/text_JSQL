@@ -3,3 +3,10 @@ matplotlib
 pyside6
 xlrd
 qianfan
+langchain
+langchain_community
+httpx
+httpx-sse
+PyJWT
+openai
+dashscope

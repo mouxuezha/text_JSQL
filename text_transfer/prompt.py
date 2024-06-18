@@ -1,7 +1,7 @@
-from dotenv import load_dotenv
-load_dotenv()    #加载环境变量
-from langchain.prompts import PromptTemplates
-from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate
+# from dotenv import load_dotenv
+# load_dotenv()    #加载环境变量
+# from langchain.prompts import PromptTemplates
+# from langchain.prompts import ChatPromptTemplate, HumanMessagePromptTemplate, SystemMessagePromptTemplate
 # from langchain_community.llms import HuggingFaceHub
 # 以qianfan为例 写functioncall
 import qianfan
@@ -11,17 +11,26 @@ import re
 
 class PromptJSQL:
     def __init__(self):  
+
+        
+        self.chatcount = 0   # 用来控制对话轮数 
+        # 这个prompt template 需要修改 
+        self.total_num = 3000
+        self.num = 0 
+        # 敌我双方部署点信息
+        self.our_deploy_point = (2.59, 39.72)
+        self.enemy_deploy_point = (2.68984, 39.70)
         #  以下这些只发送给LLM 一次
-        self.role_template = """
+        self.role_template = f"""
         你是一个兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮和无人机等装备。这次陆战推演场景一共有{self.total_num}步，
         在每一步，我将告诉你敌我态势和地图相关信息，并由你来尝试生成作战指令。
         """ 
         self.cot_template = """
-            作为一个兵棋推演的红方玩家，我们的目标是在夺取蓝方防守的夺控点，并利用我方装备尽可能攻击蓝方算子。我们知道夺控点的坐标。
+            作为一个兵棋推演的红方玩家，我们的目标是在夺取蓝方防守的夺控点 坐标为（2.7100,39.7600），并利用我方装备尽可能攻击蓝方算子。我们知道夺控点的坐标。
             1.你需要清楚我方装备的当前位置，以及当前的推演帧
             2.你可以得到敌方装备的位置信息以及我方装备的位置信息，以及地图信息。
             3.基于这些信息，你需要去判断我方装备需要执行哪些动作，这些动作包括集结、移动和开火。
-            再次强调一下，我们的目标是夺取夺控点，也就是指挥我方装备机动到夺控点所在的坐标。 
+            再次强调一下，我们的目标是夺取夺控点，也就是指挥我方装备机动到夺控点所在的坐标（2.7100,39.7600）。 
         """
         # 加入态势的垂直知识模板
         self.prompt_taishi_explain = {
@@ -47,7 +56,7 @@ class PromptJSQL:
             """
         }
         # 提供一些地图的背景知识E
-        self.prompt_map_background = """
+        self.prompt_map_background = f"""
         \n\n
             地图的边界坐标为（2.60E, 39.85N）、(2.80E, 39.85N)、 (2.60E, 39.65N)、 (2.80E,39.65N) 我方（红方）的初始部署坐标为{self.our_deploy_point},敌方（蓝方）的初始部署坐标为{self.enemy_deploy_point}
             简单描述一下地图，地图西北方向为海洋，其余部分为陆地。陆地中间部分为山区，装备单位经过山区会由于坡度地形因素，导致行进速度减慢，
@@ -56,7 +65,7 @@ class PromptJSQL:
         """
         
         # 提供一些基础知识的背景 例如 装备的武力值 
-        self.prompt_background = """
+        self.prompt_background = f"""
         \n\n
             这里给出兵棋推演中的一些基本背景信息，包括装备编成、装备火力值、装备防御值、装备机动速度、装备射程等。你可以认为红蓝双方相同类型的装备具有相同的火力值、射程等参数。例如，红方坦克的射程为2500m，那么可以认为蓝方坦克的射程也为2500m。
             火力值反映了装备对敌方装备的打击毁伤能力，火力值越大，毁伤能力越强，数值表示相对大小。 装备防御值反映了装备对敌方攻击的防御能力，防御值越大，防御能力越强。
@@ -91,13 +100,15 @@ class PromptJSQL:
             - 集结指令(gather): [gather, obj_id, obj_id2] 表示我方装备obj_id1, obj_id2 向同一位置进发。
         \n\n
         """
-        self.output_format = """
+        self.output_format = f"""
         \n\n
         基于敌我双方的态势信息，选择一定的策略，并按以下形式输出
-        1.  **当前阶段**： 当前是第{self.num}帧，处在[推演阶段]，其中[推演阶段]的值为以下之一： <早期阶段>，<中期阶段>， <后期阶段>
-        2.  **红方（我方）策略**： [总体策略] ，其中[总体策略]的类型为以下之一：<向夺控点前进>、<远离敌方装备后退>、<向敌方左侧迂回>、<向敌方右侧迂回>
-        3.  **红方（我方）行动**： 对于我方每个装备单位，给出相应的行动指令，行动指令包括以下一种或者几种(冒号后为输出格式)：
-            - 机动指令(move): [move, obj_id, act] ， 其中obj_id 为string 类型，取值范围： 我方单位的ID； act为string类型，取值范围： <前进>，<后退>, <向左迂回>,<向右迂回>
+        1.  **当前阶段**： 当前是第{self.num}帧，处在[推演阶段]，其中[推演阶段]的值为以下之一： <早期阶段>，<中期阶段>， <后期阶段> 需要根据当前帧和总推演时长判断
+        2.  **红方（我方）策略**： [总体策略] ，其中[总体策略]的类型为以下之一：<向夺控点前进>、<远离敌方装备后退>、<向敌方左侧迂回>、<向敌方右侧迂回> 
+        3.  **红方（我方）行动**： 对于我方每个装备单位（注意只给前一叙述中提到的我方单位），先给出和其最近的敌方装备和坐标，并计算距离：
+            - 最近的敌方单位是 [最近的敌方单位id]  坐标是[敌方单位lat lon] 与我方单位的距离是 [利用lat 和 lon 这两个经纬度计算的距离]
+              再给出相应的行动指令，行动指令包括以下一种或者几种(冒号后为输出格式)：
+            - 机动指令(move): [move, obj_id, act] ， 其中obj_id 为string 类型，取值范围： 当前还存在的我方单位的ID； act为string类型，取值范围： <前进>，<后退>, <向左迂回>,<向右迂回>
             - 开火指令(fire): [fire, obj_id] ，其中obj_id 为string 类型，取值范围： 我方单位的ID；
             - 停止指令(stop): [stop, obj_id] ，其中obj_id 为string 类型，取值范围： 我方单位的ID；
             - 集结指令(gather): [gather, obj_id, obj_id2, obj_id3],其中obj_id、obj_id2为string 类型，取值范围： 我方单位的ID；
@@ -112,7 +123,7 @@ class PromptJSQL:
         
         """
         # 这部分是给输入的例子
-        self.input_example1 = """
+        self.input_example1 = f"""
         \n\n 
         1. **当前是{self.num}帧
         2. **当前红方（我方）装备的位置信息是
@@ -148,9 +159,9 @@ class PromptJSQL:
             敌方obj_id为Infantry5的步兵位置在(2.68618,39.7006)处 
         """)
         # 这部分是给输出指令结果的例子
-        self.output_example1 = """
+        self.output_example1 = f"""
         \n\n
-        1.  **当前阶段**： 当前是第300帧，处在早期阶段
+        1.  **当前阶段**： 当前是第300帧，处在早期阶段,
         2.  **红方（我方）策略**： [向夺控点前进] 
         3.  **红方（我方）行动**： 
                 [move, ArmoredTruck_ZTL100_0, 前进]
@@ -185,13 +196,6 @@ class PromptJSQL:
 
         """
 
-        self.chatcount = 0   # 用来控制对话轮数 
-        # 这个prompt template 需要修改 
-        self.total_num = 3000
-        self.num = 0 
-        # 敌我双方部署点信息
-        self.our_deploy_point = None
-        self.enemy_deploy_point = None
         #self.prompt_template = #f"{instruction}\n\n{output_format}\n\n{examples}\n\n用户输入:\n__INPUT__"
 
     # def _get_completion(self, prompt, model = "qianfan"):
@@ -221,14 +225,14 @@ class PromptJSQL:
     def add_background_info(self, prompt, background_info):
         return prompt+background_info
 
-    def get_example_input_output(self):
-        return  """
+    def get_example_input_output(self, input1, output1):
+        return  f"""
              下面是一个输入输出的例子，输入是当前敌我双方的态势信息：
              ----example input-----
-             {self.input_example1}
+             {input1}
              经过推理后，输出我方各装备下一步的指令动作：
              ----example output----
-             {self.output_example1}
+             {output1}
         """
     def generate_prompt(self):
         prompt_templates = dict()
@@ -236,10 +240,10 @@ class PromptJSQL:
         prompt_templates["background_prompt"] = self.prompt_background + self.prompt_map_background
         prompt_templates["parsestatus_prompt"] = self.add_detected_info_explain(self.prompt_taishi_explain["detected_status"], \
                   self.input_example1,  self.prompt_detect_status_explain) + \
-                  self.add_our_info_explain(self.prompt_taishi_explain["our_status"] + \
+                  self.add_our_info_explain(self.prompt_taishi_explain["our_status"] , 
                   self.input_example1,  self.prompt_our_status_explain)
-        prompt_templates["test_example"] = self.get_example_input_output(self.prompt_taishi_explain["our_status"], 
-                self.output_example1,   self.prompt_our_status_explain)
+        prompt_templates["test_example"] = self.get_example_input_output(self.input_example1, 
+                self.output_example1)
         prompt_templates["output_prompt"] = self.output_format + self.prompt_action_explain
 
         return prompt_templates

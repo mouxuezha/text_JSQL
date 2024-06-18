@@ -7,7 +7,7 @@ import os
 class model_communication():
     def __init__(self):
         
-        self.log_model_communication_name = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\text_JSQL\model_communication\log.txt"
+        self.log_model_communication_name = r"model_communication\log.txt"
         self.__init_AKSK()
         pass
 
@@ -16,8 +16,8 @@ class model_communication():
         # print("model_communication: using qianfan")
         self.save_txt("model_communication: using qianfan")
         # 通过环境变量传递（作用于全局，优先级最低）
-        self.qianfan_access_key = self.load_txt(r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\text_JSQL\model_communication\AK.txt")
-        self.qianfan_security_key = self.load_txt(r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\text_JSQL\model_communication\SK.txt")
+        self.qianfan_access_key = self.load_txt(r"model_communication\AK.txt")
+        self.qianfan_security_key = self.load_txt(r"model_communication\SK.txt")
         os.environ["QIANFAN_ACCESS_KEY"] = self.qianfan_access_key
         os.environ["QIANFAN_SECRET_KEY"] = self.qianfan_security_key
         self.chat_comp = qianfan.ChatCompletion()
@@ -40,6 +40,21 @@ class model_communication():
    
         return resp_str
     
+    def communicate_with_model_debug(self,message):
+        # 这个是加载一段用于测试的东西
+        # 勤俭持家，能节约一点token就节约一点token。
+        text_demo = "好的，按照你的格式给出作战指令：1. [move, ArmoredTruck_ZTL100_0, x=2.59, y=39.72], 移动我方无人战车ArmoredTruck_ZTL100_0到(2.59,39.72)处。2. [move, ArmoredTruck_ZTL100_1, x=2.59, y=39.72], 移动我方无人战车ArmoredTruck_ZTL100_1到(2.59,39.72)处。3. [move, Howitzer_C100_0, x=2.59, y=39.72], 移动我方自行迫榴炮Howitzer_C100_0到(2.59,39.72)处。4. [move, Infantry0, x=2.59, y=39.72], 移动我方步兵Infantry0到(2.59,39.72)处。5. [move, Infantry1, x=2.59, y=39.72], 移动我方步兵Infantry1到(2.59,39.72)处。6. [move, MainBattleTank_ZTZ100_0, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_0到(2.59,39.72)处。7. [move, MainBattleTank_ZTZ100_1, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_1到(2.59,39.72)处。8. [move, MainBattleTank_ZTZ100_2, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_2到(2.59,39.72)处。9. [move, MainBattleTank_ZTZ100_3, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_3到(2.59,39.72)处。10. [move, ShipboardCombat_plane0, x=2.59, y=39.72], 移动我方无人机ShipboardCombat_plane0到(2.59,39.72)处。...接下来的指令按照上述格式，给出每一步行动的指令..."
+        return text_demo
+    
+    def communicate_with_model_single(self,message):
+        # 由于文心有长度限制，连续走多轮调用会报错，所以这里采取一个丑陋的变通处理，每一步都只输入initiate和当前态势，重开一个序列。
+        self.__init_AKSK()
+        try:
+            resp_str = self.communicate_with_model(message)
+        except:
+            resp_str = "文心寄了，下一轮看运气罢。"
+        return resp_str
+
     def load_txt(self,file_name):
         # 单纯的读取txt文件，主要是用来读那些key的。
         
