@@ -31,7 +31,7 @@ class command_processor(QtCore.QThread):
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt()
-        self.LLM_model = "moon" # 这里可以改，默认是qianfan,还有智谱啥的
+        self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
         self.model_communication = ModelCommLangchain(model_name=self.LLM_model)
@@ -133,8 +133,9 @@ class command_processor(QtCore.QThread):
         return shishi
 
     def add_fupan_info(self, time_step, command, all_str, response_str):
-        fupan_step = {"command":command, "all_str":all_str, "response_str":response_str}
-        self.fupan_pkl[time_step] = fupan_step
+        fupan_step_single = {"command":command, "all_str":all_str, "response_str":response_str}
+
+        self.fupan_pkl[time_step]=fupan_step_single
 
     def save_fupan_info(self):
         # 这么搞其实有风险，每存一次都会生成一个不一样的。但是先不管了
@@ -360,7 +361,8 @@ class command_processor(QtCore.QThread):
             else:
                 self.run_one_step_fupan()
             
-            if (self.timestep % 100 == 0) and (self.timestep>500):
+            # 其实只有非复盘状态下这个才有意义，否则0除以0了
+            if (self.timestep % 100 == 0) and (self.timestep>500) and (self.flag_fupan == False):
                 # 每100步就存一下日志
                 self.text_transfer.get_num_commands()
 
@@ -449,16 +451,16 @@ class command_processor(QtCore.QThread):
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 0
-    # shishi_debug = MyWidget_debug()
-    shishi_debug = MyWidget_debug2()
+    flag = 1
+    shishi_debug = MyWidget_debug() # 无人干预
+    # shishi_debug = MyWidget_debug2() # 模拟有人干预
     shishi = command_processor(shishi_debug)
     if flag == 0:
         # 这个是单跑这个不跑dialog box，拟似人混，启动！
         shishi.main_loop()
     elif flag == 1:
         # 这个是加载并运行特定复盘文件。
-        shishi.main_loop(fupan_name=r"auto_test_log0")
+        shishi.main_loop(fupan_name=r"auto_test_log1")
     elif flag == 2:
         # 这个是加载特定的AI，然后再来运行。
         shishi.get_agent_out(role="blue",location=r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\太初")

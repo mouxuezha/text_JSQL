@@ -25,6 +25,7 @@ class StagePrompt:
 
     def get_stage_prompt(self, time_step):
         # 先确定一下当前的阶段，然后根据阶段生成一些prompt
+        self.get_stage_now(time_step)
         prompt = "当前时间步长为" + str(time_step) + "，"
         if self.stage_now == "机动":
             prompt = prompt+ "请命令各单位优先向夺控点方向搜索前进，无人机探测夺控点附近"
