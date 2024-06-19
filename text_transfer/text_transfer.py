@@ -252,7 +252,8 @@ class text_transfer(object):
         pass 
 
 
-
+    # 这里解析指令这里得加点东西  现在这个 只能识别出来个别指令  输出比较固定  
+    # 补充一个只给大方向的版本
     def text_to_commands(self, text:str):
         
         commands = []

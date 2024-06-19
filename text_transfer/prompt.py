@@ -100,19 +100,24 @@ class PromptJSQL:
             - 集结指令(gather): [gather, obj_id, obj_id2] 表示我方装备obj_id1, obj_id2 向同一位置进发。
         \n\n
         """
+       
+        #### ，先给出和其最近的敌方装备和坐标，并计算距离：
+        ####     - 最近的敌方单位是 [最近的敌方单位id]  坐标是[敌方单位lat lon] 与我方单位的距离是 [利用lat 和 lon 这两个经纬度计算的距离（注意要调用经纬度的计算而不是欧式距离，忽略高程）]
+
+
+
         self.output_format = f"""
         \n\n
         基于敌我双方的态势信息，选择一定的策略，并按以下形式输出
         1.  **当前阶段**： 当前是第{self.num}帧，处在[推演阶段]，其中[推演阶段]的值为以下之一： <早期阶段>，<中期阶段>， <后期阶段> 需要根据当前帧和总推演时长判断
         2.  **红方（我方）策略**： [总体策略] ，其中[总体策略]的类型为以下之一：<向夺控点前进>、<远离敌方装备后退>、<向敌方左侧迂回>、<向敌方右侧迂回> 
-        3.  **红方（我方）行动**： 对于我方每个装备单位（注意只给前一叙述中提到的我方单位），先给出和其最近的敌方装备和坐标，并计算距离：
-            - 最近的敌方单位是 [最近的敌方单位id]  坐标是[敌方单位lat lon] 与我方单位的距离是 [利用lat 和 lon 这两个经纬度计算的距离（注意要调用经纬度的计算而不是欧式距离，忽略高程）]
+        3.  **红方（我方）行动**： 对于我方每个装备单位（注意只给前一叙述中提到的我方单位）
               再给出相应的行动指令，行动指令包括以下一种或者几种(冒号后为输出格式)：
             - 机动指令(move): [move, obj_id, act] ， 其中obj_id 为string 类型，取值范围： 当前还存在的我方单位的ID； act为string类型，取值范围： <前进>，<后退>, <向左迂回>,<向右迂回>
             - 开火指令(fire): [fire, obj_id] ，其中obj_id 为string 类型，取值范围： 我方单位的ID；
             - 停止指令(stop): [stop, obj_id] ，其中obj_id 为string 类型，取值范围： 我方单位的ID；
             - 集结指令(gather): [gather, obj_id, obj_id2, obj_id3],其中obj_id、obj_id2为string 类型，取值范围： 我方单位的ID；
-            请按上述格式输出指令，不能输出值为null。
+            请按上述格式输出指令，不能输出值为null。 同时一句话解释生成该指令的原因。
         4.  **态势分析**： 给出我方下一步采用什么策略。
         \n\n
         """
@@ -164,13 +169,16 @@ class PromptJSQL:
         1.  **当前阶段**： 当前是第300帧，处在早期阶段,
         2.  **红方（我方）策略**： [向夺控点前进] 
         3.  **红方（我方）行动**： 
+            -我方ArmoredTruck_ZTL100_0和ArmoredTruck_ZTL100_1作为快速反应单位，向夺控点方向快速前进。
                 [move, ArmoredTruck_ZTL100_0, 前进]
                 [move, ArmoredTruck_ZTL100_1, 前进]
+            -我方坦克MainBattleTank_ZTZ100_0、MainBattleTank_ZTZ100_1、MainBattleTank_ZTZ100_2和MainBattleTank_ZTZ100_3继续向夺控点前进：
                 [fire, MainBattleTank_ZTZ100_0]
                 [fire, MainBattleTank_ZTZ100_1]
                 [move, MainBattleTank_ZTZ100_1, 前进]
                 [move, MainBattleTank_ZTZ100_2, 前进]
                 [stop, MainBattleTank_ZTZ100_3]
+            - 我方WheeledCmobatTruck_ZB100_0和WheeledCmobatTruck_ZB100_1向夺控点方向前进，同时注意避开敌方可能的火力
                 [move, WheeledCmobatTruck_ZB100_0, 向右迂回]
                 [move, WheeledCmobatTruck_ZB100_1, 向左迂回]
                 [gather, Infantry0, Infantry1 ]
