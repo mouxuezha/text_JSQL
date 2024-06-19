@@ -10,11 +10,13 @@ class StagePrompt:
 
     def get_stage_now(self, time_step):
         # 根据当前帧数判断是什么阶段，突出一个怎么快怎么来。
-        if time_step < 1000:
+        if time_step < 400:
             self.stage_now = "机动"
-        elif time_step < 2000:
+        elif time_step <700:
+            self.stage_now = "侦察"
+        elif time_step < 1500:
             self.stage_now = "交战"
-        elif time_step < 3000:
+        elif time_step < 2999:
             self.stage_now = "夺控"
         else:
             self.stage_now = "机动"
@@ -25,11 +27,13 @@ class StagePrompt:
         # 先确定一下当前的阶段，然后根据阶段生成一些prompt
         prompt = "当前时间步长为" + str(time_step) + "，"
         if self.stage_now == "机动":
-            prompt = prompt+ "请保持警惕，并命令各单位优先向夺控点搜索前进。"
+            prompt = prompt+ "请命令各单位优先向夺控点方向搜索前进，无人机探测夺控点附近"
         elif self.stage_now == "交战":
             prompt = prompt+  "请命令各单位占据有利地形、形成有利阵型，有效打击敌人。"
         elif self.stage_now == "夺控":
-            prompt = prompt+  "请命令各单位迅速向夺控点(2.68,39.74)前进，并清缴夺控点周围敌人。"
+            prompt = prompt+  "请命令各单位迅速向夺控点前进，并清缴夺控点周围敌人。"
+        elif self.stage_now == "侦察":
+            prompt = prompt+  "请命令坦克停止前进，步兵下车，并命令无人机移动到东南方向移动以探查敌情"
         
         return prompt
         

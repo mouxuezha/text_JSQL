@@ -8,11 +8,13 @@ from text_transfer.text_transfer import text_transfer, text_demo
 from text_transfer.stage_prompt import StagePrompt
 from model_communication.model_communication import model_communication
 from model_communication.model_comm_langchain import ModelCommLangchain
+from dialog_box.dialog_box_debug import *
 
 import json
 import time 
 import argparse
 import sys,os,pickle
+from importlib import import_module
 
 from PySide6 import QtCore, QtWidgets, QtGui
 
@@ -29,8 +31,10 @@ class command_processor(QtCore.QThread):
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt()
-        self.model_communication = model_communication()
+        self.LLM_model = "moon" # 这里可以改，默认是qianfan,还有智谱啥的
+        # self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
+        self.model_communication = ModelCommLangchain(model_name=self.LLM_model)
         # self.__init_dialog_box()
         self.dialog_box = dialog_box
         self.__init_env()
@@ -38,6 +42,7 @@ class command_processor(QtCore.QThread):
         self.detected_state = {} # 这个是敌方的
         self.timestep = 0 
         self.flag_human_interact = False #这个用来标志当前时间步是否引入人类交互。
+        self.human_order = "" # 这个用来常态化地存人类交互指令，以防人类意图只出现一帧就被盖了
 
         # 搞一个用来存复盘的东西。
         self.fupan_pkl = {} # {timestep: {"command":command_list, "all_str":all_str, "response_str":response_str} }
@@ -75,6 +80,57 @@ class command_processor(QtCore.QThread):
         self.blue_deploy_location = self.runnig_location + r'\guize\bluedeploy'
         # self.redAgent.set_deploy_folder(self.red_deploy_location)
         # self.blueAgent.set_deploy_folder(self.blue_deploy_location)
+    def get_agent_out(self,role="blue",location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\太初"):
+        # 这个是搞一个方便地装载外部agent的接口。从去年劳动竞赛的craft manager的基础上开发出来的。
+        if role == "blue":
+            blue_location = location + r'\python1\AI'
+            # blue_name = 'BlueAgent'
+            blue_name = 'blue_agent'
+            agent_out = self.import_certain_file(blue_location,blue_name)
+            self.blueAgent = agent_out.BlueAgent()
+        elif role == "red":
+            red_location = location + r'\python1\AI'
+            # red_name = 'RedAgent'
+            red_name = 'red_agent'
+            agent_out = self.import_certain_file(red_location,red_name)
+            self.redAgent = agent_out.RedAgent()    
+        # return agent_out
+        pass 
+
+    def import_certain_file(self, location, name):
+
+        # 行吧，用点阳间的方式。
+        # sys.path.append(location)
+        sys.path.insert(0, location)
+        try:
+            sys.path.append(location+ r"\AI")
+            # sys.path.insert(0, location+r"\AI")
+            try:
+                shishi = import_module(name=name)
+            except:
+                shishi = import_module(name="AI."+name)
+            del sys.path[0]
+            # del sys.path[-1]
+        except:
+            print("Craft_Manager: attention, other file included")
+            # sys.path.append(location + r"\AI")
+            # sys.path.append(location)
+            # sys.path.append(location + r"\agent")
+            sys.path.insert(0, location + r"\AI")
+            sys.path.insert(0, location)
+            sys.path.insert(0, location + r"\agent")
+            shishi = import_module(name=name)
+            # del sys.path[-1]
+            # del sys.path[-1]
+            # del sys.path[-1]
+            del sys.path[0]
+            del sys.path[0]
+            del sys.path[0]
+        del sys.path[0]
+        del sys.path[0]
+        del sys.path[-1]
+
+        return shishi
 
     def add_fupan_info(self, time_step, command, all_str, response_str):
         fupan_step = {"command":command, "all_str":all_str, "response_str":response_str}
@@ -128,14 +184,14 @@ class command_processor(QtCore.QThread):
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
         
-        all_str = additional_str + status_str + detected_str + status_str_new + stage_str + "，请按照格式给出指令。" 
+        all_str = status_str + detected_str + status_str_new + stage_str +additional_str + "\n 请按照格式给出指令。" 
         # 把文本发给大模型，获取返回来的文本
         if status_str_new=="test":
             # 说明是在单独调试这个
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
-            # response_str = self.model_communication.communicate_with_model(all_str)
+            response_str = self.model_communication.communicate_with_model(all_str)
             # response_str = self.model_communication.communicate_with_model_single(all_str)
-            response_str = text_demo
+            # response_str = text_demo
         else:
             response_str = self.model_communication.communicate_with_model(all_str)
 
@@ -203,6 +259,7 @@ class command_processor(QtCore.QThread):
             
             # 把人类的命令读出来
             command_str = "现在我的具体意图是：" + self.dialog_box.order_now
+            self.human_order = command_str
 
             self.flag_human_interact = True
             # 外面不能直接用self.dialog_box.flag_order_renewed，因为服从于界面的逻辑，这个变量得重置
@@ -210,6 +267,7 @@ class command_processor(QtCore.QThread):
             self.dialog_box.reset_all(0.02)
         else:
             # 那就是窗口那头没有下过命令，那就先不管了
+            command_str = self.human_order
             pass
 
         # 然后还得把接收到的态势显示出来才行
@@ -284,10 +342,16 @@ class command_processor(QtCore.QThread):
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
             if self.flag_fupan == False:
                 if self.timestep % 300 == 0:
+                    additional_str = ""
                     if self.timestep == 0:
-                        additional_str = self.the_embrace()
+                        # additional_str = self.the_embrace()            
+                        if self.LLM_model =="qianfan":
+                            # 只要思想肯滑坡，办法总比困难多。
+                            additional_str = self.the_embrace()            
+                        pass 
                     else:
-                        additional_str = ""
+                        pass
+                        # additional_str = ""
                     # # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
                     # additional_str = self.the_embrace()
                     self.run_one_step(additional_str=additional_str)
@@ -295,6 +359,10 @@ class command_processor(QtCore.QThread):
                     self.run_one_step_shadow()
             else:
                 self.run_one_step_fupan()
+            
+            if (self.timestep % 100 == 0) and (self.timestep>500):
+                # 每100步就存一下日志
+                self.text_transfer.get_num_commands()
 
             # act += redAgent.step(cur_redState)
             act += blueAgent.step(cur_blueState)
@@ -378,28 +446,20 @@ class command_processor(QtCore.QThread):
             self.redAgent.set_commands(command_list)
         else:
             pass 
-
-class MyWidget_debug:
-    def __init__(self):
-        # 这个是用来隔离一下，单独debug一下main_loop的
-        self.timestep = 0
-        self.flag_order_renewed = False
-        self.order_now = "test"
-    
-    def get_status_str(self,status_str, timestep):
-        # 获取当前状态
-        pass
-
-    def reset_all(self, canshu=0):
-        # 重置所有状态
-        pass
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 1
-    shishi_debug = MyWidget_debug()
+    flag = 0
+    # shishi_debug = MyWidget_debug()
+    shishi_debug = MyWidget_debug2()
     shishi = command_processor(shishi_debug)
     if flag == 0:
+        # 这个是单跑这个不跑dialog box，拟似人混，启动！
         shishi.main_loop()
     elif flag == 1:
+        # 这个是加载并运行特定复盘文件。
         shishi.main_loop(fupan_name=r"auto_test_log0")
+    elif flag == 2:
+        # 这个是加载特定的AI，然后再来运行。
+        shishi.get_agent_out(role="blue",location=r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\太初")
+        shishi.main_loop()
