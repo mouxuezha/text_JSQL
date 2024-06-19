@@ -5,7 +5,6 @@ xlrd
 qianfan
 langchain
 langchain_community
-dotenv
 httpx
 httpx-sse
 PyJWT
