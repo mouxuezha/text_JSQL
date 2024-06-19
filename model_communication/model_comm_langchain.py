@@ -108,6 +108,15 @@ class ModelCommLangchain():
             f.write(neirong+"\n")
         return
     
+    def get_tokens(self):
+        # 获取token数
+        token_all = 0 
+        for output_token in self.history_output_tokens:
+            token_all = token_all + output_token
+        str_buffer ="==========当前模型为" + self.model_name + "，当前token数为" + str(token_all)
+        self.save_txt(str_buffer)
+        print(str_buffer)
+        
 if __name__ == '__main__':
     communication = ModelCommLangchain(model_name='qianfan')
     # communication = ModelCommLangchain(model_name='moon')

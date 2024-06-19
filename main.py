@@ -31,7 +31,7 @@ class command_processor(QtCore.QThread):
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt()
-        self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
+        self.LLM_model = "qwen" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
         self.model_communication = ModelCommLangchain(model_name=self.LLM_model)
@@ -363,7 +363,8 @@ class command_processor(QtCore.QThread):
             
             # 其实只有非复盘状态下这个才有意义，否则0除以0了
             if (self.timestep % 100 == 0) and (self.timestep>500) and (self.flag_fupan == False):
-                # 每100步就存一下日志
+                # 每100步就看看成色
+                self.model_communication.get_tokens()
                 self.text_transfer.get_num_commands()
 
             # act += redAgent.step(cur_redState)
@@ -451,7 +452,7 @@ class command_processor(QtCore.QThread):
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 1
+    flag = 0
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     shishi = command_processor(shishi_debug)
@@ -460,7 +461,7 @@ if __name__ == "__main__":
         shishi.main_loop()
     elif flag == 1:
         # 这个是加载并运行特定复盘文件。
-        shishi.main_loop(fupan_name=r"auto_test_log1")
+        shishi.main_loop(fupan_name=r"auto_test_log0")
     elif flag == 2:
         # 这个是加载特定的AI，然后再来运行。
         shishi.get_agent_out(role="blue",location=r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\太初")
