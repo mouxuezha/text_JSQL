@@ -1,13 +1,81 @@
 # 这个用来实现“JSON态势转化成文本态势”，以及约定一些命令的信息
 
 # 需要约定一下命令格式了。
-
+import math
 import json
 class text_transfer(object):
     def __init__(self) -> None:
         self.command_type_list = ["move", "stop", "off_board"]
         self.type_transfer = type_transfer() 
-        pass
+        self.ed_lat,  self.ed_lon =  39.70, 2.68984
+        self.tar_lat, self.tar_lon = 39.7600, 2.7100
+    def LLA2XYZ(self, lon, lat, alt):
+        Earthe = 0.0818191908426
+        Radius_Earth = 6378140.0
+        PI = 3.14159265358979
+        deg2rad = PI / 180.0
+        lat = lat * deg2rad
+        lon = lon * deg2rad
+        omge = 0.99330562000987
+        d = Earthe * math.sin(lat)
+        n = Radius_Earth / math.sqrt(1 - math.pow(d, 2))
+        nph = n + alt
+        x = nph * math.cos(lat) * math.cos(lon)
+        y = nph * math.cos(lat) * math.sin(lon)
+        z = (omge * n + alt) * math.sin(lat)
+        return x, y, z
+
+    def XYZ2LLA(self, x, y, z):
+        Radius_Earth = 6378140
+        Oblate_Earth = 1.0 / 298.257
+        a = Radius_Earth
+        b = a * (1 - Oblate_Earth)
+        e = math.sqrt(1 - math.pow(b / a, 2))
+        x2 = x * x
+        y2 = y * y
+        root = math.sqrt(x2 + y2)
+        e2 = e * e
+        error = 1.0
+        d = 0.0
+        B = 0.0
+        H = 0.0
+        eps = 1e-10
+        PI = 3.14159265358979
+        deg2rad = PI / 180.0
+        rad2deg = 180.0 / PI
+
+        while error >= eps:
+            temp = d
+            B = math.atan(z / root / (1 - d))
+            sin2B = math.sin(B) * math.sin(B)
+            N = a / math.sqrt(1 - e2 * sin2B)
+            H = root / math.cos(B) - N
+            d = N * e2 / (N + H)
+            error = abs(d - temp)
+        lat = B
+        alt = H
+        temp = math.atan(y / x)
+        if x >= 0:
+            lon = temp
+        elif ((x < 0) and (y >= 0)):
+            lon = PI + temp
+        else:
+            lon = temp - PI
+        lat = lat * rad2deg
+        lon = lon * rad2deg
+        alt = alt
+        return lon, lat, alt
+
+    def distance(self, lon1, lat1, alt1, lon2, lat2, alt2):
+        x1, y1, z1 = self.LLA2XYZ(lon1, lat1, alt1)
+        x2, y2, z2 = self.LLA2XYZ(lon2, lat2, alt2)
+        x2tox1 = x2 - x1
+        y2toy1 = y2 - y1
+        z2toz1 = z2 - z1
+        distance = math.sqrt(x2tox1 * x2tox1 + y2toy1 * y2toy1 + z2toz1 * z2toz1)
+        return distance
+
+
 
     def status_to_text(self, status):
         # print("status_to_text unfinished yet,return a demo")
@@ -43,6 +111,102 @@ class text_transfer(object):
         print(detected_str)
         return detected_str
         pass 
+
+    #  把态势翻译成人话
+    def turn_taishi_to_renhua(self, status, detected_state):
+        our_status = dict()
+        for obj_id in list(status.keys()):
+            unit_status = status[obj_id]
+            lon = round(unit_status["VehicleState"]["lon"], 5) 
+            lat = round(unit_status["VehicleState"]["lat"], 5)
+            alt = round(unit_status["VehicleState"]["alt"], 5)
+            unit_type_zhongwen = self.type_transfer.unit_type_transfer(unit_status["UnitType"])
+            if unit_type_zhongwen == "其他":
+                # 什么BMC3那些就别拿进来了
+                continue
+            else:
+                our_status[obj_id] = {"type": unit_type_zhongwen, "lon": lon, "lat":lat, "alt": alt}
+        detect_state = dict()
+        for obj_id in list(detected_state.keys()):
+            detected_status = detected_state[obj_id]
+            lon = detected_status["targetLon"]
+            lat = detected_status["targetLat"]
+            alt = detected_status["targetAlt"]
+            detected_type_zhongwen = self.type_transfer.unit_type_transfer(detected_status["unitType"])
+            if detected_type_zhongwen == "其他":
+                continue
+            else:
+                detect_state[obj_id] = {"type": detected_type_zhongwen, "lon":lon, "lat":lat, "alt":alt}
+        # 怎么翻译成人话  从哪些角度翻译
+        # 这几个点吧  主力位置 敌方集群向哪个方向移动  是主力还是啥  意图可能是啥  都有啥装备  我方大概需要怎么配合
+        keypoints = None
+        enemy_tank_id = self.select_by_type(detect_state, "坦克")
+        enemy_tank_lat_avg, enemy_tank_lon_avg  = self.get_avg_pos(enemy_tank_id, detect_state)
+        our_tank_id = self.select_by_type(our_status, "坦克")
+        our_tank_lat_avg, our_tank_lon_avg = self.get_avg_pos(our_tank_id, our_status)
+        enemy_direct = self.relative_pos(our_tank_lat_avg, our_tank_lon_avg, enemy_tank_lat_avg, enemy_tank_lon_avg)
+        group_dis = self.distance(enemy_tank_lon_avg, enemy_tank_lat_avg, 0, our_tank_lon_avg, our_tank_lat_avg, 0)
+        enemy_in_range_dict = self.find_nearest_enemy(our_tank_lat_avg, our_tank_lon_avg, detect_state, 3000)
+        enemy_in_range_renhua =  self.turn_dict_to_renhua(enemy_in_range_dict)
+        messages = f"""
+            当前探测到对方主力装备位于我方装备的{enemy_direct}方向，我方平均距离为{group_dis} , 敌方在我方射程范围内的装备有 {enemy_in_range_renhua}, 
+        """
+        if self.check_enemy_closer_to_target(enemy_tank_lon_avg, enemy_tank_lat_avg):
+            left_time = self.distance(enemy_tank_lon_avg, enemy_tank_lat_avg, 0, self.tar_lon, self.tar_lat, 0)/20
+            left_time = int(left_time)
+            messages += f" 敌方正在向夺控点进发 先头部队预计还有 {left_time} 到达夺控点" 
+        return messages 
+    # 加一个用来判断是不是靠近夺控点的方法
+    def check_enemy_closer_to_target(self, elon, elat):
+        std_dis = self.distance(self.ed_lon, self.ed_lat,0,  self.tar_lon, self.tar_lat, 0)
+        cur_dis = self.distance(self.tar_lon, self.tar_lat, 0, elon, elat, 0)
+        if std_dis > cur_dis:
+            return True
+        return False
+    def select_by_type(self, status, type = "坦克"):
+        return [ obj_id for obj_id , values_ in status.items() if type in values_["type"]]
+    
+    def find_nearest_enemy(self, our_lat, our_lon, detect_status, range = 2500):
+        detect_id_list = [_id for _id in detect_status.keys() if self.distance( our_lat, our_lon, 0, detect_status[_id]["lat"], detect_status[_id]["lon"] ,0 ) < range]
+        return self.generate_calculate_unit(detect_id_list, detect_status)
+    
+    def turn_dict_to_renhua(self, cal_detect_dict):
+        renhua = """"""
+        for _t, _num in cal_detect_dict.items():
+            renhua = renhua +  _t +" 数量为 " + str(_num) + " "
+
+        return renhua
+
+    def get_avg_pos(self, idlist, status):
+        if len(idlist) == 0:
+            return 0, 0
+        avg_lat =  sum([status[obj_id]["lat"] for obj_id in idlist])/ len(idlist)
+        avg_lon =  sum([status[obj_id]["lon"] for obj_id in idlist])/ len(idlist)
+        return avg_lat, avg_lon
+    
+    def generate_calculate_unit(self, idlist, estatus):
+        cal = dict()
+        for  _id  in  idlist:
+            _val = estatus[_id]
+            if _val["type"] not in cal:
+                cal[ _val["type"] ] = 1
+            else:
+                cal[ _val["type"] ] += 1
+        
+        return cal
+
+    def relative_pos(self, olat, olon, elat, elon):   # 需要优雅一点的写法 
+        rdir =  ""
+        if  olon > elon :
+            rdir +=  "西"
+        elif olon < elon:
+            rdir +=  "东"
+        if olat > elat:
+            rdir += "南"
+        elif olat < elat:
+            rdir += "北"
+        return rdir 
+
 
     #@szh 0607 将我方装备信息转化为JSON 发送给LLM
     def status_to_text_tojson(self, status):

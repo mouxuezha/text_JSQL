@@ -177,13 +177,18 @@ class command_processor(QtCore.QThread):
         # 把态势转成大模型能看懂的文本形式
         status_str = self.text_transfer.status_to_text(self.status)
         detected_str = self.text_transfer.detected_to_text(self.detected_state)
+        
 
         # 检测是否人混的干预，有的话也弄进去
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str + detected_str)
 
         # 增加态势阶段的提示。
-        stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
-        
+        #stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+        stage_str = """
+           在自身动作选择上，你可以根据敌方装备类型和附近我方装备的情况去分析。例如，你可以通过当前敌方装备和我方装备的位置信息（lat、lon），计算出敌方算子到我方算子的距离，如果在我方武器射程内，则可以向敌方算子开火射击。
+           再如，你可以通过敌方装备的类型和位置分布，推断出敌方装备的火力值和防御值，与当前我方装备进行比较，判断是否向前发动进攻还是向后撤退或者是进行迂回配合等作战行动。
+           举个例子，如果前方有敌方坦克，而我方单位是装甲车或突击车，敌方坦克火力值高，防御值高，相比较之下我方单位的火力值和防御值较低，应当选择远离敌方坦克后撤。
+        """
         all_str = status_str + detected_str + status_str_new + stage_str +additional_str + "\n 请按照格式给出指令。" 
         # 把文本发给大模型，获取返回来的文本
         if status_str_new=="test":
@@ -341,6 +346,9 @@ class command_processor(QtCore.QThread):
             # 红蓝方智能体产生动作
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
             if self.flag_fupan == False:
+                if self.timestep % 50 == 0:
+                     taishi_to_renhua = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)
+                     print("taishi to renhua  ", taishi_to_renhua)
                 if self.timestep % 300 == 0:
                     additional_str = ""
                     if self.timestep == 0:
