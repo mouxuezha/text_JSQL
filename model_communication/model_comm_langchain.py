@@ -9,6 +9,7 @@ from langchain.chains import ConversationChain
 from langchain.chains.conversation.memory import ConversationSummaryMemory, ConversationBufferWindowMemory
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
+from langchain_core.callbacks import BaseCallbackHandler
 
 from text_transfer.prompts import PROMPT_TEMPLATES
 
@@ -46,8 +47,24 @@ MODEL_KWARGS = {
     }
 }
 
+class TokenHandler(BaseCallbackHandler):
+    def __init__(self, model_name: str, tokens):
+        super().__init__()
+        self.name = model_name
+        self.tokens = tokens
+        
+    def on_llm_end(self, res, **kwargs) -> None:
+        print(res.generations[0][0].generation_info)
+        if self.name == 'qwen':
+            tmp = res.generations[0][0].generation_info["token_usage"]['output_tokens']
+        else:
+            tmp = res.llm_output["token_usage"]['completion_tokens']
+        self.tokens.append(tmp)
+
 class ModelCommLangchain():
     def __init__(self, model_name='qianfan'):
+        self.model_name = model_name
+        self.history_output_tokens = []
         self.log_model_communication_name = r"auto_test\log.txt"
         load_dotenv()
         chat_model = CHAT_MODELS[model_name](**MODEL_KWARGS[model_name])
@@ -66,10 +83,11 @@ class ModelCommLangchain():
             output_parser = StrOutputParser()
         )
         self.msgs = self.chain.memory.buffer
+        self.cb = [TokenHandler(self.model_name, self.history_output_tokens)]
     
     def communicate_with_model(self, message):
-        self.save_txt(message)
-        resp = self.chain.invoke([HumanMessage(content=message)])
+        self.save_txt(message)           
+        resp = self.chain.invoke([HumanMessage(content=message)], config={"callbacks": self.cb})
         resp_str = resp['response']
         self.save_txt(resp_str)
         return resp_str
@@ -91,7 +109,8 @@ class ModelCommLangchain():
         return
     
 if __name__ == '__main__':
-    # communication = ModelCommLangchain(model_name='qianfan')
-    communication = ModelCommLangchain(model_name='moon')
+    communication = ModelCommLangchain(model_name='qianfan')
+    # communication = ModelCommLangchain(model_name='moon')
     # communication.communicate_with_model('你好')
     communication.communicate_with_model('VScode如何远程连接服务器？')
+    print(communication.history_output_tokens)
