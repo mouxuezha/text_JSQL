@@ -27,14 +27,17 @@ class StagePrompt:
         # 先确定一下当前的阶段，然后根据阶段生成一些prompt
         self.get_stage_now(time_step)
         prompt = "当前时间步长为" + str(time_step) + "，"
+        
+        # 这个是人混的时候加的。
+        prompt = "如无具体命令，则" + prompt
+        
         if self.stage_now == "机动":
-            prompt = prompt+ "请命令各单位优先向夺控点方向搜索前进，无人机探测夺控点附近"
+            prompt = prompt+ "请命令各单位优先向夺控点方向搜索前进，步兵不下车，无人机探测夺控点附近"
         elif self.stage_now == "交战":
             prompt = prompt+  "请命令各单位占据有利地形、形成有利阵型，有效打击敌人。"
         elif self.stage_now == "夺控":
             prompt = prompt+  "请命令各单位迅速向夺控点前进，并清缴夺控点周围敌人。"
         elif self.stage_now == "侦察":
             prompt = prompt+  "请命令坦克停止前进，步兵下车，并命令无人机移动到东南方向移动以探查敌情"
-        
         return prompt
         

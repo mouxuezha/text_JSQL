@@ -31,7 +31,7 @@ class command_processor(QtCore.QThread):
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt()
-        self.LLM_model = "qwen" # 这里可以改，默认是qianfan,还有智谱啥的
+        self.LLM_model = "zhipu" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
         self.model_communication = ModelCommLangchain(model_name=self.LLM_model)
@@ -447,8 +447,8 @@ class command_processor(QtCore.QThread):
 if __name__ == "__main__":
     # # 这个是总的测试的了
     flag = 0
-    shishi_debug = MyWidget_debug() # 无人干预
-    # shishi_debug = MyWidget_debug2() # 模拟有人干预
+    # shishi_debug = MyWidget_debug() # 无人干预
+    shishi_debug = MyWidget_debug2() # 模拟有人干预
     shishi = command_processor(shishi_debug)
     if flag == 0:
         # 这个是单跑这个不跑dialog box，拟似人混，启动！

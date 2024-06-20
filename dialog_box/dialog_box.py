@@ -5,6 +5,9 @@ import time
 
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtWidgets import QDialog 
+import os.path
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from main import command_processor
 class MyWidget(QtWidgets.QWidget):
     step_signal = QtCore.Signal(int) # 这个用来刷新的，下一步把窗口里的所有东西都刷新一遍。

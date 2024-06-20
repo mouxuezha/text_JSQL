@@ -26,14 +26,14 @@ class MyWidget_debug2:
         self.order_now = ""
     
     def get_status_str(self,status_str, timestep):
-        # 这个是总开关
-        return 
+        # 这个是总开关 # 但是其实不必要，用MyWidget_debug而不是MyWidget_debug2，就是把拟似人类命令都关了的
+        # return 
 
         # 获取当前状态
-        if timestep == 114:
-            self.order_now = "请命令无人机向地图区域西南方向移动以敌情。"
+        if timestep == 200:
+            self.order_now = "请命令无人机向地图区域东南方向移动以敌情。"
             self.flag_order_renewed = True
-        elif timestep == 333 :
+        elif timestep ==  114:
             self.order_now = "请命令步兵战车放下步兵，并向夺控点附近搜索前进"
             self.flag_order_renewed = True
         elif timestep == 2000:
