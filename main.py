@@ -16,11 +16,13 @@ import argparse
 import sys,os,pickle
 from importlib import import_module
 
+import threading
+
 from PySide6 import QtCore, QtWidgets, QtGui
 
 class command_processor(QtCore.QThread):
     
-    def __init__(self,dialog_box):
+    def __init__(self,dialog_box, Comm_type ="duizhan"):
         super().__init__()
         self.runnig_location = r"auto_test"
         self.log_file = r'overall_result.txt'
@@ -34,7 +36,8 @@ class command_processor(QtCore.QThread):
         self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
-        self.model_communication = ModelCommLangchain(model_name=self.LLM_model)
+        self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
+        # 要用多个的话等后面再来改罢。
         # self.__init_dialog_box()
         self.dialog_box = dialog_box
         self.__init_env()
@@ -47,6 +50,7 @@ class command_processor(QtCore.QThread):
         # 搞一个用来存复盘的东西。
         self.fupan_pkl = {} # {timestep: {"command":command_list, "all_str":all_str, "response_str":response_str} }
         self.flag_fupan = False # 用来标记当前是否在复盘。
+        self.flag_finished = False 
         pass
     
     # def __init_dialog_box(self):
@@ -242,6 +246,42 @@ class command_processor(QtCore.QThread):
 
         pass 
 
+    def run_one_step_fupan(self):
+        timestep = self.timestep # 先把当前的timestep获取出来。
+
+        # 然后从复盘文件里面读。
+        if timestep in self.fupan_pkl:
+            # 那就是说明这一帧交互过了。
+            # 那就来一遍
+            all_str = self.fupan_pkl[timestep]["all_str"]
+            command_list = self.fupan_pkl[timestep]["command"]
+            response_str = self.fupan_pkl[timestep]["response_str"]
+
+            # 然后执行一遍
+            self.redAgent.set_commands(command_list)
+        else:
+            pass 
+
+        # 下面这部分是读取态势并处理之后准备拿去另一个线程触发解说的
+        
+        # 从agent把态势拿出来
+        self.status, self.detected_state= self.redAgent.get_status()
+
+        # 把态势转成大模型能看懂的文本形式
+        status_str = self.text_transfer.status_to_text(self.status)
+        # 敌方的情况也得转，
+        detected_str = self.text_transfer.detected_to_text(self.detected_state)
+        # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
+        zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)
+
+        self.status_jieshuo = status_str + detected_str + zhuyili_str
+        # 原则上应该进一步优化，就是每次互动结束之后过几帧再开始存，或者直接就是收到了再开始存，鉴定为可以但没必要。
+
+    def get_status_dixing(self,status):
+        # 这个想要实现的是把每一个装备的当前地形都拿出来，然后再塞回去status里面。反正多点儿没有坏处就是了。
+        print("unfinished yet: get_status_dixing")
+        pass
+
     def human_intervene_check(self, status_str):
         # 2024年6月4日09:34:20这个看起来不对，得重新写一下才对。
         # 输入输出怎么做还两说呢，整个窗口？然后用信号槽机制实现人输入的这个异步，可行。
@@ -271,10 +311,16 @@ class command_processor(QtCore.QThread):
 
         return self.flag_human_interact , command_str
     
-    def main_loop(self,fupan_name=""):
+    def main_loop(self,**kargs):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
         self.timestep = 0 # 每个episode的步数
         log_file = auto_save_file_name(log_folder=r'auto_test')
+        
+        if "fupan_name" in kargs:
+            # 说明是复盘模式
+            fupan_name = kargs["fupan_name"]
+        else:
+            fupan_name = ""
         
         # 训练环境初始化，并返回红蓝方舰船编号
         print("begin resetting")
@@ -326,7 +372,7 @@ class command_processor(QtCore.QThread):
             self.flag_fupan = False
             pass
 
-
+        self.flag_finished = False # 这个是用来给其他线程看的。
         # 智能体与环境交互生成训练数据
         while True:
             self.env.SetRender(True) # 训练界面可视化：False --> 关闭
@@ -405,6 +451,7 @@ class command_processor(QtCore.QThread):
                 auto_save(self.log_file, tips, redScore_str, blueScore_str)
                 # result = env.Terminal()
                 auto_save_overall(blueScore_str + '\n' + redScore_str, log_file=self.log_file)
+                self.flag_finished = True # 这个是用来给其他线程看的。
                 break        
         
         if self.flag_fupan == False:
@@ -429,35 +476,58 @@ class command_processor(QtCore.QThread):
         # self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
         return all_str
     
-    def run_one_step_fupan(self):
-        timestep = self.timestep # 先把当前的timestep获取出来。
+    def the_embrace_jieshuo(self):
+        all_str = "请作为解说员，解说一场兵棋推演比赛，尽量讲清楚双方作战过程和行动逻辑，准备好了吗？"
+        return all_str
 
-        # 然后从复盘文件里面读。
-        if timestep in self.fupan_pkl:
-            # 那就是说明这一帧交互过了。
-            # 那就来一遍
-            all_str = self.fupan_pkl[timestep]["all_str"]
-            command_list = self.fupan_pkl[timestep]["command"]
-            response_str = self.fupan_pkl[timestep]["response_str"]
+    def jieshuo_mul_thread(self):
+        # 这个试图用来实现游戏解说。其实和态势认知几乎是一回事。
+        # 开两个线程，一个用来跑复盘，再一个用来和大模型互动。
+        self.status_jieshuo = ""
+        thread1 = threading.Thread(target=self.main_loop,kwargs={"fupan_name": r"auto_test_log0"})
+        thread2 = threading.Thread(target=self.jieshuo_single)
 
-            # 然后执行一遍
-            self.redAgent.set_commands(command_list)
-        else:
-            pass 
-    
+        # 然后就启动线程呗
+        thread1.start()
+        thread2.start()
+        # 然后就等待线程结束呗
+        thread1.join()
+        thread2.join()
+        # 然后就返回结果呗
+        print("回合结束，鉴定为：解说demo好使")
+        return self.status_jieshuo
+
+    def jieshuo_single(self):
+        # 不传参数了，从共享内存里直接读出类的成员变量，可也。
+        all_str = self.status_jieshuo
+
+        # 这么简单？这么玩的话岂不是直接就可以开始来进行解说了？
+        for i in range(114):
+            response_str = self.model_communication.communicate_with_model(all_str)
+            print(response_str)
+            if self.flag_finished == True:
+                break # 那边要是跑完了，这边就直接退了
+
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 2
+    flag = 4
     # shishi_debug = MyWidget_debug() # 无人干预
     shishi_debug = MyWidget_debug2() # 模拟有人干预
-    shishi = command_processor(shishi_debug)
+    
     if flag == 0:
         # 这个是单跑这个不跑dialog box，拟似人混，启动！
+        shishi = command_processor(shishi_debug)
         shishi.main_loop()
     elif flag == 1:
         # 这个是加载并运行特定复盘文件。
+        shishi = command_processor(shishi_debug)
         shishi.main_loop(fupan_name=r"auto_test_log0")
     elif flag == 2:
         # 这个是加载特定的AI，然后再来运行。
+        shishi = command_processor(shishi_debug)
         shishi.get_agent_out(role="blue",location=r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\LGD.DK&NUIST")
         shishi.main_loop()
+    elif flag == 4:
+        # 这个是加载并运行特定的复盘，然后解说比赛的demo
+        shishi = command_processor(shishi_debug,Comm_type ="jieshuo")
+        shishi.jieshuo_mul_thread()

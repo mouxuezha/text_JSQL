@@ -62,16 +62,20 @@ class TokenHandler(BaseCallbackHandler):
         self.tokens.append(tmp)
 
 class ModelCommLangchain():
-    def __init__(self, model_name='qianfan'):
+    def __init__(self, model_name='qianfan',Comm_type ="duizhan"):
         self.model_name = model_name
         self.history_output_tokens = []
-        self.log_model_communication_name = r"auto_test\log.txt"
+        # self.log_model_communication_name = r"auto_test\log.txt"
+        self.log_model_communication_name = r"auto_test\log"+"_"+model_name+"_"+Comm_type+"_.txt"
         load_dotenv()
         chat_model = CHAT_MODELS[model_name](**MODEL_KWARGS[model_name])
-        system_template = PROMPT_TEMPLATES['llm_chat']['embrace']
+        if Comm_type == "duizhan":
+            system_template = PROMPT_TEMPLATES['llm_chat']['embrace']
+        elif Comm_type == "jieshuo":
+            system_template = PROMPT_TEMPLATES['llm_chat']['jieshuo_embrace']
         prompt_template = ChatPromptTemplate.from_messages(
-            [("system", system_template), ("user", "{input}")]
-        )
+                [("system", system_template), ("user", "{input}")]
+            )
         # sys_prompt = SystemMessagePromptTemplate.from_template(system_template)
         # user_prompt = HumanMessagePromptTemplate("{text}")
         # chat_prompt = ChatPromptTemplate.from_messages([sys_prompt, user_prompt])
