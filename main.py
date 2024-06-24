@@ -31,7 +31,7 @@ class command_processor(QtCore.QThread):
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt()
-        self.LLM_model = "zhipu" # 这里可以改，默认是qianfan,还有智谱啥的
+        self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
         self.model_communication = ModelCommLangchain(model_name=self.LLM_model)
@@ -83,7 +83,8 @@ class command_processor(QtCore.QThread):
     def get_agent_out(self,role="blue",location = r""):
         # 这个是搞一个方便地装载外部agent的接口。从去年劳动竞赛的craft manager的基础上开发出来的。
         if role == "blue":
-            blue_location = location + r'\python1\AI'
+            # blue_location = location + r'\python1\AI'
+            blue_location = location + r'\python1'
             # blue_name = 'BlueAgent'
             blue_name = 'blue_agent'
             agent_out = self.import_certain_file(blue_location,blue_name)
@@ -446,7 +447,7 @@ class command_processor(QtCore.QThread):
     
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 0
+    flag = 2
     # shishi_debug = MyWidget_debug() # 无人干预
     shishi_debug = MyWidget_debug2() # 模拟有人干预
     shishi = command_processor(shishi_debug)
@@ -458,5 +459,5 @@ if __name__ == "__main__":
         shishi.main_loop(fupan_name=r"auto_test_log0")
     elif flag == 2:
         # 这个是加载特定的AI，然后再来运行。
-        shishi.get_agent_out(role="blue",location=r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\太初")
+        shishi.get_agent_out(role="blue",location=r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\Team\LGD.DK&NUIST")
         shishi.main_loop()

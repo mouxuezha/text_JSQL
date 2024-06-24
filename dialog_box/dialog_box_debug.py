@@ -30,10 +30,10 @@ class MyWidget_debug2:
         # return 
 
         # 获取当前状态
-        if timestep == 200:
+        if timestep == 300:
             self.order_now = "请命令无人机向地图区域东南方向移动以敌情。"
             self.flag_order_renewed = True
-        elif timestep ==  114:
+        elif timestep ==  210:
             self.order_now = "请命令步兵战车放下步兵，并向夺控点附近搜索前进"
             self.flag_order_renewed = True
         elif timestep == 2000:
