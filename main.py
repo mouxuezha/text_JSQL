@@ -32,8 +32,8 @@ class command_processor(QtCore.QThread):
         self.__init_agent()
 
         self.text_transfer = text_transfer()
-        self.stage_prompt = StagePrompt()
-        self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
+        self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage
+        self.LLM_model = "zhipu" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication()
         # self.model_communication = ModelCommLangchain(model_name="zhipu")
         self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
@@ -45,6 +45,7 @@ class command_processor(QtCore.QThread):
         self.detected_state = {} # 这个是敌方的
         self.timestep = 0 
         self.flag_human_interact = False #这个用来标志当前时间步是否引入人类交互。
+        self.flag_regular_interacte = False # 这个用来改是不是定时和大模型交互的，关了就是只有人说话才交互。
         self.human_order = "" # 这个用来常态化地存人类交互指令，以防人类意图只出现一帧就被盖了
 
         # 搞一个用来存复盘的东西。
@@ -383,7 +384,7 @@ class command_processor(QtCore.QThread):
             # 红蓝方智能体产生动作
             act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
             if self.flag_fupan == False:
-                if self.timestep % 300 == 0:
+                if (self.timestep % 300 == 0) and (self.flag_regular_interacte==True):
                     additional_str = ""
                     if self.timestep == 0:
                         # additional_str = self.the_embrace()            

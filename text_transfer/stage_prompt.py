@@ -3,9 +3,10 @@
 
 
 class StagePrompt:
-    def __init__(self):
+    def __init__(self, flag_kaiguan=True):
         self.stage_now = "机动"
         # 先初步划分一下，“机动”阶段（前期，调一下阵型，上下车啥的，如有），“交战”阶段（不加什么特效），“夺控”阶段。
+        self.flag_kaiguan = flag_kaiguan
         pass
 
     def get_stage_now(self, time_step):
@@ -25,6 +26,9 @@ class StagePrompt:
 
     def get_stage_prompt(self, time_step):
         # 先确定一下当前的阶段，然后根据阶段生成一些prompt
+        if self.flag_kaiguan == False:
+            # 关闭状态，直接返回个空的。
+            return ""
         self.get_stage_now(time_step)
         prompt = "当前时间步长为" + str(time_step) + "，"
         
