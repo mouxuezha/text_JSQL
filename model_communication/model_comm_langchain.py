@@ -3,6 +3,7 @@ import os
 from langchain_community.chat_models import ChatZhipuAI, QianfanChatEndpoint, ChatBaichuan
 from langchain_community.chat_models.moonshot import MoonshotChat
 from langchain_community.chat_models.tongyi import ChatTongyi
+from langchain_openai import ChatOpenAI
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage
 from langchain.chains import ConversationChain
@@ -11,6 +12,11 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.prompts import ChatPromptTemplate, SystemMessagePromptTemplate, HumanMessagePromptTemplate
 from langchain_core.callbacks import BaseCallbackHandler
 
+import sys
+current_path = os.path.dirname(__file__)
+root_path = os.path.abspath(os.path.dirname(current_path) + os.path.sep + ".")
+print(root_path)
+sys.path.append(root_path)
 from text_transfer.prompts import PROMPT_TEMPLATES
 
 
@@ -19,7 +25,8 @@ CHAT_MODELS = {
     'qianfan': QianfanChatEndpoint,
     'moon': MoonshotChat,
     'qwen': ChatTongyi,
-    'baichuan': ChatBaichuan
+    'baichuan': ChatBaichuan,
+    'ollama': ChatOpenAI
 }
 
 MODEL_KWARGS = {
@@ -44,7 +51,12 @@ MODEL_KWARGS = {
     'baichuan': {
         'model': 'Baichuan2-Turbo-192K', # Baichuan2-Turbo
         'temperature': 0.1
-    }
+    },
+    'ollama': {
+        'model': 'qwen72b',
+        'base_url': 'http://192.168.1.213:11434/v1/',
+        'api_key': 'ollama'
+    }    
 }
 
 class TokenHandler(BaseCallbackHandler):
@@ -54,7 +66,7 @@ class TokenHandler(BaseCallbackHandler):
         self.tokens = tokens
         
     def on_llm_end(self, res, **kwargs) -> None:
-        print(res.generations[0][0].generation_info)
+        print(res.llm_output)
         if self.name == 'qwen':
             tmp = res.generations[0][0].generation_info["token_usage"]['output_tokens']
         else:
@@ -122,8 +134,13 @@ class ModelCommLangchain():
         print(str_buffer)
         
 if __name__ == '__main__':
-    communication = ModelCommLangchain(model_name='qianfan')
+    communication = ModelCommLangchain(model_name='ollama')
     # communication = ModelCommLangchain(model_name='moon')
     # communication.communicate_with_model('你好')
-    communication.communicate_with_model('VScode如何远程连接服务器？')
+    test_str = """我方obj_id为MainBattleTank_ZTZ100_3的坦克位置在(2.59297,39.72039)处 \n
+                    我方obj_id为missile_truck0的导弹发射车位置在(2.6228,41.6363)处 \n
+                    敌方obj_id为MainBattleTank_ZTZ200_1的坦克位置在(2.68121,39.71009)处 \n
+                    敌方obj_id为WheeledCmobatTruck_ZB200_3的步战车位置在(2.70102,39.71207)处"""
+    ret = communication.communicate_with_model(test_str)
+    # print(ret)
     print(communication.history_output_tokens)
