@@ -2,6 +2,7 @@ numpy
 matplotlib
 pyside6
 xlrd
+# these for model communication
 qianfan
 langchain
 langchain_community
@@ -11,3 +12,7 @@ PyJWT
 openai
 dashscope
 langchain-openai
+# these for TTS 
+pygame
+websocket
+pydub

@@ -3,6 +3,9 @@ model_communication/AK.txt
 model_communication/SK.txt
 model_communication/ZK.txt
 model_communication/log.txt
+TTS/APIKey.txt
+TTS/APISecret.txt
+TTS/APPID.txt
 .history
 overall_result.txt 
 auto_test
