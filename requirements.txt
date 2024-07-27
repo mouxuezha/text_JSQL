@@ -14,5 +14,7 @@ dashscope
 langchain-openai
 # these for TTS 
 pygame
+ffmpeg # 这个在Windows里面还得额外下载，pip下来的没有exe
 websocket
-pydub
+websocket-client
+pydub # 这个装了之后要改路径，不然找不到ffmpeg.exe
