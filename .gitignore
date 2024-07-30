@@ -174,3 +174,4 @@ cython_debug/
 test.ipynb
 log.txt
 overall_result.txt
+*.html
