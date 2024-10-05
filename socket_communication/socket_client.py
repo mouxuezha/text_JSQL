@@ -77,5 +77,5 @@ class socket_client(socket_base,QtCore.QThread):
         self.thread1.join()                
 
 if __name__ == '__main__':
-    client = socket_client(dialog_box=None,ip="192.168.1.140",port="20001")
+    client = socket_client(dialog_box=None,ip="192.168.1.117",port="20001")
     client.run_mul()
