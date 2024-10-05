@@ -4,6 +4,7 @@ import os
 import sys
 import random
 import numpy as np
+import shutil
 
 def get_states(env):
     result = env.GetCurrentStatus()
@@ -98,3 +99,33 @@ def auto_save_overall(str_buffer, log_file = r'C:\Users\42418\Desktop\2024ldjs\E
     file.write(str_buffer + '\n')
     file.close()
     return 0
+
+def load_agents(sorce_location, player="red"):
+    # 先全都复制过来，复制过里啊之后再把.git删了，就算是完成了一次更新。
+    # 先获取以下当前路径。
+    if player=="red":
+        # target_location = r"D:\EnglishMulu\text_JSQL\agent_guize\me_AI"
+        target_location = sys.path[0] + r"\me_AI"
+    elif player=="blue":
+        # target_location = r"D:\EnglishMulu\text_JSQL\agent_guize\enemy_AI"
+        target_location = sys.path[0] + r"\enemy_AI"
+    
+    # 先把之前的删了。
+    shutil.rmtree(target_location)
+
+    # 然后一整个文件夹复制过去
+    shutil.copytree(sorce_location, target_location)
+
+    # 然后把里面的.git文件夹删了。
+    git_location = target_location + r"\.git"
+    # shutil.rmtree(git_location) # 算了，这个会爆权限问题，手动删一下也就罢了。
+    
+    pass
+
+if __name__ == "__main__":
+    # 在这里实现一个装载智能体的功能，然后重新整理一下那些调用关系。
+    # 文件系统的结构也得重新琢磨一下了，比较理想的是enemy_AI和me_AI这层让它对应好了。
+    red_location = r"D:\EnglishMulu\AI_test_2024"
+    blue_location = r"D:\EnglishMulu\AI_test_2024"
+    load_agents(red_location, player="red")
+    load_agents(blue_location, player="blue")
