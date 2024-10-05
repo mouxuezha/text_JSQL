@@ -1,12 +1,11 @@
 # 这个是主函数，到时候就运行这个就完事了。
 from agent_guize.agent import Agent
-from agent_guize.enemy_AI.blue_agent import BlueAgent
-from agent_guize.me_AI.red_agent import RedAgent
+from agent_guize.enemy_AI.agent.agent_dispatch import agent_dispatch
 from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer, text_demo
 from text_transfer.stage_prompt import StagePrompt
-from model_communication.model_communication import model_communication
+from model_communication.model_communication import model_communication,model_communication_debug
 from model_communication.model_comm_langchain import ModelCommLangchain
 from dialog_box.dialog_box_debug import *
 
@@ -34,9 +33,8 @@ class command_processor(QtCore.QThread):
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage
         self.LLM_model = "zhipu" # 这里可以改，默认是qianfan,还有智谱啥的
-        # self.model_communication = model_communication()
-        # self.model_communication = ModelCommLangchain(model_name="zhipu")
-        self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
+        self.model_communication = model_communication_debug()
+        # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
         # 要用多个的话等后面再来改罢。
         # self.__init_dialog_box()
         self.dialog_box = dialog_box
@@ -79,14 +77,16 @@ class command_processor(QtCore.QThread):
 
     def __init_agent(self):
         # 这里面应该不要含有需要给后端发东西的内容，以便调试。
-        self.redAgent = RedAgent()
-        self.blueAgent = BlueAgent()
+        self.redAgent = agent_dispatch(player="red")
+        self.blueAgent = agent_dispatch(player="blue")
         self.red_deploy_location = self.runnig_location + r'\guize\reddeploy'
         self.blue_deploy_location = self.runnig_location + r'\guize\bluedeploy'
         # self.redAgent.set_deploy_folder(self.red_deploy_location)
         # self.blueAgent.set_deploy_folder(self.blue_deploy_location)
+
     def get_agent_out(self,role="blue",location = r""):
         # 这个是搞一个方便地装载外部agent的接口。从去年劳动竞赛的craft manager的基础上开发出来的。
+        # 2024，这个还得改，但是等用的时候再改吧，效率优先
         if role == "blue":
             # blue_location = location + r'\python1\AI'
             blue_location = location + r'\python1'
@@ -325,12 +325,15 @@ class command_processor(QtCore.QThread):
         
         # 训练环境初始化，并返回红蓝方舰船编号
         print("begin resetting")
-        shipIDlist = self.env.Reset()
-        shipIDlist = json.loads(shipIDlist)
+        unit_ids_dict = self.env.Reset()
+        unit_ids_dict = json.loads(unit_ids_dict)
 
         redAgent = self.redAgent
         blueAgent = self.blueAgent
 
+        # 和去年的不同，这里要初始化global和local
+        redAgent.init_agent(unit_ids_dict['RedShipID'])
+        blueAgent.init_agent(unit_ids_dict['BlueShipID'])     
         # 红蓝方智能体全局变量初始化
         redAgent.reset()
         blueAgent.reset()
@@ -340,9 +343,8 @@ class command_processor(QtCore.QThread):
         s_next = []
 
         act = []
-        # print("shipIDList ", shipIDlist)
-        act += redAgent.deploy(shipIDlist['RedShipID'])
-        act += blueAgent.deploy(shipIDlist['BlueShipID'])
+        act += redAgent.deploy(unit_ids_dict['RedShipID'])
+        act += blueAgent.deploy(unit_ids_dict['BlueShipID'])
         action = {"Action": act}
         print("action ", action)
         self.env.Step(Action = action)
@@ -511,9 +513,9 @@ class command_processor(QtCore.QThread):
 
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 4
-    # shishi_debug = MyWidget_debug() # 无人干预
-    shishi_debug = MyWidget_debug2() # 模拟有人干预
+    flag = 0
+    shishi_debug = MyWidget_debug() # 无人干预
+    # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
     if flag == 0:
         # 这个是单跑这个不跑dialog box，拟似人混，启动！
