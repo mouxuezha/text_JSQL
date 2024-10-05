@@ -37,7 +37,7 @@ class socket_base():
             port = 12345
         else:
             host = self.my_ip
-            port = self.my_port
+            port = int(self.my_port)
         
         if self.socket_type == "server":
             # 服务端
