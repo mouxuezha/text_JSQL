@@ -21,8 +21,8 @@ class socket_server(socket_base, QtCore.QThread):
     def run_mul(self):
         # 这个是用来开多线程的。原则上只要我启动接收线程之后不对齐，就不会卡主线程。
         # 原则上，需要多个socket的话就在这里面开一堆多线程，然后标一下序号啥的，反正都简单
-        # self.thread1 = threading.Thread(target=self.run_single)
-        self.thread1 = threading.Thread(target=self.run_single_test)
+        self.thread1 = threading.Thread(target=self.run_single)
+        # self.thread1 = threading.Thread(target=self.run_single_test)
 
         self.thread1.start()
 
