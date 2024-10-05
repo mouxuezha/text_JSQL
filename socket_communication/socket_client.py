@@ -10,8 +10,8 @@ from socket_communication.socket_base import socket_base
 from PySide6 import QtCore
 
 class socket_client(socket_base,QtCore.QThread):
-    def __init__(self, dialog_box=None):
-        socket_base.__init__(self,"client")
+    def __init__(self, dialog_box=None,ip="0.0.0.0",port="114514"):
+        socket_base.__init__(self,"client",ip=ip,port=port)
         QtCore.QThread.__init__(self)
         self.dialog_box = dialog_box
         pass
@@ -19,7 +19,8 @@ class socket_client(socket_base,QtCore.QThread):
     def run_mul(self):
         # 这个是用来开多线程的。原则上只要我启动接收线程之后不对齐，就不会卡主线程。
         # 原则上，需要多个socket的话就在这里面开一堆多线程，然后标一下序号啥的，反正都简单
-        self.thread1 = threading.Thread(target=self.run_single)
+        # self.thread1 = threading.Thread(target=self.run_single)
+        self.thread1 = threading.Thread(target=self.run_single_debug)
 
         self.thread1.start()
 
@@ -76,5 +77,5 @@ class socket_client(socket_base,QtCore.QThread):
         self.thread1.join()                
 
 if __name__ == '__main__':
-    client = socket_client()
+    client = socket_client(dialog_box=None,ip="192.168.1.140",port="20001")
     client.run_mul()

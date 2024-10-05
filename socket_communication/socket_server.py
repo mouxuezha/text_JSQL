@@ -10,9 +10,9 @@ from socket_communication.socket_base import socket_base
 from PySide6 import QtCore
 
 class socket_server(socket_base, QtCore.QThread):
-    def __init__(self,dialog_box = None):
+    def __init__(self,dialog_box = None,ip="0.0.0.0",port="114514"):
         # 这个应该是一个封装好的、不卡主线程的东西，随时能够用它发字符串，随时能读取它收的字符串、随时能知道新收到的字符串有没有被读取过了。
-        socket_base.__init__(self,"server")
+        socket_base.__init__(self,"server",ip=ip,port=port)
         QtCore.QThread.__init__(self)
         self.dialog_box = dialog_box
         self.flag_new = False # 暴力一点，这个用来标识有没有收到新的
@@ -21,7 +21,8 @@ class socket_server(socket_base, QtCore.QThread):
     def run_mul(self):
         # 这个是用来开多线程的。原则上只要我启动接收线程之后不对齐，就不会卡主线程。
         # 原则上，需要多个socket的话就在这里面开一堆多线程，然后标一下序号啥的，反正都简单
-        self.thread1 = threading.Thread(target=self.run_single)
+        # self.thread1 = threading.Thread(target=self.run_single)
+        self.thread1 = threading.Thread(target=self.run_single_test)
 
         self.thread1.start()
 
@@ -81,5 +82,5 @@ class socket_server(socket_base, QtCore.QThread):
         self.thread1.join()
 
 if __name__ == "__main__":
-    server = socket_server()
+    server = socket_server(dialog_box=None,ip="192.168.1.117",port="20001")
     server.run_mul()

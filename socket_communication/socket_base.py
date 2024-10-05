@@ -6,7 +6,7 @@ import threading
 import time
 
 class socket_base():
-    def __init__(self,socket_type="server"):
+    def __init__(self,socket_type="server",ip="0.0.0.0",port="114514"):
         # 这个应该是一个封装好的、不卡主线程的东西，随时能够用它发字符串，随时能读取它收的字符串、随时能知道新收到的字符串有没有被读取过了。
 
 
@@ -16,6 +16,13 @@ class socket_base():
         self.flag_new = False # 暴力一点，这个用来标识有没有收到新的
         self.flag_send = False # 这个是标识发没发
         self.socket_type = socket_type
+        if port == "114514":
+            # 那就说明没有设，那就本地直接来了。
+            self.flag_local_host = True
+        else:
+            # 那就说明设置过了，那就按照设置过的来，局域网互联，岂不美哉。
+            self.flag_local_host = False
+            self.set_IP_and_port(ip,port)
 
         self.__init_socket()
         pass 
@@ -23,10 +30,14 @@ class socket_base():
     def __init_socket(self):
         # 初始化socket
         self.real_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-
-        # 这个是本地的。等到真的通信的话要用别的
-        host = socket.gethostname()
-        port = 12345
+        
+        if self.flag_local_host:
+            # 这个是本地的。等到真的通信的话要用别的
+            host = socket.gethostname()
+            port = 12345
+        else:
+            host = self.my_ip
+            port = self.my_port
         
         if self.socket_type == "server":
             # 服务端
@@ -43,6 +54,16 @@ class socket_base():
             pass 
         
         print("socket init ready")     
+    
+    def set_IP_and_port(self,IP,port):
+        # 这个还是跑不了的，设定一下自己到底是什么IP什么端口号。
+        # TODO：讲道理后期应该整成扫描的，把局域网里面的所有端口号都扫一遍那种。
+        self.my_ip = IP
+        self.my_port = port
+        self.flag_local_host = False
+        pass 
+
+
 
     
     def send_str(self,status_str:str):
@@ -66,6 +87,7 @@ class socket_base():
         return self.received_str
     
         pass 
+    
     def load_config(self):
         # 加载配置文件
         config_name = "config.txt"

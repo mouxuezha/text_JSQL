@@ -23,7 +23,7 @@ class MyWidget(QtWidgets.QWidget):
         self.step_num = 0
         self.p_status ="off"
         # self.p = command_processor(self)
-        self.socket_client = socket_client(self)
+        self.socket_client = socket_client(self,ip="192.168.1.140",port="20001")
         
 
         self.button = QtWidgets.QPushButton("下达命令")

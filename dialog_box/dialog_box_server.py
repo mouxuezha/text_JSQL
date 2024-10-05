@@ -24,7 +24,7 @@ class MyWidget(QtWidgets.QWidget):
         self.step_num = 0
         self.p_status ="on" # 为了后面能走，这个得默认是on
         self.p = command_processor(self)
-        self.socket_server = socket_server(self)   # 跟那边一样，这个也是要把自己传进去的，因为有需要在那里面触发的
+        self.socket_server = socket_server(self,ip="192.168.1.117",port="20001")   # 跟那边一样，这个也是要把自己传进去的，因为有需要在那里面触发的
         
         
         self.button = QtWidgets.QPushButton("下达命令")
