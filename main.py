@@ -204,7 +204,10 @@ class command_processor(QtCore.QThread):
         while True:
             if self.dialog_box.p_status == "on":
                 print("command_processor is running")
-                self.main_loop()
+                if (self.role == "offline") or (self.role == "server"):
+                    self.main_loop()
+                elif (self.role == "red_player") or (self.role=="blue_player"):
+                    self.main_loop_client() # 这不一样的，得进行一点定制才行，用于实现客户端电脑和大模型的通信。
             else:
                 print("command_processor is off")
                 pass
@@ -373,7 +376,7 @@ class command_processor(QtCore.QThread):
             # 然后显示一下。以及交互，在这里面了
             flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)
 
-            if flag_human_intervene:
+            if flag_human_intervene: # 要有这个才触发和大模型的互动，
                 # 增加态势阶段的提示。
                 stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
                 all_str = status_str_received + stage_str + "\n 请按照格式给出指令。" 
@@ -581,7 +584,17 @@ class command_processor(QtCore.QThread):
             # 如果不是复盘状态，那就存一下
             self.save_fupan_info()
         pass 
-
+   
+    def main_loop_client(self):
+        # 还是不行，还是得定制一个专门用于客户端通信的。搅合在一起是不理智的。
+        self.flag_finished = False # 这个是用来给其他线程看的。
+        # 智能体与环境交互生成训练数据
+        while True:
+            # 这里面就不限步数了，因为这边的步数和平台那里的肯定是不同步的。
+            time.sleep(0.001)        
+            if (self.role == "red_player") or (self.role == "blue_player"):
+                self.run_one_step_client()    
+                
     def the_embrace(self):
         # 先和大模型互动一波，讲讲规则什么的。这个也是从run_one_step衍生出来的。
         all_str = self.text_transfer.get_initial_prompt()

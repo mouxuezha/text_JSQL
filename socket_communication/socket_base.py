@@ -74,7 +74,8 @@ class socket_base():
         pass 
     
     def receive_str(self):
-        # 这个是用来接收字符串的。
+        # 这个是用来接收字符串的。任何时候调这个，总能读取出东西来。至于说是不是新的，得从标志位来看。
+        # 按照目前这个写法，标志位只保持一帧。
         new_received_str = self.client_socket.recv(4096).decode('utf-8')
         
         # 判断一下是不是收重了，都是好事儿
