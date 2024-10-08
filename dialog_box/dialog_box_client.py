@@ -75,6 +75,7 @@ class MyWidget(QtWidgets.QWidget):
         self.text.setText("小弈人混-命令已经下达")
         self.order_now = self.dialog.text()
         self.flag_order_renewed = True
+        self.socket_client.flag_human_interact = True
         # 这个得传过去
         # 不是直接传命令了，得是传大模型处理过的那些东西，所以不是这里传了。
         # self.socket_client.send_str(self.order_now)
