@@ -8,6 +8,8 @@ from text_transfer.stage_prompt import StagePrompt
 from model_communication.model_communication import model_communication,model_communication_debug
 from model_communication.model_comm_langchain import ModelCommLangchain
 from dialog_box.dialog_box_debug import *
+from socket_communication.socket_server import *
+from socket_communication.socket_client import *
 
 import json
 import time 
@@ -21,14 +23,22 @@ from PySide6 import QtCore, QtWidgets, QtGui
 
 class command_processor(QtCore.QThread):
     
-    def __init__(self,dialog_box, Comm_type ="duizhan"):
+    def __init__(self,dialog_box, Comm_type ="duizhan",role="offline",**kargs):
         super().__init__()
         self.runnig_location = r"auto_test"
         self.log_file = r'overall_result.txt'
+        self.dialog_box = dialog_box
 
         self.args = self.__init_net()
         self.__init_env()
         self.__init_agent()
+
+        if role == "offline":
+            # 那就是无事发生
+            self.role = "offline"
+            pass 
+        else:
+            self.__init_socket(role =role, config=kargs["config"])
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage
@@ -36,9 +46,7 @@ class command_processor(QtCore.QThread):
         self.model_communication = model_communication_debug()
         # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
         # 要用多个的话等后面再来改罢。
-        # self.__init_dialog_box()
-        self.dialog_box = dialog_box
-        self.__init_env()
+        
         self.status= {} # 这个是我方的
         self.detected_state = {} # 这个是敌方的
         self.timestep = 0 
@@ -83,6 +91,34 @@ class command_processor(QtCore.QThread):
         self.blue_deploy_location = self.runnig_location + r'\guize\bluedeploy'
         # self.redAgent.set_deploy_folder(self.red_deploy_location)
         # self.blueAgent.set_deploy_folder(self.blue_deploy_location)
+    
+    def __init_socket(self, role, config:dict):
+        if role == "server":
+            # 只有server是真的需要跟平台通信的，player模式的话是不需要跟平台通信的。
+            # 同时，如果分了server和player，那么server这头就不和大模型通信了就。
+            self.role = "server"
+            self.__init_socket_server(config)
+        elif role == "red_player":
+            self.role = "red_player"
+            self.__init_socket_client(config)
+        elif role == "blue_player":
+            self.role = "blue_player"
+            self.__init_socket_client(config)  
+        else:
+            raise Exception("invalid role in main_loop.__init_socket, G.")      
+
+    def __init_socket_server(self,config:dict):
+        # 初始化一些本地网络通信的东西。
+        # config = {"red_ip":"192.168.1.117", "red_port": "20001",
+        #           "blue_ip": "192.168.1.117", "blue_port": "20002" }    
+        self.socket_server = socket_server_2player(config,dialog_box=self.dialog_box)
+
+    def __init_socket_client(self,config:dict):
+        # 看自己是红蓝方了。
+        if self.role == "red_player":
+            self.socket_client = socket_client(self.dialog_box, ip=config["red_ip"],port=config["red_port"])
+        elif self.role == "blue_player":
+            self.socket_client = socket_client(self.dialog_box, ip=config["blue_ip"],port=config["blue_port"])
 
     def get_agent_out(self,role="blue",location = r""):
         # 这个是搞一个方便地装载外部agent的接口。从去年劳动竞赛的craft manager的基础上开发出来的。
@@ -277,6 +313,82 @@ class command_processor(QtCore.QThread):
 
         self.status_jieshuo = status_str + detected_str + zhuyili_str
         # 原则上应该进一步优化，就是每次互动结束之后过几帧再开始存，或者直接就是收到了再开始存，鉴定为可以但没必要。
+    
+    def run_one_step_server(self):
+        # 就每一步检测是不是更新，如果有更新就搞，没有就算了。和平台的交互是在这里面。
+        # 从agent把态势拿出来
+        self.status, self.detected_state= self.redAgent.get_status()
+
+        # 把态势转成大模型能看懂的文本形式
+        status_str = self.text_transfer.status_to_text(self.status)
+        detected_str = self.text_transfer.detected_to_text(self.detected_state)
+        # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
+        zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)        
+
+        # 检测是否人混的干预，有的话也弄进去
+        flag_human_intervene, status_str_new = self.human_intervene_check(zhuyili_str + status_str + detected_str)
+
+        # 增加态势阶段的提示。
+        stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+        all_str = status_str + detected_str + status_str_new + stage_str + "\n 请按照格式给出指令。"      
+
+        # 这些要socket发到client里面，然后检测有没有东西发回来。
+        self.dialog_box.order_now = all_str # 准备要发过去的东西。由于是异步，不应该在这里直接调socket发送的函数。
+        self.dialog_box.flag_order_renewed = True # 而是应该是改改标志位让它自己发过去。因为有自己独立的线程在检测这个事情。
+
+        # 然后检测，那边有没有回话。由于是检测，所以就得每一步都检测了。然后是不是执行动作就看有没有收到东西了
+        red_response_str, blue_response_str = self.socket_server.human_intervene_check()
+        
+        red_response_str = "shishi"
+        blue_response_str = "shishi"
+        if (len(red_response_str)>0) or (len(blue_response_str)>0):
+            # 那就是说明是收到了东西了,那就走一步
+
+            # 把文本里面的命令提取出来。
+            red_commands = self.text_transfer.text_to_commands(red_response_str)   
+            blue_commands = self.text_transfer.text_to_commands(blue_response_str)        
+
+            # 然后分别给到两个智能体。 # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
+            self.redAgent.set_commands(red_commands) # 得专门给它定制一个发命令的才行，不然不行。
+            self.blueAgent.set_commands(blue_commands)
+
+            self.add_fupan_info(self.timestep, (red_commands + blue_commands), all_str, (red_response_str+blue_response_str))
+        else:
+            # 否则就不走这一步
+            pass
+
+        pass
+
+    def run_one_step_client(self):
+        # 联机的话和大模型的互动放在这里面了，把互动完事儿了的命令传回去就行了，刚好自带一个异步，岂不美哉
+        
+        # 先检测有没有收到态势，有就显示，然后再检测有没有人工干预，都有就触发和大模型的互动。
+        if self.socket_client.flag_new == True:
+            # 那就说明这一帧收到东西了。# 讲道理，不断刷标志位来触发还是不够保险，除非这边（main.py里面）的刷新频率远高于那边（socket里面）。比较理想的是用信号槽机制。
+            status_str_received = self.socket_client.receive_str()
+
+            # 然后显示一下。以及交互，在这里面了
+            flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)
+
+            if flag_human_intervene:
+                # 增加态势阶段的提示。
+                stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+                all_str = status_str_received + stage_str + "\n 请按照格式给出指令。" 
+                # 把文本发给大模型，获取返回来的文本
+                if status_str_new=="test":
+                    # 说明是在单独调试这个
+                    # response_str = self.model_communication.communicate_with_model_debug(all_str)
+                    # response_str = self.model_communication.communicate_with_model(all_str)
+                    # response_str = self.model_communication.communicate_with_model_single(all_str)
+                    response_str = text_demo
+                else:
+                    response_str = self.model_communication.communicate_with_model(all_str)
+            
+            # 然后把交互好了的内容发到服务器那端去。
+            # 以现在的写法，人类改过命令的话它应该是会自己发过去的，甚至不需要加这一行修改
+            self.dialog_box.flag_order_renewed = True
+
+        pass
 
     def get_status_dixing(self,status):
         # 这个想要实现的是把每一个装备的当前地形都拿出来，然后再塞回去status里面。反正多点儿没有坏处就是了。
@@ -384,24 +496,32 @@ class command_processor(QtCore.QThread):
             self.flag_human_interact = False
 
             # 红蓝方智能体产生动作
-            act += redAgent.step(cur_redState) # 原则上这一层应该是不加东西的
+            act += redAgent.step(cur_redState) # 这么玩要能成立，step里面得是空的，抽象状态都在run_one_step里面根据各人的命令来改。
+            act += blueAgent.step(cur_blueState)  # 所以抽象状态改了之后得到下一步才会真正生效，正常问题不大应该。
             if self.flag_fupan == False:
-                if (self.timestep % 300 == 0) and (self.flag_regular_interacte==True):
-                    additional_str = ""
-                    if self.timestep == 0:
-                        # additional_str = self.the_embrace()            
-                        if self.LLM_model =="qianfan":
-                            # 只要思想肯滑坡，办法总比困难多。
-                            additional_str = self.the_embrace()            
-                        pass 
+                if self.role == "offline":
+                    # 这个就是无事发生，和以前的一样正常跑
+                    if (self.timestep % 300 == 0) and (self.flag_regular_interacte==True):
+                        additional_str = ""
+                        if self.timestep == 0:
+                            # additional_str = self.the_embrace()            
+                            if self.LLM_model =="qianfan":
+                                # 只要思想肯滑坡，办法总比困难多。
+                                additional_str = self.the_embrace()            
+                            pass 
+                        else:
+                            pass
+                            # additional_str = ""
+                        # # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
+                        # additional_str = self.the_embrace()
+                        self.run_one_step(additional_str=additional_str)
                     else:
-                        pass
-                        # additional_str = ""
-                    # # 由于百度限制了长度，所以每次都得来一遍初拥了（悲
-                    # additional_str = self.the_embrace()
-                    self.run_one_step(additional_str=additional_str)
-                else:
-                    self.run_one_step_shadow()
+                        self.run_one_step_shadow()
+                elif self.role =="server":
+                    # 这个就是本线程为服务器，不再取模了，直接拉满。
+                    self.run_one_step_server()
+                elif (self.role == "red_player") or (self.role == "blue_player"):
+                    self.run_one_step_client()
             else:
                 self.run_one_step_fupan()
             
@@ -410,9 +530,6 @@ class command_processor(QtCore.QThread):
                 # 每100步就看看成色
                 self.model_communication.get_tokens()
                 self.text_transfer.get_num_commands()
-
-            # act += redAgent.step(cur_redState)
-            act += blueAgent.step(cur_blueState)
 
             self.env.Step(Action = action)
             next_redState, next_blueState = get_states(self.env)
@@ -513,7 +630,7 @@ class command_processor(QtCore.QThread):
 
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 0
+    flag = 5
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
@@ -534,3 +651,11 @@ if __name__ == "__main__":
         # 这个是加载并运行特定的复盘，然后解说比赛的demo
         shishi = command_processor(shishi_debug,Comm_type ="jieshuo")
         shishi.jieshuo_mul_thread()
+    elif flag == 5:
+        # 这个是开起来当服务器的，跑在需要跟平台交互的电脑上。
+        config = {"red_ip":"192.168.1.117", "red_port": "20001",
+                  "blue_ip": "192.168.1.117", "blue_port": "20002" }
+        shishi = command_processor(shishi_debug,role="server",config=config)
+        shishi.main_loop()
+        # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
+        #      

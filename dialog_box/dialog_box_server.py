@@ -21,10 +21,21 @@ class MyWidget(QtWidgets.QWidget):
         super().__init__()
         self.order_now = "none"
         self.flag_order_renewed = False
+        
+        # 人跟人打，就要有特定的说法了。干脆重新规划一下，红蓝方都以客户端的形式给出，哪怕是本地的也行。然后这个server彻底作为一个中间层存在，不再显示界面了
+        self.order_now_client = "none"
+        self.flag_order_renewed_client = False        
+
         self.step_num = 0
         self.p_status ="on" # 为了后面能走，这个得默认是on
         self.p = command_processor(self)
-        self.socket_server = socket_server(self,ip="192.168.1.117",port="20001")   # 跟那边一样，这个也是要把自己传进去的，因为有需要在那里面触发的
+
+        # IP是服务器这台电脑在内网的IP，端口用个不一样的。
+        config = {"red_ip":"192.168.1.117", "red_port": "20001",
+                  "blue_ip": "192.168.1.117", "blue_port": "20002" }
+        self.socket_server = socket_server(self,ip="192.168.1.117",port="20001")  
+        # self.socket_server_red = socket_server(self,ip="192.168.1.117",port="20001")  
+        # self.socket_server_blue = socket_server(self,ip="192.168.1.117",port="20002")   
         
         
         self.button = QtWidgets.QPushButton("下达命令")
