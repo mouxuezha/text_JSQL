@@ -14,6 +14,8 @@ class socket_client(socket_base,QtCore.QThread):
         socket_base.__init__(self,"client",ip=ip,port=port)
         QtCore.QThread.__init__(self)
         self.dialog_box = dialog_box
+        self.status_str = ""
+        self.flag_human_interact = False
         pass
 
     def run_mul(self):
@@ -60,11 +62,13 @@ class socket_client(socket_base,QtCore.QThread):
             time.sleep(0.01)
             print('这里是客户端，连接地址：', self.real_socket)
             status_str = self.receive_str()
+            
             if self.flag_new == True:
                 self.dialog_box.flag_order_renewed = True
                 self.dialog_box.reset_all(0.01)
                 self.dialog_box.get_status_str(status_str,0)
                 print("客户端收到服务端的态势：", status_str)
+                self.status_str = status_str
             
             if self.dialog_box.flag_order_renewed == True:
                 # 人类改过命令，所以这里要给它传过去。
