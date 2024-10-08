@@ -97,7 +97,7 @@ class socket_server_2player(QtCore.QThread):
         self.flag_new = False # 暴力一点，这个用来标识有没有收到新的
         self.flag_send = False # 这个是标识发没发                
         while True:
-            time.sleep(0.01)
+            time.sleep(1)
             print('红方玩家连接地址：', self.red_server.real_socket)
             print('蓝方玩家连接地址：', self.blue_server.real_socket)
             red_command_str = self.red_server.receive_str()
@@ -148,12 +148,14 @@ class socket_server_2player(QtCore.QThread):
         if self.red_server.flag_new == True:
             # 那就是红方玩家对应的服务器进程收到东西了。那就读出来。
             red_response_str = self.red_server.receive_str()
+            print("红方命令："+red_response_str)
         else:
             red_response_str = "" # 来个空的，防止报错
 
         if self.blue_server.flag_new == True:
             # 那就是蓝方玩家对应的服务器进程收到东西了。那就读出来。
             blue_response_str = self.blue_server.receive_str()
+            print("蓝方命令："+blue_response_str)
         else:
             blue_response_str = "" # 来个空的，防止报错
 

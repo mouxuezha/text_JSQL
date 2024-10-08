@@ -344,9 +344,8 @@ class command_processor(QtCore.QThread):
         self.dialog_box.order_now = all_str # 准备要发过去的东西。由于是异步，不应该在这里直接调socket发送的函数。
         self.dialog_box.flag_order_renewed = True # 而是应该是改改标志位让它自己发过去。因为有自己独立的线程在检测这个事情。
 
-        
-        red_response_str = "shishi"
-        blue_response_str = "shishi"
+        time.sleep(1)
+        print("run_one_step_server, stepping")
         if (len(red_response_str)>0) or (len(blue_response_str)>0):
             # 那就是说明是收到了东西了,那就走一步
 
