@@ -94,10 +94,12 @@ class MyWidget(QtWidgets.QWidget):
         if self.p_status == "off":
             self.p_status = "on"
             self.socket_client.send_str("客户端命令：开始推演") # 写长一点，以防字符串匹配的时候有重复的
+            self.p.start()
             self.button2.setText("停止")
         elif self.p_status == "on":
             self.p_status = "off"
             self.socket_client.send_str("客户端命令：停止推演")
+            self.p.start()
             self.button2.setText("开始")
         else:
             raise Exception("p_status error")
