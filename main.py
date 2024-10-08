@@ -330,19 +330,17 @@ class command_processor(QtCore.QThread):
         # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
         zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)        
 
-        # 检测是否人混的干预，有的话也弄进去
-        flag_human_intervene, status_str_new = self.human_intervene_check(zhuyili_str + status_str + detected_str)
+        # 然后检测，那边有没有回话。由于是检测，所以就得每一步都检测了。然后是不是执行动作就看有没有收到东西了
+        red_response_str, blue_response_str = self.socket_server.human_intervene_check()
 
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
-        all_str = status_str + detected_str + status_str_new + stage_str + "\n 请按照格式给出指令。"      
+        all_str = status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"      
 
         # 这些要socket发到client里面，然后检测有没有东西发回来。
         self.dialog_box.order_now = all_str # 准备要发过去的东西。由于是异步，不应该在这里直接调socket发送的函数。
         self.dialog_box.flag_order_renewed = True # 而是应该是改改标志位让它自己发过去。因为有自己独立的线程在检测这个事情。
 
-        # 然后检测，那边有没有回话。由于是检测，所以就得每一步都检测了。然后是不是执行动作就看有没有收到东西了
-        red_response_str, blue_response_str = self.socket_server.human_intervene_check()
         
         red_response_str = "shishi"
         blue_response_str = "shishi"

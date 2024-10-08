@@ -80,6 +80,7 @@ class socket_base():
         # 判断一下是不是收重了，都是好事儿
         if new_received_str != self.received_str:
             self.received_str = new_received_str
+            print(self.received_str)
             self.flag_new = True
         else:
             self.flag_new = False
