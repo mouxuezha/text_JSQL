@@ -669,8 +669,8 @@ if __name__ == "__main__":
         shishi.jieshuo_mul_thread()
     elif flag == 5:
         # 这个是开起来当服务器的，跑在需要跟平台交互的电脑上。
-        config = {"red_ip":"192.168.1.117", "red_port": "20001",
-                  "blue_ip": "192.168.1.117", "blue_port": "20002" }
+        config = {"red_ip":"192.168.1.140", "red_port": "20001",
+                  "blue_ip": "192.168.1.140", "blue_port": "20002" }
         shishi = command_processor(shishi_debug,role="server",config=config)
         shishi.main_loop()
         # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
