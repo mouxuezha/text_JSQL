@@ -3,6 +3,7 @@ import os.path
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from socket_communication.socket_client import socket_client
+from main import command_processor
 
 import random
 import time 
@@ -14,17 +15,17 @@ class MyWidget(QtWidgets.QWidget):
     step_signal = QtCore.Signal(int) # 这个用来刷新的，下一步把窗口里的所有东西都刷新一遍。
     # 所以在分客户端和本地的模式下，就是态势更新了就刷一下了，这个就得去socket_client里改了。
     # 后面考虑统一一下或者做个启动器。
-    def __init__(self):
+    def __init__(self, role="red_player"):
         super().__init__()
 
     
         self.order_now = "none"
         self.flag_order_renewed = False
+
         self.step_num = 0
         self.p_status ="off"
-        # self.p = command_processor(self)
-        self.socket_client = socket_client(self,ip="192.168.1.140",port="20001")
-        
+        self.p = command_processor(self,role)
+        self.socket_client = socket_client(self,ip="192.168.1.117",port="20001")
 
         self.button = QtWidgets.QPushButton("下达命令")
         self.button2 = QtWidgets.QPushButton("开始")
