@@ -369,13 +369,15 @@ class command_processor(QtCore.QThread):
         # 联机的话和大模型的互动放在这里面了，把互动完事儿了的命令传回去就行了，刚好自带一个异步，岂不美哉
         
         # 先检测有没有收到态势，有就显示，然后再检测有没有人工干预，都有就触发和大模型的互动。
-        if self.socket_client.flag_new == True:
-            # 那就说明这一帧收到东西了。# 讲道理，不断刷标志位来触发还是不够保险，除非这边（main.py里面）的刷新频率远高于那边（socket里面）。比较理想的是用信号槽机制。
-            status_str_received = self.socket_client.receive_str()
+        # if self.socket_client.flag_new == True: # 不检测了，态势是空的就空的呗，无所谓。
+        # 那就说明这一帧收到东西了。# 讲道理，不断刷标志位来触发还是不够保险，除非这边（main.py里面）的刷新频率远高于那边（socket里面）。比较理想的是用信号槽机制。
+        status_str_received = self.socket_client.receive_str()
 
-            # 然后显示一下。以及交互，在这里面了
-            flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)
-
+        # 然后显示一下。以及交互，在这里面了
+        flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)
+            
+        if self.dialog_box.flag_order_renewed == True:
+            # 那就是人下了命令。得分开，别跟人下命令那个耦合在一起。
             if flag_human_intervene: # 要有这个才触发和大模型的互动，
                 # 增加态势阶段的提示。
                 stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
@@ -391,9 +393,7 @@ class command_processor(QtCore.QThread):
                     response_str = self.model_communication.communicate_with_model(all_str)
             
             # 然后把交互好了的内容发到服务器那端去。
-            # 以现在的写法，人类改过命令的话它应该是会自己发过去的，甚至不需要加这一行修改
-            self.dialog_box.flag_order_renewed = True
-
+            self.socket_client.send_str(response_str)               
         pass
 
     def get_status_dixing(self,status):
