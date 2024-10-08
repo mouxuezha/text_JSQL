@@ -76,7 +76,8 @@ class MyWidget(QtWidgets.QWidget):
         self.order_now = self.dialog.text()
         self.flag_order_renewed = True
         # 这个得传过去
-        self.socket_client.send_str(self.order_now)
+        # 不是直接传命令了，得是传大模型处理过的那些东西，所以不是这里传了。
+        # self.socket_client.send_str(self.order_now)
 
         # # 这些是用来debug的
         # print(self.order_now)
@@ -109,7 +110,7 @@ if __name__ == "__main__":
             
     app = QtWidgets.QApplication([])
 
-    widget = MyWidget(role="red_player",config = config)
+    widget = MyWidget(role="blue_player",config = config)
     widget.resize(800, 300)
     widget.show()
 
