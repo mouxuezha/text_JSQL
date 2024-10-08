@@ -29,13 +29,14 @@ class command_processor(QtCore.QThread):
         self.log_file = r'overall_result.txt'
         self.dialog_box = dialog_box
 
-        self.args = self.__init_net()
-        self.__init_env()
-        self.__init_agent()
+
 
         if role == "offline":
             # 那就是无事发生
             self.role = "offline"
+            self.args = self.__init_net()
+            self.__init_env()
+            self.__init_agent()
             pass 
         else:
             self.__init_socket(role =role, config=kargs["config"])
@@ -98,6 +99,10 @@ class command_processor(QtCore.QThread):
             # 同时，如果分了server和player，那么server这头就不和大模型通信了就。
             self.role = "server"
             self.__init_socket_server(config)
+            # 这些是跟平台通信的东西，自然只需要在本线程是服务器的时候才需要来。
+            self.args = self.__init_net()
+            self.__init_env()
+            self.__init_agent()
         elif role == "red_player":
             self.role = "red_player"
             self.__init_socket_client(config)

@@ -15,7 +15,7 @@ class MyWidget(QtWidgets.QWidget):
     step_signal = QtCore.Signal(int) # 这个用来刷新的，下一步把窗口里的所有东西都刷新一遍。
     # 所以在分客户端和本地的模式下，就是态势更新了就刷一下了，这个就得去socket_client里改了。
     # 后面考虑统一一下或者做个启动器。
-    def __init__(self, role="red_player"):
+    def __init__(self, role="red_player",**kargs):
         super().__init__()
 
     
@@ -24,8 +24,9 @@ class MyWidget(QtWidgets.QWidget):
 
         self.step_num = 0
         self.p_status ="off"
-        self.p = command_processor(self,role)
-        self.socket_client = socket_client(self,ip="192.168.1.117",port="20001")
+        self.p = command_processor(self,role=role, config=config)
+        # self.socket_client = socket_client(self,ip="192.168.1.117",port="20001")
+        self.socket_client = self.p.socket_client # 看看能不能偷个懒
 
         self.button = QtWidgets.QPushButton("下达命令")
         self.button2 = QtWidgets.QPushButton("开始")
@@ -102,9 +103,13 @@ class MyWidget(QtWidgets.QWidget):
 
 if __name__ == "__main__":
     # 跑起来看看成色
+
+    config = {"red_ip":"192.168.1.117", "red_port": "20001",
+            "blue_ip": "192.168.1.117", "blue_port": "20002" }
+            
     app = QtWidgets.QApplication([])
 
-    widget = MyWidget()
+    widget = MyWidget(role="red_player",config = config)
     widget.resize(800, 300)
     widget.show()
 
