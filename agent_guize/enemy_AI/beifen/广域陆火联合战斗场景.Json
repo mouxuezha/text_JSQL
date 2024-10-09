@@ -738,7 +738,7 @@
                }
             ],
             "ViewShape" : "round_shape",
-            "detector_max_range" : 4000,
+            "detector_max_range" : 2300,
             "isPendulumAble" : false,
             "max_azimuth" : 2,
             "max_elevation" : 45,
@@ -802,7 +802,7 @@
                }
             ],
             "ViewShape" : "round_shape",
-            "detector_max_range" : 5000,
+            "detector_max_range" : 2300,
             "isPendulumAble" : false,
             "max_azimuth" : 2,
             "max_elevation" : 45,
@@ -4302,7 +4302,7 @@
                "DetectorType" : "missile_radar",
                "azimuth" : 20,
                "be_destroyed" : false,
-               "detector_range" : 4000,
+               "detector_range" : 2300,
                "elevation" : 0,
                "initial_pointangle" : 0,
                "is_detector_on" : false,
@@ -4830,7 +4830,7 @@
       "Infantry6" : {
          "PlayerID" : "player2",
          "PlayerName" : "bluePlayer",
-         "UnitID" : "Infantry5",
+         "UnitID" : "Infantry6",
          "UnitType" : "infantry",
          "VehicleState" : {
             "DetectorType" : "no_detecttype",
@@ -4888,7 +4888,7 @@
       "Infantry7" : {
          "PlayerID" : "player2",
          "PlayerName" : "bluePlayer",
-         "UnitID" : "Infantry5",
+         "UnitID" : "Infantry7",
          "UnitType" : "infantry",
          "VehicleState" : {
             "DetectorType" : "no_detecttype",
@@ -4946,7 +4946,7 @@
       "Infantry8" : {
          "PlayerID" : "player2",
          "PlayerName" : "bluePlayer",
-         "UnitID" : "Infantry5",
+         "UnitID" : "Infantry8",
          "UnitType" : "infantry",
          "VehicleState" : {
             "DetectorType" : "no_detecttype",
@@ -6154,7 +6154,7 @@
                "DetectorType" : "wingedAircraft_Radar",
                "azimuth" : 20,
                "be_destroyed" : false,
-               "detector_range" : 2000,
+               "detector_range" : 1500,
                "elevation" : 0,
                "initial_pointangle" : 0,
                "is_detector_on" : true,
@@ -6206,7 +6206,7 @@
                "DetectorType" : "wingedAircraft_Radar",
                "azimuth" : 20,
                "be_destroyed" : false,
-               "detector_range" : 2000,
+               "detector_range" : 1500,
                "elevation" : 0,
                "initial_pointangle" : 0,
                "is_detector_on" : true,
@@ -9433,7 +9433,7 @@
             "mass" : 10,
             "max_height" : 8000,
             "max_hp" : 1,
-            "max_range" : 4000,
+            "max_range" : 3000,
             "min_height" : 0,
             "min_range" : 0,
             "object" : [
@@ -13321,7 +13321,7 @@
             "damage_hp" : 1,
             "max_launch_cd" : 60,
             "max_launch_num" : 4,
-            "max_range" : 2000000
+            "max_range" : 3000
          }
       },
       {

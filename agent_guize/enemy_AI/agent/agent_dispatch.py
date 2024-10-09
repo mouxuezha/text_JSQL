@@ -39,9 +39,9 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
             self.name_list = ["MainBattleTank_ZTZ200", "ArmoredTruck_ZTL200", "WheeledCmobatTruck_ZB200", "Howitzer_C200",
                             "missile_truck", "Infantry", "ShipboardCombat_plane","CruiseMissile","JammingTruck"]             
         pass
-        
-        self.commands_queue = queue.Queue(maxsize=114514) # 这个是新加的，用来处理和大模型的交互。
 
+        self.commands_queue = queue.Queue(maxsize=114514) # 这个是新加的，用来处理和大模型的交互。
+    
     def init_agent(self, unit_ID_list):
         # 每个装备应该是对应一个局部的智能体的，不然态势同步的时候就乱完了。
         # 这个还不应该是列表，这个还应该是ID的list才比较好。
@@ -259,18 +259,17 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         else:
             raise Exception('XXHtest: invalid location, G!')
         pass
-
+    
     def deploy(self,ids):
         # 这个也是延续之前的部署方式了。为了尽量减少依赖项保持稳定，发布版的部署坐标硬编码在程序里，而不再读取外部东西
         # 并把代码相应地简化一下，尝试减少行数增加可读性。
         deploy_type_dict = dict() # key:type, value, unit number
         building_loaction_list = [] 
         building_loaction_list.append([100.137777,13.6442,0])
-        building_loaction_list.append([100.1167513,13.6432282,0])
         building_loaction_list.append([100.1644399,13.65847,0])
         building_loaction_list.append([100.103974397,13.63564213,0])
+        building_loaction_list.append([100.1167513,13.6432282,0])
         building_loaction_list.append([100.140676439,13.607695814,0])
-        
 
         if self.player == "red":
             # 那就说明现在是红方，那就照着红方的来
@@ -634,7 +633,7 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         return self.act
     
     def deploy_addition(self,CruiseMissileID,Deployment_CruiseMissile):
-        # 这个最开始是用来处理巡飞弹的，让它开局直接能够飞起来。阳哥的原版方案是直接硬编码在python里，我觉着不彳亍。
+        # 这个最开始是用来处理巡飞弹的，让它开局直接能够飞起来。阳哥的原版方案是直接硬编码在C++里，我觉着不彳亍。
         for i in range(len(CruiseMissileID)):
             rand_angle = random.randint(0,360)
             rand_angle_rad = rand_angle / 180 * np.pi # 来个随机方向。
@@ -689,7 +688,7 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
     
     def get_status(self):
         return self.status, self.global_agent.detected_state
-    
+            
     def set_commands(self, command_list:list):
         # print("set_commands: unfinished yet")
         # 首先把这些个command加入到queue里面去。增加一个键值对，当前时间。
@@ -769,6 +768,6 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
                 
         else:
             raise Exception("undefined comand type in set_commands_single, G.")
-        
+  
 if __name__ == "__main__":
     print("这个没法单独测试，构筑单独测试用例的意义也不是很大。直接去main.py里面测可也")

@@ -5,32 +5,55 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from agent.base_agent import BaseAgent
 import copy
 
+import numpy as np 
 
 class GlobalAgent(BaseAgent):
     def __init__(self):
         super().__init__()
         self.test_config =dict()
         self.num = 0
+    
+    def communication(self, local_agents:dict):
+        # 这个用于实现global和没有受到干扰的agent之间的通信。
 
-    def step(self,status):
+        # 如果是我们的自己的代码，这里就可以用于传递抽象状态了
+        # 那么现在确实是我们自己的代码。
+
+        # 找出能通信的智能体
+        for unit_id_single in list(local_agents.keys()):
+            # 把它的abstract_state弄出来
+            abstract_state_single = {unit_id_single: self.abstract_state[unit_id_single]}
+            local_agent_single = local_agents[unit_id_single]
+            # 给到local的里面。按理来说，都是传引用的话，到这里就算是完事儿了。调试的时候注意看一眼。
+            # local_agent_single.abstract_state = abstract_state_single
+            local_agent_single.receive_order(abstract_state_single)
+
+            # 然后把当前能看到的态势也都发进去。
+            local_agent_single.detected_state2 = self.detected_state2
+            local_agent_single.detected_state = self.detected_state
+            
+            # 然后是当前的命令设定，也得更新进去。
+            local_agent_single.group_A_gai_config = self.group_A_gai_config
+        
+        
+        pass
+
+    def step(self,status:dict):
         self.act = [] 
         self.status = status
         # print("unfinished yet")
         if self.player == "red":
             # 当前智能体是红方
-            self.act = self.step_red_demo(status)
-            # self.act = self.step_red_test_kaihuo(status)
-            # self.act = self.step_red_test_move(status)
-            # self.act = self.step_red_test_ganrao(status)
-            # self.act = self.step_red_test_xunfeidan(status)
-            # self.act = self.step_red_test_yueye(status)
+            # self.act = self.step_red_shishi1(status)
+            # self.act = self.step_red_shangxiache(status)
+            self.act = self.step_LLM(status)
             pass
         elif self.player == "blue":
             # 当前智能体是蓝方
-            self.act = self.step_blue_demo(status)
-            # self.act = self.step_blue_test_kaihuo(status)
-            # self.act = self.step_blue_test_ganrao(status)
-            # self.act = self.step_blue_test_building(status)
+            # self.act = self.step_blue_shishi1(status)
+            # self.act = self.step_blue_shishi2(status)
+            # self.act = self.step_blue_shangxiache(status)
+            self.act = self.step_LLM(status)
             pass 
         return self.act
     
@@ -43,9 +66,6 @@ class GlobalAgent(BaseAgent):
         self.test_config = self.test_config | test_config
         pass
     
-    def communication(self, local_agent_dict:dict):
-        # 这个是用来实现全局和局部之间传输信息的。各参赛队伍可自行定制传输内容。
-        pass
 
     # 以下是我们测试的时候用过的代码，可供各队参考
     def step_red_test_move(self, status):
@@ -253,7 +273,7 @@ class GlobalAgent(BaseAgent):
                                                         detectinfo[targetid]['targetAlt'],
                                                         MainBattleTank_ZTZ100MissileType[1])
 
-        if self.num >=0:
+        if self.num >=500:
             # 发挥红方火力优势。
             for equip in missile_truckID:
                 my_LLA = self.get_LLA(equip,status=status)
@@ -265,60 +285,29 @@ class GlobalAgent(BaseAgent):
                                                         detectinfo[targetid]['targetLat'],
                                                         detectinfo[targetid]['targetAlt'],
                                                         MissleTruckMissileType[0]) 
-            # 专门用来看拦截的
-            for equip in missile_truckID:
-                my_LLA = self.get_LLA(equip,status=status)
-                target_LLA=[100.137777,13.6442,0]
-                self._Attack_Action(equip, target_LLA[0],target_LLA[1],target_LLA[2],MissleTruckMissileType[0])   
-                                  
+            
         return self.act
 
     def step_blue_demo(self, status:dict):
         self.act = [] 
         # 也是直接冲
-        # target_LLA = [100.137777, 13.6442, 0 ]
-        # ID_list = list(status.keys())
-        WheeledCmobatTruck_ZB200 = self.select_by_type("WheeledCmobatTruck_ZB200")
-        MainBattleTank_ZTZ200 = self.select_by_type("MainBattleTank_ZTZ200")
-    
-        WheeledCmobatTruck_ZB200ID = list(WheeledCmobatTruck_ZB200.keys())
-        MainBattleTank_ZTZ200ID = list(MainBattleTank_ZTZ200.keys())
+        target_LLA = [100.137777, 13.6442, 0 ]
+        ID_list = list(status.keys())
 
         if self.num == 2:
-            # for ID_single in ID_list:
-            #     # self._Change_State(ID_single,3)
-            #     pass
+            for ID_single in ID_list:
+                # self._Change_State(ID_single,3)
+                pass
             # 上下车演示：
-            # 先上车
             for i in range(4):
                 IFV_ID = "WheeledCmobatTruck_ZB200_" + str(i)
                 infantry_ID = "Infantry" + str(i+2)
                 self._On_Board_Action(IFV_ID, infantry_ID)  
 
-        if self.num == 5:
-            # 四个ZJ车载步兵冲向四个房子前
-            target_LLA_step1_WheeledCmobatTruck_ZB200 = [(100.164, 13.656, 0),
-                                                          (100.138, 13.6403, 0),
-                                                          (100.117, 13.6414, 0),
-                                                          (100.105, 13.6348, 0)]
-            for i, target_single in enumerate(target_LLA_step1_WheeledCmobatTruck_ZB200):
-                Id = WheeledCmobatTruck_ZB200ID[i]
-                lon, lat, alt = target_single 
-                self._Move_Action(Id, lon, lat, alt)
-            # 坦克分两组向前冲
-            target_LLA_step1_MainBattleTank_ZTZ200 = [(100.151, 13.6492, 0),
-                                                      (100.151, 13.6492, 0),
-                                                      (100.127, 13.641, 0),
-                                                      (100.127, 13.641, 0)]
-            for i, target_single in enumerate(target_LLA_step1_MainBattleTank_ZTZ200):
-                Id = MainBattleTank_ZTZ200ID[i]
-                lon, lat, alt = target_single 
-                self._Move_Action(Id, lon, lat, alt)
-            # 无人机随机巡逻
-            patrol_area = [100.0923, 100.18707, 13.6024, 13.67248]
-            self.random_patrol('ShipboardCombat_plane1', patrol_area, num_points=10)
+        if self.num == 21:
+            for ID_single in ID_list:
+                self._Move_Action(ID_single, target_LLA[0], target_LLA[1], target_LLA[2])       
 
-            
         # 侦察和打击
         # 获取探测信息测试
         detectinfo = self.get_detect_info(status)
@@ -368,3 +357,285 @@ class GlobalAgent(BaseAgent):
             ganrao_id = "JammingTruck_1"
             self._SetJammer_Action(ganrao_id, 2)          
         return self.act 
+    
+    def step_red_shishi1(self, status:dict):
+        self.act = [] 
+        blue_deploy_LLA = [100.12472961, 13.66152304, 0]
+        # 先把兵种的分类做了
+        bin_status = self.select_by_type("Infantry")
+        tank_status = self.select_by_type("MainBattleTank")
+        xiaoche_status = self.select_by_type("ArmoredTruck")
+        che_status = self.select_by_type("WheeledCmobatTruck")
+        feiji_status = self.select_by_type("ShipboardCombat_plane")
+        xunfeidan_status = self.select_by_type("CruiseMissile")
+        daodan_status = self.select_by_type("missile_truck")
+        pao_status = self.select_by_type("Howitzer")
+        ganraoche_status = self.select_by_type("JammingTruck")
+        base_LLA = self.building_loaction_list[0]
+
+        if self.num<=1:
+            # 还是搞个初始化好了。
+            self.Inint_abstract_state(status)
+
+        if self.num ==1:
+            self.set_UAV_scout(feiji_status,blue_deploy_LLA,R=4500)
+            self.set_UAV_scout(xunfeidan_status,"ShipboardCombat_plane0",R=500)
+            self.set_none(daodan_status) # 这个是导弹先不慌开火
+            # self.set_open_fire(daodan_status) # 新版的这个里面也自带了导弹不慌开火。
+        
+        # if self.num == 11:
+            
+        #     # self.group_A_gai(base_LLA, status=(tank_status | che_status | xiaoche_status))
+        #     # self.group_A(base_LLA, status=(tank_status | che_status | xiaoche_status))
+        #     self.group_A(base_LLA, status=tank_status)
+        #     pass
+
+        # 先搞一个最挫的红方绕路偷家打法，从左边绕
+        LLA_list = []
+        LLA_list.append([100.096, 13.6109, 0])
+        LLA_list.append([100.092, 13.6463, 0])
+        LLA_list.append([100.12472961, 13.66152304, 0])
+        if self.num ==2: # 开局反正不会被干扰，不用那啥。
+            self.group_A2(LLA_list[1], che_status, bin_status)
+            # self.group_A(LLA_list[0],status=(tank_status | xiaoche_status  | ganraoche_status))
+            self.group_A(LLA_list[0],status=(tank_status | xiaoche_status | pao_status | ganraoche_status))
+            # self.group_A([100.104,13.6389,0],status=(xiaoche_status))
+        
+        # if (self.num >= 500) and (self.num <= 1500) and (self.num%11==0):
+        if self.num == 300:
+            # 其实被干扰了也没啥，反正只要通信恢复就会自动同步过去的哇。
+            # self.group_A(LLA_list[1],status=(xiaoche_status))
+            self.group_A([100.104,13.6389,0],status=(xiaoche_status))
+
+            
+        if self.num in [600,610,620]:
+            # 其实被干扰了也没啥，反正只要通信恢复就会自动同步过去的哇。
+            # self.group_A(LLA_list[1],status=(tank_status | pao_status | ganraoche_status))
+            self.group_A(LLA_list[1],status=pao_status)
+        if self.num in [680]:
+            self.set_open_fire(pao_status)
+        if self.num in [900,910,920]:
+            self.group_A2(LLA_list[1], che_status, bin_status)
+            # self.group_A(LLA_list[1],status=pao_status)
+        if (self.num >= 1200) and (self.num %11==4):
+            # self.group_A2(LLA_list[1], che_status, bin_status)
+            # self.group_A(LLA_list[2],status=(tank_status | xiaoche_status | che_status |bin_status))
+            self.group_A(LLA_list[2],status=(pao_status | xiaoche_status | che_status |bin_status))
+            self.set_open_fire(pao_status)
+
+
+        self.Gostep_abstract_state()
+        # self._Move_Action("MainBattleTank_ZTZ100_0", base_LLA[0], base_LLA[1], base_LLA[2])
+        return self.act 
+
+    def step_red_shangxiache(self,status:dict):
+        self.act= [] 
+        # 这个也是为了配合来哥好好测上下车的。
+        location_list = [] 
+        location_list.append([100.154, 13.614, 0])
+        location_list.append([100.161, 13.6028, 0])
+        location_list.append([100.147, 13.6031, 0])
+        # 先把兵种的分类做了
+        bin_status = self.select_by_type("Infantry")
+        tank_status = self.select_by_type("MainBattleTank")
+        xiaoche_status = self.select_by_type("ArmoredTruck")
+        che_status = self.select_by_type("WheeledCmobatTruck")
+        feiji_status = self.select_by_type("ShipboardCombat_plane")
+        xunfeidan_status = self.select_by_type("CruiseMissile")
+        daodan_status = self.select_by_type("missile_truck")
+        pao_status = self.select_by_type("Howitzer")
+        ganraoche_status = self.select_by_type("JammingTruck")
+        if self.num % 1200 == 2:
+            # 那就去第一个点  
+            index = 0 
+        elif self.num % 1200 == 402:
+            # 那就去第二个点
+            index = 1
+        elif self.num % 1200 == 802:
+            # 那就去第三个点
+            index = 2 
+        else:
+            # 那就不重复发命令了
+            index = -1 
+
+        if index>=0:
+            target_LLA =  location_list[index]
+            self.group_A2(target_LLA, che_status, bin_status)
+        self.Gostep_abstract_state()
+        # self._Move_Action("MainBattleTank_ZTZ100_0", base_LLA[0], base_LLA[1], base_LLA[2])
+        return self.act 
+    def step_blue_shishi1(self,status:dict):
+        self.act = [] 
+        red_deploy_LLA = [100.15427471282, 13.60603147549, 0]
+        blue_deploy_LLA = [100.12472961, 13.66152304, 0]
+        # 先把兵种的分类做了
+        bin_status = self.select_by_type("Infantry")
+        bin1_status= dict()
+        bin2_status = dict()
+        bin_id_list = list(bin_status.keys())
+        for i in range(len(bin_id_list)):
+            if i <4:
+                # 那就是机动步兵
+                bin1_status[bin_id_list[i]] = bin_status[bin_id_list[i]]
+            else:
+                # 那就是驻防步兵
+                bin2_status[bin_id_list[i]] = bin_status[bin_id_list[i]]
+        tank_status = self.select_by_type("MainBattleTank")
+        xiaoche_status = self.select_by_type("ArmoredTruck")
+        che_status = self.select_by_type("WheeledCmobatTruck")
+        feiji_status = self.select_by_type("ShipboardCombat_plane")
+        ganraoche_status = self.select_by_type("JammingTruck")
+
+        if self.num ==1:
+            # 驻防步兵就开局直接进房子可也。
+            self.set_hidden_and_alert(bin2_status)
+            # 先知一飞开三矿
+            self.set_UAV_scout(feiji_status,red_deploy_LLA,R=3000)
+            # 干扰车冲一波看看成色。
+            self.set_move_and_jammer(ganraoche_status, red_deploy_LLA, model=-1)
+        
+        if self.num >=2 and self.num < 2000:
+            # 调一下态势认知的那些函数。# 0923好像不是太好使，这玩意check不出来。
+            result_state_list, variance, index = self.check_enemy_group(self.detected_state2, R_threshold=1500)
+            if variance>0.7:
+                # 那就说明过来的敌方的集中程度比较高。那就合兵对付它。
+                result_state = result_state_list[index]
+                base_LLA = self.building_loaction_list[index]
+                n_fangxiang = self.check_enemy_direction(result_state, base_LLA)
+                # A过去还是可以做到的吧。
+                # self.group_A(base_LLA, status=(tank_status | ganraoche_status))
+                
+                if self.num < 400:
+                    self.group_A_gai(base_LLA, status=(tank_status ), vector=n_fangxiang)
+                    # self.group_A_gai(base_LLA, status=(tank_status | ganraoche_status), vector=n_fangxiang)
+                    # self.group_A(base_LLA,status=ganraoche_status)
+                    self.group_A2(base_LLA-0.001*n_fangxiang, che_status, bin1_status)
+                else:
+                    # self.group_A_gai(base_LLA, status=(tank_status | ganraoche_status ), vector=n_fangxiang,name="blue2")
+                    # self.group_A_gai(base_LLA, status=( che_status |bin1_status), vector=n_fangxiang,name="blue3")
+                    # 上面这个不太对，会变成往侧面就去了，不知道为啥。
+                    self.group_A(base_LLA, status=(tank_status | ganraoche_status ))
+                    self.group_A(base_LLA, status=( che_status |bin1_status))
+                pass
+            else:
+                # 那就说明过来的敌方比较分散，需要想一些办法来处理。
+                print("unfinished yet in step_blue_shishi")
+        elif self.num > 2500:
+            # 要是到最后几步了，就A到点里去好了。
+            self.group_A(blue_deploy_LLA, status=( che_status |tank_status| ganraoche_status))    
+            
+        # 其他的，尝试搞一些博弈，比如侦测到对面从哪边过来，就相应地去防守那个方向。比如看见对面无人机过来了，就把干扰车开过去准备给它干扰了。原则上给它干扰了就能压制它传情报。由于开了干扰就全图可见，就还有分兵的说法。
+
+        self.Gostep_abstract_state()
+        return self.act  
+
+    def step_blue_shishi2(self,status:dict):
+        # 这个是用来确证“静止打运动、隐蔽打机动”能够出效果的，就是先A到红方shishi1的路上，然后隐蔽起来，实现一个以静打动，看看成色。
+        self.act = [] 
+        red_deploy_LLA = [100.15427471282, 13.60603147549, 0]
+        blue_deploy_LLA = [100.12472961, 13.66152304, 0]
+        # 先把兵种的分类做了
+        bin_status = self.select_by_type("Infantry")
+        bin1_status= dict()
+        bin2_status = dict()
+        bin_id_list = list(bin_status.keys())
+        for i in range(len(bin_id_list)):
+            if i <4:
+                # 那就是机动步兵
+                bin1_status[bin_id_list[i]] = bin_status[bin_id_list[i]]
+            else:
+                # 那就是驻防步兵
+                bin2_status[bin_id_list[i]] = bin_status[bin_id_list[i]]
+        tank_status = self.select_by_type("MainBattleTank")
+        xiaoche_status = self.select_by_type("ArmoredTruck")
+        che_status = self.select_by_type("WheeledCmobatTruck")
+        feiji_status = self.select_by_type("ShipboardCombat_plane")
+        ganraoche_status = self.select_by_type("JammingTruck")
+        xunfeidan_status = self.select_by_type("CruiseMissile")
+        
+        base_LLA = self.building_loaction_list[2]
+        base_LLA_gai = (np.array(base_LLA) - np.array(blue_deploy_LLA)) * 0.8  + np.array(blue_deploy_LLA)
+        base_LLA_gai = list(base_LLA_gai)
+
+        if self.num ==1:
+            # 驻防步兵就开局直接进房子可也。
+            self.set_hidden_and_alert(bin2_status)
+            # 先知一飞开三矿
+            self.set_UAV_scout(feiji_status,red_deploy_LLA,R=4000)
+            self.set_UAV_scout(xunfeidan_status,base_LLA,R=1500)
+            # 干扰车冲一波看看成色。
+            self.set_move_and_jammer(ganraoche_status, red_deploy_LLA, model=-1)
+        
+        if self.num >=2 and self.num < 600 and self.num%10==2:
+            # 调一下态势认知的那些函数。# 0923好像不是太好使，这玩意check不出来。
+            # self.group_A_gai(base_LLA, status=(tank_status ))
+            if self.num >=20:
+                self.group_A_gai(base_LLA_gai, status=(tank_status | ganraoche_status))
+            # self.group_A(base_LLA,status=ganraoche_status)
+            self.group_A2(base_LLA, che_status, bin1_status)
+            
+        elif self.num == 620:
+            # 切成隐蔽状态。
+            status=(tank_status  | che_status | bin1_status)
+            self.set_hidden_and_alert(status)
+        # # elif self.num == 800:
+        #     target_LLA = [100.117, 13.618, 0]
+        #     self.group_A(target_LLA,status=tank_status)
+
+        if self.num > 2500:
+            # 要是到最后几步了，就A到点里去好了。
+            self.group_A(blue_deploy_LLA, status=( che_status |tank_status| ganraoche_status))    
+            
+        # 其他的，尝试搞一些博弈，比如侦测到对面从哪边过来，就相应地去防守那个方向。比如看见对面无人机过来了，就把干扰车开过去准备给它干扰了。原则上给它干扰了就能压制它传情报。由于开了干扰就全图可见，就还有分兵的说法。
+
+        self.Gostep_abstract_state()
+        return self.act  
+    
+    def step_blue_shangxiache(self, status:dict):
+        self.act= [] 
+        # 这个是为了配合来哥好好测上下车的。
+        location_list = [] 
+        location_list.append([100.123,13.6682,0])
+        location_list.append([100.114,13.6541,0])
+        location_list.append([100.137,13.6589,0])
+        # 先把兵种的分类做了
+        bin_status = self.select_by_type("Infantry")
+        bin1_status= dict()
+        bin2_status = dict()
+        bin_id_list = list(bin_status.keys())
+        for i in range(len(bin_id_list)):
+            if i <4:
+                # 那就是机动步兵
+                bin1_status[bin_id_list[i]] = bin_status[bin_id_list[i]]
+            else:
+                # 那就是驻防步兵
+                bin2_status[bin_id_list[i]] = bin_status[bin_id_list[i]]
+        tank_status = self.select_by_type("MainBattleTank")
+        xiaoche_status = self.select_by_type("ArmoredTruck")
+        che_status = self.select_by_type("WheeledCmobatTruck")
+        feiji_status = self.select_by_type("ShipboardCombat_plane")
+        ganraoche_status = self.select_by_type("JammingTruck")
+        xunfeidan_status = self.select_by_type("CruiseMissile")
+
+        if self.num % 1200 == 2:
+            # 那就去第一个点  
+            index = 0 
+        elif self.num % 1200 == 402:
+            # 那就去第二个点
+            index = 1
+        elif self.num % 1200 == 802:
+            # 那就去第三个点
+            index = 2 
+        else:
+            # 那就不重复发命令了
+            index = -1 
+
+        if index>=0:
+            target_LLA =  location_list[index]
+            self.group_A2(target_LLA, che_status, bin1_status)
+        self.Gostep_abstract_state()
+        return self.act 
+    def step_LLM(self,status:dict):
+        # 用于配合大模型的。说白了就是啥也不干，只走一波抽象状态。
+        self.Gostep_abstract_state()
+        return self.act     
