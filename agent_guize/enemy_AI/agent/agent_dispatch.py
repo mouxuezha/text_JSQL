@@ -685,6 +685,10 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         # 这个也是，要多一层“传到global agent 里面去”的操作
         test_config = {"my_state": state}
         self.global_agent.load_test_config(test_config)
+    
+    def get_status(self):
+        return self.status, self.global_agent.detected_state
+            
     def set_commands(self, command_list:list):
         # print("set_commands: unfinished yet")
         # 首先把这些个command加入到queue里面去。增加一个键值对，当前时间。
