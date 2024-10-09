@@ -1,6 +1,7 @@
 # 这个是主函数，到时候就运行这个就完事了。
-from agent_guize.agent import Agent
+# from agent_guize.agent import Agent
 from agent_guize.enemy_AI.agent.agent_dispatch import agent_dispatch
+# from agent_guize.me_AI.agent.agent_dispatch import agent_dispatch
 from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer, text_demo
