@@ -1,6 +1,7 @@
 # 这个是主函数，到时候就运行这个就完事了。
-from agent_guize.agent import Agent
+# from agent_guize.agent import Agent
 from agent_guize.enemy_AI.agent.agent_dispatch import agent_dispatch
+# from agent_guize.me_AI.agent.agent_dispatch import agent_dispatch
 from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer, text_demo
@@ -351,7 +352,7 @@ class command_processor(QtCore.QThread):
 
         time.sleep(1)
         print("run_one_step_server, stepping")
-        if (len(red_response_str)>0) or (len(blue_response_str)>0):
+        if (len(red_response_str)>0) and (len(blue_response_str)>0):
             # 那就是说明是收到了东西了,那就走一步
 
             # 把文本里面的命令提取出来。
