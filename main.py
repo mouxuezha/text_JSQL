@@ -351,7 +351,7 @@ class command_processor(QtCore.QThread):
 
         time.sleep(1)
         print("run_one_step_server, stepping")
-        if (len(red_response_str)>0) or (len(blue_response_str)>0):
+        if (len(red_response_str)>0) and (len(blue_response_str)>0):
             # 那就是说明是收到了东西了,那就走一步
 
             # 把文本里面的命令提取出来。
