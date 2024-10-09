@@ -24,8 +24,7 @@ class MyWidget(QtWidgets.QWidget):
 
         self.step_num = 0
         self.p_status ="off"
-        self.p = command_processor(self,role=role, config=config)
-        # self.socket_client = socket_client(self,ip="192.168.1.117",port="20001")
+        self.p = command_processor(self,role=role, config=kargs["config"])
         self.socket_client = self.p.socket_client # 看看能不能偷个懒
 
         self.button = QtWidgets.QPushButton("下达命令")

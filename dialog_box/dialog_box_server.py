@@ -4,7 +4,7 @@
 import os.path
 import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from socket_communication.socket_server import socket_server
+from socket_communication.socket_server import socket_server_2player
 from main import command_processor
 import random
 import time 
@@ -17,7 +17,7 @@ class MyWidget(QtWidgets.QWidget):
     # 讲道理，完全可以做成“服务器端点也行，在这点也行”的模式嘛。
     
     step_signal = QtCore.Signal(int) # 这个用来刷新的，下一步把窗口里的所有东西都刷新一遍。
-    def __init__(self):
+    def __init__(self,**kargs):
         super().__init__()
         self.order_now = "none"
         self.flag_order_renewed = False
@@ -28,14 +28,11 @@ class MyWidget(QtWidgets.QWidget):
 
         self.step_num = 0
         self.p_status ="on" # 为了后面能走，这个得默认是on
-        self.p = command_processor(self)
+        config = kargs["config"]
+        self.p = command_processor(self,role="server",config=config)
 
         # IP是服务器这台电脑在内网的IP，端口用个不一样的。
-        config = {"red_ip":"192.168.1.117", "red_port": "20001",
-                  "blue_ip": "192.168.1.117", "blue_port": "20002" }
-        self.socket_server = socket_server(self,ip="192.168.1.117",port="20001")  
-        # self.socket_server_red = socket_server(self,ip="192.168.1.117",port="20001")  
-        # self.socket_server_blue = socket_server(self,ip="192.168.1.117",port="20002")   
+        self.socket_server = socket_server_2player(config,dialog_box=self)
         
         
         self.button = QtWidgets.QPushButton("下达命令")
@@ -110,8 +107,9 @@ class MyWidget(QtWidgets.QWidget):
 if __name__ == "__main__":
     # 跑起来看看成色
     app = QtWidgets.QApplication([])
-
-    widget = MyWidget()
+    config = {"red_ip":"192.168.1.140", "red_port": "20001",
+                "blue_ip": "192.168.1.140", "blue_port": "20002" }
+    widget = MyWidget(config=config)
     widget.resize(800, 300)
     widget.show()
 
