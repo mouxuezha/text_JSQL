@@ -75,6 +75,7 @@ class MyWidget(QtWidgets.QWidget):
         self.text.setText("小弈人混-命令已经下达")
         self.order_now = self.dialog.text()
         self.flag_order_renewed = True
+        self.socket_client.flag_human_interact = True
         # 这个得传过去
         # 不是直接传命令了，得是传大模型处理过的那些东西，所以不是这里传了。
         # self.socket_client.send_str(self.order_now)
@@ -94,10 +95,12 @@ class MyWidget(QtWidgets.QWidget):
         if self.p_status == "off":
             self.p_status = "on"
             self.socket_client.send_str("客户端命令：开始推演") # 写长一点，以防字符串匹配的时候有重复的
+            self.p.start()
             self.button2.setText("停止")
         elif self.p_status == "on":
             self.p_status = "off"
             self.socket_client.send_str("客户端命令：停止推演")
+            self.p.start()
             self.button2.setText("开始")
         else:
             raise Exception("p_status error")

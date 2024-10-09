@@ -369,31 +369,30 @@ class command_processor(QtCore.QThread):
         # 联机的话和大模型的互动放在这里面了，把互动完事儿了的命令传回去就行了，刚好自带一个异步，岂不美哉
         
         # 先检测有没有收到态势，有就显示，然后再检测有没有人工干预，都有就触发和大模型的互动。
-        if self.socket_client.flag_new == True:
-            # 那就说明这一帧收到东西了。# 讲道理，不断刷标志位来触发还是不够保险，除非这边（main.py里面）的刷新频率远高于那边（socket里面）。比较理想的是用信号槽机制。
-            status_str_received = self.socket_client.receive_str()
+        # if self.socket_client.flag_new == True: # 不检测了，态势是空的就空的呗，无所谓。
+        # 那就说明这一帧收到东西了。# 讲道理，不断刷标志位来触发还是不够保险，除非这边（main.py里面）的刷新频率远高于那边（socket里面）。比较理想的是用信号槽机制。
 
-            # 然后显示一下。以及交互，在这里面了
-            flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)
+        # status_str_received = self.socket_client.receive_str() # 不能这么写，直接阻塞了，鉴定为拉
+        status_str_received = self.socket_client.status_str
 
-            if flag_human_intervene: # 要有这个才触发和大模型的互动，
-                # 增加态势阶段的提示。
-                stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
-                all_str = status_str_received + stage_str + "\n 请按照格式给出指令。" 
-                # 把文本发给大模型，获取返回来的文本
-                if status_str_new=="test":
-                    # 说明是在单独调试这个
-                    # response_str = self.model_communication.communicate_with_model_debug(all_str)
-                    # response_str = self.model_communication.communicate_with_model(all_str)
-                    # response_str = self.model_communication.communicate_with_model_single(all_str)
-                    response_str = text_demo
-                else:
-                    response_str = self.model_communication.communicate_with_model(all_str)
+        # 然后显示一下。以及交互，在这里面了
+        flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)
+            
+        # if self.dialog_box.flag_order_renewed == True: # 这个失效了，原因不明。可能是什么线程不共享内存一类的？或者偷懒导致复制了
+        if flag_human_intervene:
+            # 那就是人下了命令。得分开，别跟人下命令那个耦合在一起。
+            # 增加态势阶段的提示。
+            stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+            all_str = status_str_received + stage_str + "\n 请按照格式给出指令。" 
+            # 把文本发给大模型，获取返回来的文本
+            # 说明是在单独调试这个
+            # response_str = self.model_communication.communicate_with_model_debug(all_str)
+            # response_str = self.model_communication.communicate_with_model(all_str)
+            # response_str = self.model_communication.communicate_with_model_single(all_str)
+            response_str = text_demo
             
             # 然后把交互好了的内容发到服务器那端去。
-            # 以现在的写法，人类改过命令的话它应该是会自己发过去的，甚至不需要加这一行修改
-            self.dialog_box.flag_order_renewed = True
-
+            self.socket_client.send_str(response_str)               
         pass
 
     def get_status_dixing(self,status):
@@ -410,7 +409,8 @@ class command_processor(QtCore.QThread):
         print(self.dialog_box.flag_order_renewed)
         time.sleep(0.1)
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
-        if self.dialog_box.flag_order_renewed:
+        # if self.dialog_box.flag_order_renewed: 
+        if self.socket_client.flag_human_interact == True:
             
             # 把人类的命令读出来
             command_str = "现在我的具体意图是：" + self.dialog_box.order_now
@@ -427,6 +427,9 @@ class command_processor(QtCore.QThread):
 
         # 然后还得把接收到的态势显示出来才行
         self.dialog_box.get_status_str(status_str,self.timestep)
+
+        # 完事儿了把标志位改成false
+        self.socket_client.flag_human_interact = False
 
         return self.flag_human_interact , command_str
     
@@ -588,10 +591,12 @@ class command_processor(QtCore.QThread):
     def main_loop_client(self):
         # 还是不行，还是得定制一个专门用于客户端通信的。搅合在一起是不理智的。
         self.flag_finished = False # 这个是用来给其他线程看的。
+        
         # 智能体与环境交互生成训练数据
         while True:
             # 这里面就不限步数了，因为这边的步数和平台那里的肯定是不同步的。
-            time.sleep(0.001)        
+            self.flag_human_interact = False
+            time.sleep(0.01)        
             if (self.role == "red_player") or (self.role == "blue_player"):
                 self.run_one_step_client()    
                 
@@ -669,8 +674,8 @@ if __name__ == "__main__":
         shishi.jieshuo_mul_thread()
     elif flag == 5:
         # 这个是开起来当服务器的，跑在需要跟平台交互的电脑上。
-        config = {"red_ip":"192.168.1.117", "red_port": "20001",
-                  "blue_ip": "192.168.1.117", "blue_port": "20002" }
+        config = {"red_ip":"192.168.1.140", "red_port": "20001",
+                  "blue_ip": "192.168.1.140", "blue_port": "20002" }
         shishi = command_processor(shishi_debug,role="server",config=config)
         shishi.main_loop()
         # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
