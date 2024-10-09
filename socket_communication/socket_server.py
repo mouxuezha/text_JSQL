@@ -92,16 +92,17 @@ class socket_server_2player(QtCore.QThread):
         self.flag_send = False # 这个是标识发没发
 
 
-    def run_single(self,server):
+    def run_single(self):
         # 这个是用来和一个server端dialog_box类似物来协作的。
         self.flag_new = False # 暴力一点，这个用来标识有没有收到新的
         self.flag_send = False # 这个是标识发没发                
         while True:
-            time.sleep(0.01)
+            time.sleep(0.5)
             print('红方玩家连接地址：', self.red_server.real_socket)
             print('蓝方玩家连接地址：', self.blue_server.real_socket)
-            red_command_str = self.red_server.receive_str()
+            red_command_str = self.red_server.receive_str() # 这个设定就是公平器件，得两边都下了指令之后，服务器才对其进行一起处理。
             blue_command_str = self.blue_server.receive_str()
+            # red_command_str, blue_command_str = self.human_intervene_check()
             # 专门处理一下那边按按钮传过来的命令
             if (red_command_str == '客户端命令：开始推演') and (blue_command_str == '客户端命令：开始推演'):
                 # 那就说明是点了按钮了.两个都开始那就是真的开始了
@@ -112,11 +113,12 @@ class socket_server_2player(QtCore.QThread):
 
             if self.red_server.flag_new == True:
                 self.dialog_box.flag_order_renewed = True
-                self.dialog_box.reset_all(0.01)
+                self.red_server.flag_new = False
                 print("服务器收到红方玩家命令：", red_command_str)
             if self.blue_server.flag_new == True:
                 self.dialog_box.flag_order_renewed = True
-                self.dialog_box.reset_all(0.01)
+                # self.dialog_box.reset_all(0.01)
+                self.blue_server.flag_new = False
                 print("服务器收到蓝方玩家命令：", blue_command_str)                
             
             if self.dialog_box.flag_order_renewed == True:
@@ -147,13 +149,18 @@ class socket_server_2player(QtCore.QThread):
         # check一下远处发过来的是啥。以及发没发。
         if self.red_server.flag_new == True:
             # 那就是红方玩家对应的服务器进程收到东西了。那就读出来。
-            red_response_str = self.red_server.receive_str()
+            # 不对，不能直接读，这个是堵塞的
+            # red_response_str = self.red_server.receive_str()
+            red_response_str = self.red_server.received_str
+            print("红方命令："+red_response_str)
         else:
             red_response_str = "" # 来个空的，防止报错
 
         if self.blue_server.flag_new == True:
             # 那就是蓝方玩家对应的服务器进程收到东西了。那就读出来。
-            blue_response_str = self.blue_server.receive_str()
+            # blue_response_str = self.blue_server.receive_str()
+            blue_response_str = self.blue_server.received_str
+            print("蓝方命令："+blue_response_str)
         else:
             blue_response_str = "" # 来个空的，防止报错
 

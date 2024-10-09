@@ -1,12 +1,12 @@
 # 这个是用来debug的，配合main函数
 
 class MyWidget_debug:
-    def __init__(self):
+    def __init__(self,role="server",**kargs):
         # 这个是用来隔离一下，单独debug一下main_loop的
         self.timestep = 0
         self.flag_order_renewed = False
         self.order_now = "test"
-    
+
     def get_status_str(self,status_str, timestep):
         # 获取当前状态
         pass

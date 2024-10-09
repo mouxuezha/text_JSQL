@@ -16,6 +16,7 @@ import time
 import argparse
 import sys,os,pickle
 from importlib import import_module
+import random
 
 import threading
 
@@ -116,7 +117,10 @@ class command_processor(QtCore.QThread):
         # 初始化一些本地网络通信的东西。
         # config = {"red_ip":"192.168.1.117", "red_port": "20001",
         #           "blue_ip": "192.168.1.117", "blue_port": "20002" }    
+
+        return # 这个放到dialog box server里面去弄了
         self.socket_server = socket_server_2player(config,dialog_box=self.dialog_box)
+        self.socket_server.run_mul() # 这个得在合适的敌方给它开起来
 
     def __init_socket_client(self,config:dict):
         # 看自己是红蓝方了。
@@ -333,8 +337,9 @@ class command_processor(QtCore.QThread):
         # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
         zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)        
 
-        # 然后检测，那边有没有回话。由于是检测，所以就得每一步都检测了。然后是不是执行动作就看有没有收到东西了
-        red_response_str, blue_response_str = self.socket_server.human_intervene_check()
+        # # 然后检测，那边有没有回话。由于是检测，所以就得每一步都检测了。然后是不是执行动作就看有没有收到东西了
+        # red_response_str, blue_response_str = self.socket_server.human_intervene_check()
+        red_response_str, blue_response_str = self.human_intervene_check_server()
 
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
@@ -344,9 +349,8 @@ class command_processor(QtCore.QThread):
         self.dialog_box.order_now = all_str # 准备要发过去的东西。由于是异步，不应该在这里直接调socket发送的函数。
         self.dialog_box.flag_order_renewed = True # 而是应该是改改标志位让它自己发过去。因为有自己独立的线程在检测这个事情。
 
-        
-        red_response_str = "shishi"
-        blue_response_str = "shishi"
+        time.sleep(1)
+        print("run_one_step_server, stepping")
         if (len(red_response_str)>0) or (len(blue_response_str)>0):
             # 那就是说明是收到了东西了,那就走一步
 
@@ -389,7 +393,7 @@ class command_processor(QtCore.QThread):
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
             # response_str = self.model_communication.communicate_with_model(all_str)
             # response_str = self.model_communication.communicate_with_model_single(all_str)
-            response_str = text_demo
+            response_str = text_demo + str(random.randint(114514)) # 加个随机数主要是为了防止字符串被识别成一样的
             
             # 然后把交互好了的内容发到服务器那端去。
             self.socket_client.send_str(response_str)               
@@ -432,7 +436,12 @@ class command_processor(QtCore.QThread):
         self.socket_client.flag_human_interact = False
 
         return self.flag_human_interact , command_str
-    
+
+    def human_intervene_check_server(self):
+        # 这个是有说法的了，检测两个server看是不是收到了那边传来的东西。
+        red_response_str, blue_response_str = self.dialog_box.socket_server.human_intervene_check()
+        return red_response_str, blue_response_str
+
     def main_loop(self,**kargs):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
         self.timestep = 0 # 每个episode的步数
@@ -676,7 +685,9 @@ if __name__ == "__main__":
         # 这个是开起来当服务器的，跑在需要跟平台交互的电脑上。
         config = {"red_ip":"192.168.1.140", "red_port": "20001",
                   "blue_ip": "192.168.1.140", "blue_port": "20002" }
+        # shishi_debug = MyWidget_debug(role="server",config=config) # 无人干预
         shishi = command_processor(shishi_debug,role="server",config=config)
-        shishi.main_loop()
+        shishi.run()
+        # 由于dialog box和command_processor的相互引用关系，理智的做法是改在dialogbox_sserver里面，而不是直接开这个。
         # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
         #      
