@@ -393,7 +393,7 @@ class command_processor(QtCore.QThread):
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
             # response_str = self.model_communication.communicate_with_model(all_str)
             # response_str = self.model_communication.communicate_with_model_single(all_str)
-            response_str = text_demo + str(random.randint(114514)) # 加个随机数主要是为了防止字符串被识别成一样的
+            response_str = text_demo + str(random.randint(0,114514)) # 加个随机数主要是为了防止字符串被识别成一样的
             
             # 然后把交互好了的内容发到服务器那端去。
             self.socket_client.send_str(response_str)               
