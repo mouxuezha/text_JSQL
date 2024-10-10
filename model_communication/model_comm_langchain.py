@@ -23,7 +23,7 @@ from text_transfer.prompts import PROMPT_TEMPLATES
 CHAT_MODELS = {
     'zhipu': ChatZhipuAI,
     'qianfan': QianfanChatEndpoint,
-    'moon': MoonshotChat,
+    'moon': MoonshotChat,  # 20241010这个的参数好像改了，导致用不了了
     'qwen': ChatTongyi,
     'baichuan': ChatBaichuan,
     'ollama': ChatOpenAI
@@ -103,7 +103,8 @@ class ModelCommLangchain():
     
     def communicate_with_model(self, message):
         self.save_txt(message)           
-        resp = self.chain.invoke([HumanMessage(content=message)], config={"callbacks": self.cb})
+        resp = self.chain.invoke(str(HumanMessage(content=message)), config={"callbacks": self.cb})
+        # resp = self.chain.invoke([HumanMessage(content=message)], config={"callbacks": self.cb})
         resp_str = resp['response']
         self.save_txt(resp_str)
         return resp_str
@@ -134,13 +135,14 @@ class ModelCommLangchain():
         print(str_buffer)
         
 if __name__ == '__main__':
-    communication = ModelCommLangchain(model_name='ollama')
+    # communication = ModelCommLangchain(model_name='ollama')
+    communication = ModelCommLangchain(model_name='qianfan')
     # communication = ModelCommLangchain(model_name='moon')
     # communication.communicate_with_model('你好')
-    test_str = """我方obj_id为MainBattleTank_ZTZ100_3的坦克位置在(2.59297,39.72039)处 \n
-                    我方obj_id为missile_truck0的导弹发射车位置在(2.6228,41.6363)处 \n
-                    敌方obj_id为MainBattleTank_ZTZ200_1的坦克位置在(2.68121,39.71009)处 \n
-                    敌方obj_id为WheeledCmobatTruck_ZB200_3的步战车位置在(2.70102,39.71207)处"""
+    test_str = """我方obj_id为MainBattleTank_ZTZ100_3的坦克位置在(100.12147,13.6409)处 \n
+                    我方obj_id为missile_truck0的导弹发射车位置在(100.12843,13.6423)处 \n
+                    敌方obj_id为MainBattleTank_ZTZ200_1的坦克位置在(100.13174,13.6571)处 \n
+                    敌方obj_id为WheeledCmobatTruck_ZB200_3的步战车位置在(100.12582,13.65363)处"""
     ret = communication.communicate_with_model(test_str)
     # print(ret)
     print(communication.history_output_tokens)
