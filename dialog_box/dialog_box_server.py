@@ -69,7 +69,7 @@ class MyWidget(QtWidgets.QWidget):
             self.step_num = step_num
             self.text.setText(status_str)
             # 这个get_status_str是在main里面调的，调到就说明态势更新了，所以传就完事儿了
-            self.socket_server.send_str(status_str)
+            self.socket_server.send_to_players(status_str)
             self.step_signal.emit(step_num)
     
     def get_human_order(self):

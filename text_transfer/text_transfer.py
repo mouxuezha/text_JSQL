@@ -92,7 +92,7 @@ class text_transfer(object):
                 # 什么BMC3那些就别拿进来了
                 continue
             else:
-                status_str +="我方obj_id为"+str(obj_id)+"的"
+                status_str +="红方obj_id为"+str(obj_id)+"的"
                 status_str += f"{unit_type_zhongwen}位置在({lon},{lat})处 \n"
         return status_str
     
@@ -108,9 +108,9 @@ class text_transfer(object):
             if detected_type_zhongwen == "其他":
                 continue
             else:
-                detected_str +="敌方obj_id为"+str(obj_id)+"的"
+                detected_str +="蓝方obj_id为"+str(obj_id)+"的"
                 detected_str += f"{detected_type_zhongwen}位置在({lon},{lat})处 \n"
-        print(detected_str)
+        print("text_transfer detected_to_text:" + detected_str)
         return detected_str
         pass 
 
@@ -313,7 +313,9 @@ class text_transfer(object):
                         self.num_commands[0] += 1
                     except:
                         self.num_commands[1] += 1
-                        print("G in one off_board command")               
+                        print("G in one off_board command")      
+
+        print("text_to_commands: valid commands number: "+str(len(commands)))      
         return commands
     
     def get_initial_prompt(self):

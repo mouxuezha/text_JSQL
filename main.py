@@ -116,6 +116,8 @@ class command_processor(QtCore.QThread):
 
     def __init_socket_server(self,config:dict):
         # 初始化一些本地网络通信的东西。
+        self.red_response_str = ""
+        self.blue_response_str= ""
         # config = {"red_ip":"192.168.1.117", "red_port": "20001",
         #           "blue_ip": "192.168.1.117", "blue_port": "20002" }    
 
@@ -346,28 +348,30 @@ class command_processor(QtCore.QThread):
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
         all_str = "当前态势："+status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"      
 
-        # 这些要socket发到client里面，然后检测有没有东西发回来。按说这三种方案都应该是有效的
-        self.dialog_box.order_now = all_str # 准备要发过去的东西。由于是异步，不应该在这里直接调socket发送的函数。
-        self.dialog_box.flag_order_renewed = True # 而是应该是改改标志位让它自己发过去。因为有自己独立的线程在检测这个事情。
+        # 这些要socket发到client里面，然后检测有没有东西发回来。
+        self.dialog_box.get_status_str(all_str,self.timestep) # 这个又是一种方案
 
-        self.dialog_box.get_status_str(all_str) # 这个又是一种方案
-
-        self.dialog_box.socket_server.send_to_players(all_str) # 这个又是一种方案
-
-        time.sleep(1)
         print("run_one_step_server, stepping")
-        if (len(red_response_str)>0) and (len(blue_response_str)>0):
+        time.sleep(0.5)
+        if (len(red_response_str)>0) or (len(blue_response_str)>0):
+            # or是只要有一边发了命令就走一步，and是两边都发了才走一步。感觉还是只要有就走比较合理。
             # 那就是说明是收到了东西了,那就走一步
+            
+            # 调试用的：这里停一下看看成色
+            print("run_one_step_server, commands")
+            # print(red_response_str)
+            # time.sleep(1)
 
             # 把文本里面的命令提取出来。
             red_commands = self.text_transfer.text_to_commands(red_response_str)   
-            blue_commands = self.text_transfer.text_to_commands(blue_response_str)        
+            blue_commands = self.text_transfer.text_to_commands(blue_response_str)  
 
             # 然后分别给到两个智能体。 # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
             self.redAgent.set_commands(red_commands) # 得专门给它定制一个发命令的才行，不然不行。
             self.blueAgent.set_commands(blue_commands)
 
             self.add_fupan_info(self.timestep, (red_commands + blue_commands), all_str, (red_response_str+blue_response_str))
+            print("run_one_step_server, commands, done")
         else:
             # 否则就不走这一步
             pass
@@ -444,8 +448,25 @@ class command_processor(QtCore.QThread):
 
     def human_intervene_check_server(self):
         # 这个是有说法的了，检测两个server看是不是收到了那边传来的东西。
-        red_response_str, blue_response_str = self.dialog_box.socket_server.human_intervene_check()
-        return red_response_str, blue_response_str
+        # 异步的存在时间差的问题，那边收到了之后只保留1帧，所以得好好设计时间差，甚至直接不要时间差了
+        red_response_str_new, blue_response_str_new = self.dialog_box.socket_server.human_intervene_check()
+
+        if red_response_str_new != self.red_response_str:
+            # 那就是命令被更新过了。
+            red_response_str_return = red_response_str_new
+            self.red_response_str = red_response_str_new
+        else:
+            # 那就是命令没有被更新，那就无事发生
+            red_response_str_return = ""
+        
+        if blue_response_str_new != self.blue_response_str:
+            blue_response_str_return = blue_response_str_new
+            self.blue_response_str = blue_response_str_new    
+        else:
+            blue_response_str_return = ""           
+
+        # 算了，这里再做一个好了，来个检测有没有更新的机制。如果有更新，就来新的，没有更新，就来空的，而不要重复的一直刷，没意思。
+        return red_response_str_return, blue_response_str_return
 
     def main_loop(self,**kargs):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。

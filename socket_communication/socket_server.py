@@ -89,7 +89,7 @@ class socket_server_2player(QtCore.QThread):
             self.model=kargs["model"]
         else:
             self.model = "debug" # "normal"
-            
+
         self.red_server = socket_base("server",ip=config["red_ip"],port=config["red_port"])
         if self.model == "normal":
             self.blue_server = socket_base("server",ip=config["blue_ip"],port=config["blue_port"])
@@ -104,9 +104,9 @@ class socket_server_2player(QtCore.QThread):
         self.flag_send = False # 这个是标识发没发                
         while True:
             time.sleep(0.5)
-            print('红方玩家连接地址：', self.red_server.real_socket)
-            if self.model == "normal":
-                print('蓝方玩家连接地址：', self.blue_server.real_socket)
+            # print('红方玩家连接地址：', self.red_server.real_socket)
+            # if self.model == "normal":
+            #     print('蓝方玩家连接地址：', self.blue_server.real_socket)
             red_command_str = self.red_server.receive_str() # 这个设定就是公平器件，得两边都下了指令之后，服务器才对其进行一起处理。
             if self.model == "normal":
                 blue_command_str = self.blue_server.receive_str()
@@ -126,12 +126,15 @@ class socket_server_2player(QtCore.QThread):
                 self.dialog_box.flag_order_renewed = True
                 self.red_server.flag_new = False
                 print("服务器收到红方玩家命令：", red_command_str)
+                self.red_server.received_str = red_command_str # 这个更新的好像不太正确，来一波逃避可耻但有用。
+
             if self.model == "normal":
                 if self.blue_server.flag_new == True:
                     self.dialog_box.flag_order_renewed = True
                     # self.dialog_box.reset_all(0.01)
                     self.blue_server.flag_new = False
-                    print("服务器收到蓝方玩家命令：", blue_command_str)                
+                    print("服务器收到蓝方玩家命令：", blue_command_str)         
+                    self.blue_server.received_str = blue_command_str     
             
             if self.dialog_box.flag_order_renewed == True:
                 # 人类改过命令，所以这里要给它传过去。两个都传，这才叫健全。
@@ -160,25 +163,29 @@ class socket_server_2player(QtCore.QThread):
 
     def human_intervene_check(self):
         # check一下远处发过来的是啥。以及发没发。
-        if self.red_server.flag_new == True:
-            # 那就是红方玩家对应的服务器进程收到东西了。那就读出来。
-            # 不对，不能直接读，这个是堵塞的
-            # red_response_str = self.red_server.receive_str()
-            red_response_str = self.red_server.received_str
-            print("红方命令："+red_response_str)
+
+        # 一个偷懒的方案是：不check标志位了，而是检测字符串看里面有没有特定的标志
+        red_response_str = self.red_server.received_str
+        
+        if ("玩家指令" in red_response_str) :
+            # 那就是红方玩家给过来的是指令
+            # print("human_intervene_check，红方命令："+red_response_str)
+            pass
         else:
             red_response_str = "" # 来个空的，防止报错
         
         if self.model == "normal":
-            if self.blue_server.flag_new == True:
-                # 那就是蓝方玩家对应的服务器进程收到东西了。那就读出来。
-                # blue_response_str = self.blue_server.receive_str()
-                blue_response_str = self.blue_server.received_str
-                print("蓝方命令："+blue_response_str)
+            blue_response_str = self.blue_server.received_str
+            if ("玩家指令" in blue_response_str) :
+                # # 那就是蓝方玩家对应的服务器进程收到东西了。那就读出来。
+                # # blue_response_str = self.blue_server.receive_str()
+                # blue_response_str = self.blue_server.received_str
+                # print("human_intervene_check，蓝方命令："+blue_response_str)
+                pass
             else:
                 blue_response_str = "" # 来个空的，防止报错
         else:
-                blue_response_str = "" # 来个空的，防止报错
+                blue_response_str = "调试网络通信，蓝方不要命令。" # 来个空的，防止报错
         
 
         return red_response_str, blue_response_str
