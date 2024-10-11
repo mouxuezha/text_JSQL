@@ -24,6 +24,7 @@ class TTS_generator():
         self.auto_test_location = r"D:\EnglishMulu\text_JSQL\auto_test"
         # self.auto_test_location = r"auto_test"
         self.ffmpeg_location = r"D:\ruanjian\ffmpeg-7.0.1-essentials_build\bin\ffmpeg.exe"
+        self.pcm_name = r'\demo1.pcm'
         self.__init_AKSK()
         self.__init_net()
         pygame.init()
@@ -96,7 +97,7 @@ class TTS_generator():
                 print("sid:%s call error:%s code is:%s" % (sid, errMsg, code))
             else:
 
-                with open(self.auto_test_location+r'\demo1.pcm', 'ab') as f:
+                with open(self.auto_test_location+self.pcm_name, 'ab') as f:
                     f.write(audio)
                 # with open(self.auto_test_location+r'\demo.mp3', 'ab') as f:
                 #     f.write(audio)
@@ -112,6 +113,9 @@ class TTS_generator():
         # 然后开始通信了
         tonfxin_thread = threading.Thread(target=self.run_single)
         tonfxin_thread.start()
+        
+    def set_pcm_name(self,pcm_name_str):
+        self.pcm_name = pcm_name_str
     
     def run_single(self):
         # pass
@@ -171,7 +175,7 @@ class TTS_generator():
 
 
     # 收到websocket关闭的处理
-    def on_close(self,ws):
+    def on_close(self,ws,**kargs):
         print("### closed ###")
 
 

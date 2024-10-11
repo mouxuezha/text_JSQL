@@ -71,12 +71,18 @@ class model_communication():
 
 class model_communication_debug():
     # 这个也是原位替换的用于debug的东西，保持接口一致即可。
+    def __init__(self,Comm_type ="duizhan"):
+        self.Comm_type = Comm_type
+        pass
     def get_tokens(self):
         pass 
     def communicate_with_model(self,message):
         # 这个是加载一段用于测试的东西
         # 勤俭持家，能节约一点token就节约一点token。
-        text_demo = "好的，按照你的格式给出作战指令：1. [move, ArmoredTruck_ZTL100_0, x=2.59, y=39.72], 移动我方无人战车ArmoredTruck_ZTL100_0到(2.59,39.72)处。2. [move, ArmoredTruck_ZTL100_1, x=2.59, y=39.72], 移动我方无人战车ArmoredTruck_ZTL100_1到(2.59,39.72)处。3. [move, Howitzer_C100_0, x=2.59, y=39.72], 移动我方自行迫榴炮Howitzer_C100_0到(2.59,39.72)处。4. [move, Infantry0, x=2.59, y=39.72], 移动我方步兵Infantry0到(2.59,39.72)处。5. [move, Infantry1, x=2.59, y=39.72], 移动我方步兵Infantry1到(2.59,39.72)处。6. [move, MainBattleTank_ZTZ100_0, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_0到(2.59,39.72)处。7. [move, MainBattleTank_ZTZ100_1, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_1到(2.59,39.72)处。8. [move, MainBattleTank_ZTZ100_2, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_2到(2.59,39.72)处。9. [move, MainBattleTank_ZTZ100_3, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_3到(2.59,39.72)处。10. [move, ShipboardCombat_plane0, x=2.59, y=39.72], 移动我方无人机ShipboardCombat_plane0到(2.59,39.72)处。...接下来的指令按照上述格式，给出每一步行动的指令..."
+        if self.Comm_type == "duizhan":
+            text_demo = "好的，按照你的格式给出作战指令：1. [move, ArmoredTruck_ZTL100_0, x=2.59, y=39.72], 移动我方无人战车ArmoredTruck_ZTL100_0到(2.59,39.72)处。2. [move, ArmoredTruck_ZTL100_1, x=2.59, y=39.72], 移动我方无人战车ArmoredTruck_ZTL100_1到(2.59,39.72)处。3. [move, Howitzer_C100_0, x=2.59, y=39.72], 移动我方自行迫榴炮Howitzer_C100_0到(2.59,39.72)处。4. [move, Infantry0, x=2.59, y=39.72], 移动我方步兵Infantry0到(2.59,39.72)处。5. [move, Infantry1, x=2.59, y=39.72], 移动我方步兵Infantry1到(2.59,39.72)处。6. [move, MainBattleTank_ZTZ100_0, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_0到(2.59,39.72)处。7. [move, MainBattleTank_ZTZ100_1, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_1到(2.59,39.72)处。8. [move, MainBattleTank_ZTZ100_2, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_2到(2.59,39.72)处。9. [move, MainBattleTank_ZTZ100_3, x=2.59, y=39.72], 移动我方坦克MainBattleTank_ZTZ100_3到(2.59,39.72)处。10. [move, ShipboardCombat_plane0, x=2.59, y=39.72], 移动我方无人机ShipboardCombat_plane0到(2.59,39.72)处。...接下来的指令按照上述格式，给出每一步行动的指令..."
+        elif self.Comm_type == "jieshuo":
+            text_demo = message
         return text_demo
     def load_txt(self,file_name):
         # 单纯的读取txt文件，主要是用来读那些key的。
