@@ -344,11 +344,15 @@ class command_processor(QtCore.QThread):
 
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
-        all_str = status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"      
+        all_str = "当前态势："+status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"      
 
-        # 这些要socket发到client里面，然后检测有没有东西发回来。
+        # 这些要socket发到client里面，然后检测有没有东西发回来。按说这三种方案都应该是有效的
         self.dialog_box.order_now = all_str # 准备要发过去的东西。由于是异步，不应该在这里直接调socket发送的函数。
         self.dialog_box.flag_order_renewed = True # 而是应该是改改标志位让它自己发过去。因为有自己独立的线程在检测这个事情。
+
+        self.dialog_box.get_status_str(all_str) # 这个又是一种方案
+
+        self.dialog_box.socket_server.send_to_players(all_str) # 这个又是一种方案
 
         time.sleep(1)
         print("run_one_step_server, stepping")
@@ -376,9 +380,9 @@ class command_processor(QtCore.QThread):
         # 先检测有没有收到态势，有就显示，然后再检测有没有人工干预，都有就触发和大模型的互动。
         # if self.socket_client.flag_new == True: # 不检测了，态势是空的就空的呗，无所谓。
         # 那就说明这一帧收到东西了。# 讲道理，不断刷标志位来触发还是不够保险，除非这边（main.py里面）的刷新频率远高于那边（socket里面）。比较理想的是用信号槽机制。
-
+        # 还是统一弄到dialog box里面去比较好。
         # status_str_received = self.socket_client.receive_str() # 不能这么写，直接阻塞了，鉴定为拉
-        status_str_received = self.socket_client.status_str
+        # status_str_received = self.socket_client.status_str
 
         # 然后显示一下。以及交互，在这里面了
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)

@@ -61,7 +61,8 @@ class socket_client(socket_base,QtCore.QThread):
         while True:
             time.sleep(0.01)
             print('这里是客户端，连接地址：', self.real_socket)
-            status_str = self.receive_str()
+            status_str = self.receive_str() # 这个反正是阻塞的，print一点东西没啥不好的
+            print(status_str)
             
             if self.flag_new == True:
                 self.dialog_box.flag_order_renewed = True
@@ -69,6 +70,11 @@ class socket_client(socket_base,QtCore.QThread):
                 self.dialog_box.get_status_str(status_str,0)
                 print("客户端收到服务端的态势：", status_str)
                 self.status_str = status_str
+
+            # 好像不太对了，每一帧得从服务器收态势。
+            if "态势" in status_str:
+                # 那就鉴定为收到的是态势，那就显示一下。
+                self.dialog_box.text.setText(status_str)
             
             if self.dialog_box.flag_order_renewed == True:
                 # 人类改过命令，所以这里要给它传过去。
