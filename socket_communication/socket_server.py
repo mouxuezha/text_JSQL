@@ -70,7 +70,7 @@ class socket_server(socket_base, QtCore.QThread):
                 print("服务器收到客户端的命令：", command_str)
             
             if self.dialog_box.flag_order_renewed == True:
-                # 人类改过命令，所以这里要给它传过去。
+                # 人类改过命令，所以这里要给它传过去。# 客户端的话这个不怎么触发。
                 self.flag_send = True
                 command_str = self.dialog_box.order_now
                 self.send_str(command_str)
@@ -83,10 +83,16 @@ class socket_server(socket_base, QtCore.QThread):
 
 class socket_server_2player(QtCore.QThread):
     # 搞一个服务于2玩家的东西。
-    def __init__(self, config:dict, dialog_box = None):
+    def __init__(self, config:dict, dialog_box = None,**kargs):
         QtCore.QThread.__init__(self)
+        if "model" in kargs:
+            self.model=kargs["model"]
+        else:
+            self.model = "debug" # "normal"
+            
         self.red_server = socket_base("server",ip=config["red_ip"],port=config["red_port"])
-        self.blue_server = socket_base("server",ip=config["blue_ip"],port=config["blue_port"])
+        if self.model == "normal":
+            self.blue_server = socket_base("server",ip=config["blue_ip"],port=config["blue_port"])
         self.dialog_box = dialog_box
         self.flag_new = False # 暴力一点，这个用来标识有没有收到新的
         self.flag_send = False # 这个是标识发没发
@@ -99,9 +105,14 @@ class socket_server_2player(QtCore.QThread):
         while True:
             time.sleep(0.5)
             print('红方玩家连接地址：', self.red_server.real_socket)
-            print('蓝方玩家连接地址：', self.blue_server.real_socket)
+            if self.model == "normal":
+                print('蓝方玩家连接地址：', self.blue_server.real_socket)
             red_command_str = self.red_server.receive_str() # 这个设定就是公平器件，得两边都下了指令之后，服务器才对其进行一起处理。
-            blue_command_str = self.blue_server.receive_str()
+            if self.model == "normal":
+                blue_command_str = self.blue_server.receive_str()
+            else:
+                blue_command_str = '客户端命令：开始推演'
+
             # red_command_str, blue_command_str = self.human_intervene_check()
             # 专门处理一下那边按按钮传过来的命令
             if (red_command_str == '客户端命令：开始推演') and (blue_command_str == '客户端命令：开始推演'):
@@ -115,11 +126,12 @@ class socket_server_2player(QtCore.QThread):
                 self.dialog_box.flag_order_renewed = True
                 self.red_server.flag_new = False
                 print("服务器收到红方玩家命令：", red_command_str)
-            if self.blue_server.flag_new == True:
-                self.dialog_box.flag_order_renewed = True
-                # self.dialog_box.reset_all(0.01)
-                self.blue_server.flag_new = False
-                print("服务器收到蓝方玩家命令：", blue_command_str)                
+            if self.model == "normal":
+                if self.blue_server.flag_new == True:
+                    self.dialog_box.flag_order_renewed = True
+                    # self.dialog_box.reset_all(0.01)
+                    self.blue_server.flag_new = False
+                    print("服务器收到蓝方玩家命令：", blue_command_str)                
             
             if self.dialog_box.flag_order_renewed == True:
                 # 人类改过命令，所以这里要给它传过去。两个都传，这才叫健全。
@@ -127,7 +139,8 @@ class socket_server_2player(QtCore.QThread):
                 self.flag_send = True
                 command_str = self.dialog_box.order_now
                 self.red_server.send_str(command_str)
-                self.blue_server.send_str(command_str)
+                if self.model == "normal":
+                    self.blue_server.send_str(command_str)
                 self.dialog_box.flag_order_renewed = False
 
         pass
@@ -155,16 +168,29 @@ class socket_server_2player(QtCore.QThread):
             print("红方命令："+red_response_str)
         else:
             red_response_str = "" # 来个空的，防止报错
-
-        if self.blue_server.flag_new == True:
-            # 那就是蓝方玩家对应的服务器进程收到东西了。那就读出来。
-            # blue_response_str = self.blue_server.receive_str()
-            blue_response_str = self.blue_server.received_str
-            print("蓝方命令："+blue_response_str)
+        
+        if self.model == "normal":
+            if self.blue_server.flag_new == True:
+                # 那就是蓝方玩家对应的服务器进程收到东西了。那就读出来。
+                # blue_response_str = self.blue_server.receive_str()
+                blue_response_str = self.blue_server.received_str
+                print("蓝方命令："+blue_response_str)
+            else:
+                blue_response_str = "" # 来个空的，防止报错
         else:
-            blue_response_str = "" # 来个空的，防止报错
+                blue_response_str = "" # 来个空的，防止报错
+        
 
         return red_response_str, blue_response_str
+    
+    def send_to_players(self,status_str):
+        # 统一一下接口，这个是给客户端分发态势信息或者别的信息的。应该保证输入这里面的玩意能发出去。
+        # 先来个最挫的堵塞版的。
+        self.red_server.send_str(status_str)
+        if self.model == "normal":
+            self.blue_server.send_str(status_str)
+        self.flag_send = True
+                
 if __name__ == "__main__":
     server = socket_server(dialog_box=None,ip="192.168.1.117",port="20001")
     server.run_mul()
