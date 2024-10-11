@@ -21,9 +21,9 @@ class TTS_generator():
     def __init__(self) -> None:
       
         self.log_model_communication_name = r"TTS\log.txt"
-        self.auto_test_location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\text_JSQL\auto_test"
+        self.auto_test_location = r"D:\EnglishMulu\text_JSQL\auto_test"
         # self.auto_test_location = r"auto_test"
-        self.ffmpeg_location = r"E:\ruanjian\ffmpeg-7.0.1-essentials_build\ffmpeg-7.0.1-essentials_build\bin\ffmpeg.exe"
+        self.ffmpeg_location = r"D:\ruanjian\ffmpeg-7.0.1-essentials_build\bin\ffmpeg.exe"
         self.__init_AKSK()
         self.__init_net()
         pygame.init()
@@ -193,5 +193,6 @@ class TTS_generator():
 if __name__ == "__main__":
     TTS = TTS_generator()
     # TTS.text_to_voice("当朝大学士，统共有五位，朕不得不罢免四位")
+    # TTS.text_to_voice("请注意，以上指令是基于当前态势的推演，实际情况可能需要根据战场变化做出调整。同时，由于敌方单位的接近，我方需要保持警惕，并准备应对敌方的反击。") # 运行会报错，但是报就报呗倒是也没有什么特别的所谓。生成的还挺快的。
     TTS.display_voice(TTS.auto_test_location, r'demo1.pcm')
     # TTS.display_voice_single(r'C:\\Users\\42418\\Desktop\\2024ldjs\\EnglishMulu\\text_JSQL\\auto_test\\demo1.mp3')
