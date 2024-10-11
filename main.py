@@ -386,7 +386,8 @@ class command_processor(QtCore.QThread):
         # 那就说明这一帧收到东西了。# 讲道理，不断刷标志位来触发还是不够保险，除非这边（main.py里面）的刷新频率远高于那边（socket里面）。比较理想的是用信号槽机制。
         # 还是统一弄到dialog box里面去比较好。
         # status_str_received = self.socket_client.receive_str() # 不能这么写，直接阻塞了，鉴定为拉
-        # status_str_received = self.socket_client.status_str
+        # status_str_received = self.dialog_box.socket_client.status_str
+        status_str_received = self.socket_client.status_str
 
         # 然后显示一下。以及交互，在这里面了
         flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)
@@ -402,7 +403,7 @@ class command_processor(QtCore.QThread):
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
             # response_str = self.model_communication.communicate_with_model(all_str)
             # response_str = self.model_communication.communicate_with_model_single(all_str)
-            response_str = text_demo + str(random.randint(0,114514)) # 加个随机数主要是为了防止字符串被识别成一样的
+            response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) # 加个随机数主要是为了防止字符串被识别成一样的
             
             # 然后把交互好了的内容发到服务器那端去。
             self.socket_client.send_str(response_str)               
