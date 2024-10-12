@@ -88,11 +88,22 @@ class text_transfer(object):
             lat = round(unit_status["VehicleState"]["lat"], 5)
             alt = round(unit_status["VehicleState"]["alt"], 5)
             unit_type_zhongwen = self.type_transfer.unit_type_transfer(unit_status["UnitType"])
+            
+            # 当前装备是红方还是蓝方得读相应的字段来体现了。
+            if unit_status["PlayerName"] == "redPlayer":
+                side_name = "红方"
+                pass
+            elif unit_status["PlayerName"] == "bluePlayer":
+                side_name = "蓝方"
+                pass
+            else:
+                side_name = "其他"
+
             if unit_type_zhongwen == "其他":
                 # 什么BMC3那些就别拿进来了
                 continue
             else:
-                status_str +="红方obj_id为"+str(obj_id)+"的"
+                status_str += side_name + "obj_id为"+str(obj_id)+"的"
                 status_str += f"{unit_type_zhongwen}位置在({lon},{lat})处 \n"
         return status_str
     
@@ -108,7 +119,7 @@ class text_transfer(object):
             if detected_type_zhongwen == "其他":
                 continue
             else:
-                detected_str +="蓝方obj_id为"+str(obj_id)+"的"
+                detected_str +="目标obj_id为"+str(obj_id)+"的"
                 detected_str += f"{detected_type_zhongwen}位置在({lon},{lat})处 \n"
         print("text_transfer detected_to_text:" + detected_str)
         return detected_str
@@ -357,7 +368,7 @@ class text_transfer(object):
     def get_num_commands(self):
         # 这个算是结果处理，用来看有多少
         str_buffer = "成功识别指令{}个，识别失败{}个。".format(self.num_commands[0], self.num_commands[1])
-        str_buffer = str_buffer + "\n识别成功率：" + str(self.num_commands[0]/(self.num_commands[0]+self.num_commands[1]))
+        str_buffer = str_buffer + "\n识别成功率：" + str(self.num_commands[0]/(self.num_commands[0]+self.num_commands[1]+0.0000001))
         
         print(str_buffer)
         return str_buffer
@@ -373,6 +384,8 @@ class type_transfer(object):
             'ShipboardCombat_plane' : '无人机',
             'WheeledCmobatTruck':'步战车', 
             'missile_truck' : '导弹发射车',
+            'CruiseMissile': '巡飞弹',
+            'JammingTruck': '干扰车'
         }
     def unit_type_transfer(self, unit_type:str):
         for key in list(self.unit_type_dict.keys()):

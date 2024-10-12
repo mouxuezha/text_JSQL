@@ -44,16 +44,16 @@ class GlobalAgent(BaseAgent):
         # print("unfinished yet")
         if self.player == "red":
             # 当前智能体是红方
-            # self.act = self.step_red_shishi1(status)
+            self.act = self.step_red_shishi1(status)
             # self.act = self.step_red_shangxiache(status)
-            self.act = self.step_LLM(status)
+            # self.act = self.step_LLM(status)
             pass
         elif self.player == "blue":
             # 当前智能体是蓝方
             # self.act = self.step_blue_shishi1(status)
-            # self.act = self.step_blue_shishi2(status)
+            self.act = self.step_blue_shishi2(status)
             # self.act = self.step_blue_shangxiache(status)
-            self.act = self.step_LLM(status)
+            # self.act = self.step_LLM(status)
             pass 
         return self.act
     

@@ -11,6 +11,7 @@ from model_communication.model_comm_langchain import ModelCommLangchain
 from dialog_box.dialog_box_debug import *
 from socket_communication.socket_server import *
 from socket_communication.socket_client import *
+from TTS.TTS_interface import TTS_interface
 
 import json
 import time 
@@ -46,9 +47,14 @@ class command_processor(QtCore.QThread):
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage
         self.LLM_model = "zhipu" # 这里可以改，默认是qianfan,还有智谱啥的
-        self.model_communication = model_communication_debug()
+        self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
         # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
         # 要用多个的话等后面再来改罢。
+
+        # 解说的直接弄进去也没啥不好的。都置为False就是直接不要解说功能了，应该能够不影响程序其他部分的使用
+        config_TTS = {"flag_generate":True,"flag_play":True}
+        self.shishi_TTS = TTS_interface(config =config_TTS )
+        self.shishi_TTS.run_mul() # 反正启动线程嘛，在哪启动不是启动。
         
         self.status= {} # 这个是我方的
         self.detected_state = {} # 这个是敌方的
@@ -227,7 +233,10 @@ class command_processor(QtCore.QThread):
         status_str = self.text_transfer.status_to_text(self.status)
         detected_str = self.text_transfer.detected_to_text(self.detected_state)
         # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
-        zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)        
+        zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)
+
+        # 把新的状态压入到解说的那一组线程里面去。
+        self.shishi_TTS.add_status_list(status_str+detected_str)        
 
         # 检测是否人混的干预，有的话也弄进去
         flag_human_intervene, status_str_new = self.human_intervene_check(zhuyili_str + status_str + detected_str)
@@ -269,6 +278,9 @@ class command_processor(QtCore.QThread):
         detected_str = self.text_transfer.detected_to_text(self.detected_state)
         # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
         zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)
+
+        # 把新的状态压入到解说的那一组线程里面去。
+        self.shishi_TTS.add_status_list(status_str+detected_str)        
 
         # 检测是否人混的干预，有的话弄进去看
         flag_human_intervene, status_str_new = self.human_intervene_check(zhuyili_str + status_str + detected_str)
@@ -423,8 +435,12 @@ class command_processor(QtCore.QThread):
         print(self.dialog_box.flag_order_renewed)
         time.sleep(0.1)
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
+        if self.role == "offline":
+            panju = self.dialog_box.flag_order_renewed
+        else:
+            panju = self.socket_client.flag_human_interact
         # if self.dialog_box.flag_order_renewed: 
-        if self.socket_client.flag_human_interact == True:
+        if panju == True:
             
             # 把人类的命令读出来
             command_str = "现在我的具体意图是：" + self.dialog_box.order_now
@@ -443,7 +459,10 @@ class command_processor(QtCore.QThread):
         self.dialog_box.get_status_str(status_str,self.timestep)
 
         # 完事儿了把标志位改成false
-        self.socket_client.flag_human_interact = False
+        if self.role == "offline":
+            pass
+        else:
+            self.socket_client.flag_human_interact = False
 
         return self.flag_human_interact , command_str
 
@@ -687,12 +706,12 @@ class command_processor(QtCore.QThread):
 
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 5
+    flag = 0
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
     if flag == 0:
-        # 这个是单跑这个不跑dialog box，拟似人混，启动！
+        # 这个是单跑这个不跑dialog box，拟似人混，启动！ # 20241012里面还加持了大模型解说。
         shishi = command_processor(shishi_debug)
         shishi.main_loop()
     elif flag == 1:
@@ -709,12 +728,12 @@ if __name__ == "__main__":
         shishi = command_processor(shishi_debug,Comm_type ="jieshuo")
         shishi.jieshuo_mul_thread()
     elif flag == 5:
-        # 这个是开起来当服务器的，跑在需要跟平台交互的电脑上。
-        config = {"red_ip":"192.168.1.140", "red_port": "20001",
-                  "blue_ip": "192.168.1.140", "blue_port": "20002" }
-        # shishi_debug = MyWidget_debug(role="server",config=config) # 无人干预
-        shishi = command_processor(shishi_debug,role="server",config=config)
-        shishi.run()
-        # 由于dialog box和command_processor的相互引用关系，理智的做法是改在dialogbox_sserver里面，而不是直接开这个。
-        # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
-        #      
+        # # 这个是开起来当服务器的，跑在需要跟平台交互的电脑上。
+        # config = {"red_ip":"192.168.1.140", "red_port": "20001",
+        #           "blue_ip": "192.168.1.140", "blue_port": "20002" }
+        # # shishi_debug = MyWidget_debug(role="server",config=config) # 无人干预
+        # shishi = command_processor(shishi_debug,role="server",config=config)
+        # shishi.run()
+        # # 由于dialog box和command_processor的相互引用关系，理智的做法是改在dialogbox_sserver里面，而不是直接开这个。
+        # # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
+        pass

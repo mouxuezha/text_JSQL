@@ -103,6 +103,7 @@ class TTS_interface():
             self.thread1.start()
         if self.check_config("flag_play"):
             self.thread2.start()
+        print("解说进程已经启动，等待开始。")
         pass
 
     def run_generate(self):
@@ -150,11 +151,20 @@ class TTS_interface():
             geshu_generated = len(self.pcm_name_list)
 
             # 就先进先出呗？有的话就放，没有的话就等会儿。
+            # 不对，应该是要最新的一个，不然延迟控制不住了。
             if geshu_generated>0:
-                display_thread = self.TTS_generator.display_voice(self.TTS_generator.auto_test_location, self.pcm_name_list[0])
+
+                # 这个是顺序播放
+                # display_thread = self.TTS_generator.display_voice(self.TTS_generator.auto_test_location, self.pcm_name_list[0])
+                # display_thread.join()
+                # # 用完就可以删了.
+                # del self.pcm_name_list[0]
+
+                # 这个是播放最新的一个
+                display_thread = self.TTS_generator.display_voice(self.TTS_generator.auto_test_location, self.pcm_name_list[-1])
                 display_thread.join()
                 # 用完就可以删了.
-                del self.pcm_name_list[0]
+                del self.pcm_name_list[-1]                
             else:
                 # 那就是列表里没得可说，那就先放一下。
                 time.sleep(1)
