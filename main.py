@@ -6,7 +6,7 @@ from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer, text_demo
 from text_transfer.stage_prompt import StagePrompt
-from model_communication.model_communication import model_communication,model_communication_debug
+from model_communication.model_communication import model_communication, model_communication_debug
 from model_communication.model_comm_langchain import ModelCommLangchain
 from dialog_box.dialog_box_debug import *
 from socket_communication.socket_server import *

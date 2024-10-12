@@ -88,7 +88,7 @@ class TTS_generator():
             audio = message["data"]["audio"]
             audio = base64.b64decode(audio)
             status = message["data"]["status"]
-            print(message)
+            # print(message)
             if status == 2:
                 print("ws is closed")
                 ws.close()
@@ -111,11 +111,14 @@ class TTS_generator():
         self.Data = {"status": 2, "text": str(base64.b64encode(self.Text.encode('utf-8')), "UTF8")}
 
         # 然后开始通信了
-        tonfxin_thread = threading.Thread(target=self.run_single)
-        tonfxin_thread.start()
-        
+        tongxin_thread = threading.Thread(target=self.run_single)
+        tongxin_thread.start()
+
+        # 返回一下这个线程，用来外面需要对齐的时候用。
+        return tongxin_thread
+
     def set_pcm_name(self,pcm_name_str):
-        self.pcm_name = pcm_name_str
+        self.pcm_name = "\\" +pcm_name_str
     
     def run_single(self):
         # pass
@@ -131,7 +134,8 @@ class TTS_generator():
         mp3_location = self.pcm_to_mp3(location,name[0:-4]) 
         display_thread = threading.Thread(target=self.display_voice_single,args=(mp3_location,))
         display_thread.start()
-        pass
+
+        return display_thread
     
     def pcm_to_mp3(self,location,name):
         pcm_location = location + "\\" + name + ".pcm"
@@ -175,7 +179,7 @@ class TTS_generator():
 
 
     # 收到websocket关闭的处理
-    def on_close(self,ws,**kargs):
+    def on_close(self,ws, debug1, debug2):
         print("### closed ###")
 
 
