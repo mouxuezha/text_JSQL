@@ -21,9 +21,10 @@ class TTS_generator():
     def __init__(self) -> None:
       
         self.log_model_communication_name = r"TTS\log.txt"
-        self.auto_test_location = r"C:\Users\42418\Desktop\2024ldjs\EnglishMulu\text_JSQL\auto_test"
+        self.auto_test_location = r"D:\EnglishMulu\text_JSQL\auto_test"
         # self.auto_test_location = r"auto_test"
-        self.ffmpeg_location = r"E:\ruanjian\ffmpeg-7.0.1-essentials_build\ffmpeg-7.0.1-essentials_build\bin\ffmpeg.exe"
+        self.ffmpeg_location = r"D:\ruanjian\ffmpeg-7.0.1-essentials_build\bin\ffmpeg.exe"
+        self.pcm_name = r'\demo1.pcm'
         self.__init_AKSK()
         self.__init_net()
         pygame.init()
@@ -87,7 +88,7 @@ class TTS_generator():
             audio = message["data"]["audio"]
             audio = base64.b64decode(audio)
             status = message["data"]["status"]
-            print(message)
+            # print(message)
             if status == 2:
                 print("ws is closed")
                 ws.close()
@@ -96,7 +97,7 @@ class TTS_generator():
                 print("sid:%s call error:%s code is:%s" % (sid, errMsg, code))
             else:
 
-                with open(self.auto_test_location+r'\demo1.pcm', 'ab') as f:
+                with open(self.auto_test_location+self.pcm_name, 'ab') as f:
                     f.write(audio)
                 # with open(self.auto_test_location+r'\demo.mp3', 'ab') as f:
                 #     f.write(audio)
@@ -110,8 +111,14 @@ class TTS_generator():
         self.Data = {"status": 2, "text": str(base64.b64encode(self.Text.encode('utf-8')), "UTF8")}
 
         # 然后开始通信了
-        tonfxin_thread = threading.Thread(target=self.run_single)
-        tonfxin_thread.start()
+        tongxin_thread = threading.Thread(target=self.run_single)
+        tongxin_thread.start()
+
+        # 返回一下这个线程，用来外面需要对齐的时候用。
+        return tongxin_thread
+
+    def set_pcm_name(self,pcm_name_str):
+        self.pcm_name = "\\" +pcm_name_str
     
     def run_single(self):
         # pass
@@ -127,7 +134,8 @@ class TTS_generator():
         mp3_location = self.pcm_to_mp3(location,name[0:-4]) 
         display_thread = threading.Thread(target=self.display_voice_single,args=(mp3_location,))
         display_thread.start()
-        pass
+
+        return display_thread
     
     def pcm_to_mp3(self,location,name):
         pcm_location = location + "\\" + name + ".pcm"
@@ -171,7 +179,7 @@ class TTS_generator():
 
 
     # 收到websocket关闭的处理
-    def on_close(self,ws):
+    def on_close(self,ws, debug1, debug2):
         print("### closed ###")
 
 
@@ -193,5 +201,6 @@ class TTS_generator():
 if __name__ == "__main__":
     TTS = TTS_generator()
     # TTS.text_to_voice("当朝大学士，统共有五位，朕不得不罢免四位")
+    # TTS.text_to_voice("请注意，以上指令是基于当前态势的推演，实际情况可能需要根据战场变化做出调整。同时，由于敌方单位的接近，我方需要保持警惕，并准备应对敌方的反击。") # 运行会报错，但是报就报呗倒是也没有什么特别的所谓。生成的还挺快的。
     TTS.display_voice(TTS.auto_test_location, r'demo1.pcm')
     # TTS.display_voice_single(r'C:\\Users\\42418\\Desktop\\2024ldjs\\EnglishMulu\\text_JSQL\\auto_test\\demo1.mp3')

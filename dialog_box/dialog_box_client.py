@@ -112,7 +112,7 @@ if __name__ == "__main__":
             
     app = QtWidgets.QApplication([])
 
-    widget = MyWidget(role="blue_player",config = config)
+    widget = MyWidget(role="red_player",config = config)
     widget.resize(800, 300)
     widget.show()
 

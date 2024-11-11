@@ -6,11 +6,12 @@ from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer, text_demo
 from text_transfer.stage_prompt import StagePrompt
-from model_communication.model_communication import model_communication,model_communication_debug
+from model_communication.model_communication import model_communication, model_communication_debug
 from model_communication.model_comm_langchain import ModelCommLangchain
 from dialog_box.dialog_box_debug import *
 from socket_communication.socket_server import *
 from socket_communication.socket_client import *
+from TTS.TTS_interface import TTS_interface
 
 import json
 import time 
@@ -46,9 +47,14 @@ class command_processor(QtCore.QThread):
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage
         self.LLM_model = "zhipu" # 这里可以改，默认是qianfan,还有智谱啥的
-        self.model_communication = model_communication_debug()
+        self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
         # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
         # 要用多个的话等后面再来改罢。
+
+        # 解说的直接弄进去也没啥不好的。都置为False就是直接不要解说功能了，应该能够不影响程序其他部分的使用
+        config_TTS = {"flag_generate":True,"flag_play":True}
+        self.shishi_TTS = TTS_interface(config =config_TTS )
+        self.shishi_TTS.run_mul() # 反正启动线程嘛，在哪启动不是启动。
         
         self.status= {} # 这个是我方的
         self.detected_state = {} # 这个是敌方的
@@ -116,6 +122,8 @@ class command_processor(QtCore.QThread):
 
     def __init_socket_server(self,config:dict):
         # 初始化一些本地网络通信的东西。
+        self.red_response_str = ""
+        self.blue_response_str= ""
         # config = {"red_ip":"192.168.1.117", "red_port": "20001",
         #           "blue_ip": "192.168.1.117", "blue_port": "20002" }    
 
@@ -225,7 +233,10 @@ class command_processor(QtCore.QThread):
         status_str = self.text_transfer.status_to_text(self.status)
         detected_str = self.text_transfer.detected_to_text(self.detected_state)
         # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
-        zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)        
+        zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)
+
+        # 把新的状态压入到解说的那一组线程里面去。
+        self.shishi_TTS.add_status_list(status_str+detected_str)        
 
         # 检测是否人混的干预，有的话也弄进去
         flag_human_intervene, status_str_new = self.human_intervene_check(zhuyili_str + status_str + detected_str)
@@ -267,6 +278,9 @@ class command_processor(QtCore.QThread):
         detected_str = self.text_transfer.detected_to_text(self.detected_state)
         # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
         zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)
+
+        # 把新的状态压入到解说的那一组线程里面去。
+        self.shishi_TTS.add_status_list(status_str+detected_str)        
 
         # 检测是否人混的干预，有的话弄进去看
         flag_human_intervene, status_str_new = self.human_intervene_check(zhuyili_str + status_str + detected_str)
@@ -344,26 +358,32 @@ class command_processor(QtCore.QThread):
 
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
-        all_str = status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"      
+        all_str = "当前态势："+status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"      
 
         # 这些要socket发到client里面，然后检测有没有东西发回来。
-        self.dialog_box.order_now = all_str # 准备要发过去的东西。由于是异步，不应该在这里直接调socket发送的函数。
-        self.dialog_box.flag_order_renewed = True # 而是应该是改改标志位让它自己发过去。因为有自己独立的线程在检测这个事情。
+        self.dialog_box.get_status_str(all_str,self.timestep) # 这个又是一种方案
 
-        time.sleep(1)
         print("run_one_step_server, stepping")
-        if (len(red_response_str)>0) and (len(blue_response_str)>0):
+        time.sleep(0.5)
+        if (len(red_response_str)>0) or (len(blue_response_str)>0):
+            # or是只要有一边发了命令就走一步，and是两边都发了才走一步。感觉还是只要有就走比较合理。
             # 那就是说明是收到了东西了,那就走一步
+            
+            # 调试用的：这里停一下看看成色
+            print("run_one_step_server, commands")
+            # print(red_response_str)
+            # time.sleep(1)
 
             # 把文本里面的命令提取出来。
             red_commands = self.text_transfer.text_to_commands(red_response_str)   
-            blue_commands = self.text_transfer.text_to_commands(blue_response_str)        
+            blue_commands = self.text_transfer.text_to_commands(blue_response_str)  
 
             # 然后分别给到两个智能体。 # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
             self.redAgent.set_commands(red_commands) # 得专门给它定制一个发命令的才行，不然不行。
             self.blueAgent.set_commands(blue_commands)
 
             self.add_fupan_info(self.timestep, (red_commands + blue_commands), all_str, (red_response_str+blue_response_str))
+            print("run_one_step_server, commands, done")
         else:
             # 否则就不走这一步
             pass
@@ -376,8 +396,9 @@ class command_processor(QtCore.QThread):
         # 先检测有没有收到态势，有就显示，然后再检测有没有人工干预，都有就触发和大模型的互动。
         # if self.socket_client.flag_new == True: # 不检测了，态势是空的就空的呗，无所谓。
         # 那就说明这一帧收到东西了。# 讲道理，不断刷标志位来触发还是不够保险，除非这边（main.py里面）的刷新频率远高于那边（socket里面）。比较理想的是用信号槽机制。
-
+        # 还是统一弄到dialog box里面去比较好。
         # status_str_received = self.socket_client.receive_str() # 不能这么写，直接阻塞了，鉴定为拉
+        # status_str_received = self.dialog_box.socket_client.status_str
         status_str_received = self.socket_client.status_str
 
         # 然后显示一下。以及交互，在这里面了
@@ -394,7 +415,7 @@ class command_processor(QtCore.QThread):
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
             # response_str = self.model_communication.communicate_with_model(all_str)
             # response_str = self.model_communication.communicate_with_model_single(all_str)
-            response_str = text_demo + str(random.randint(0,114514)) # 加个随机数主要是为了防止字符串被识别成一样的
+            response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) # 加个随机数主要是为了防止字符串被识别成一样的
             
             # 然后把交互好了的内容发到服务器那端去。
             self.socket_client.send_str(response_str)               
@@ -414,8 +435,12 @@ class command_processor(QtCore.QThread):
         print(self.dialog_box.flag_order_renewed)
         time.sleep(0.1)
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
+        if self.role == "offline":
+            panju = self.dialog_box.flag_order_renewed
+        else:
+            panju = self.socket_client.flag_human_interact
         # if self.dialog_box.flag_order_renewed: 
-        if self.socket_client.flag_human_interact == True:
+        if panju == True:
             
             # 把人类的命令读出来
             command_str = "现在我的具体意图是：" + self.dialog_box.order_now
@@ -434,14 +459,34 @@ class command_processor(QtCore.QThread):
         self.dialog_box.get_status_str(status_str,self.timestep)
 
         # 完事儿了把标志位改成false
-        self.socket_client.flag_human_interact = False
+        if self.role == "offline":
+            pass
+        else:
+            self.socket_client.flag_human_interact = False
 
         return self.flag_human_interact , command_str
 
     def human_intervene_check_server(self):
         # 这个是有说法的了，检测两个server看是不是收到了那边传来的东西。
-        red_response_str, blue_response_str = self.dialog_box.socket_server.human_intervene_check()
-        return red_response_str, blue_response_str
+        # 异步的存在时间差的问题，那边收到了之后只保留1帧，所以得好好设计时间差，甚至直接不要时间差了
+        red_response_str_new, blue_response_str_new = self.dialog_box.socket_server.human_intervene_check()
+
+        if red_response_str_new != self.red_response_str:
+            # 那就是命令被更新过了。
+            red_response_str_return = red_response_str_new
+            self.red_response_str = red_response_str_new
+        else:
+            # 那就是命令没有被更新，那就无事发生
+            red_response_str_return = ""
+        
+        if blue_response_str_new != self.blue_response_str:
+            blue_response_str_return = blue_response_str_new
+            self.blue_response_str = blue_response_str_new    
+        else:
+            blue_response_str_return = ""           
+
+        # 算了，这里再做一个好了，来个检测有没有更新的机制。如果有更新，就来新的，没有更新，就来空的，而不要重复的一直刷，没意思。
+        return red_response_str_return, blue_response_str_return
 
     def main_loop(self,**kargs):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
@@ -661,12 +706,12 @@ class command_processor(QtCore.QThread):
 
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 5
+    flag = 0
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
     if flag == 0:
-        # 这个是单跑这个不跑dialog box，拟似人混，启动！
+        # 这个是单跑这个不跑dialog box，拟似人混，启动！ # 20241012里面还加持了大模型解说。
         shishi = command_processor(shishi_debug)
         shishi.main_loop()
     elif flag == 1:
@@ -683,12 +728,12 @@ if __name__ == "__main__":
         shishi = command_processor(shishi_debug,Comm_type ="jieshuo")
         shishi.jieshuo_mul_thread()
     elif flag == 5:
-        # 这个是开起来当服务器的，跑在需要跟平台交互的电脑上。
-        config = {"red_ip":"192.168.1.140", "red_port": "20001",
-                  "blue_ip": "192.168.1.140", "blue_port": "20002" }
-        # shishi_debug = MyWidget_debug(role="server",config=config) # 无人干预
-        shishi = command_processor(shishi_debug,role="server",config=config)
-        shishi.run()
-        # 由于dialog box和command_processor的相互引用关系，理智的做法是改在dialogbox_sserver里面，而不是直接开这个。
-        # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
-        #      
+        # # 这个是开起来当服务器的，跑在需要跟平台交互的电脑上。
+        # config = {"red_ip":"192.168.1.140", "red_port": "20001",
+        #           "blue_ip": "192.168.1.140", "blue_port": "20002" }
+        # # shishi_debug = MyWidget_debug(role="server",config=config) # 无人干预
+        # shishi = command_processor(shishi_debug,role="server",config=config)
+        # shishi.run()
+        # # 由于dialog box和command_processor的相互引用关系，理智的做法是改在dialogbox_sserver里面，而不是直接开这个。
+        # # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
+        pass

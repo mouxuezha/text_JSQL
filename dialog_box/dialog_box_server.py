@@ -25,6 +25,7 @@ class MyWidget(QtWidgets.QWidget):
         # 人跟人打，就要有特定的说法了。干脆重新规划一下，红蓝方都以客户端的形式给出，哪怕是本地的也行。然后这个server彻底作为一个中间层存在，不再显示界面了
         self.order_now_client = "none"
         self.flag_order_renewed_client = False        
+        self.status_to_send = "态势："
 
         self.step_num = 0
         self.p_status ="on" # 为了后面能走，这个得默认是on
@@ -32,7 +33,7 @@ class MyWidget(QtWidgets.QWidget):
         self.p = command_processor(self,role="server",config=config)
 
         # IP是服务器这台电脑在内网的IP，端口用个不一样的。
-        self.socket_server = socket_server_2player(config,dialog_box=self)
+        self.socket_server = socket_server_2player(config,dialog_box=self,model="debug")
         
         
         self.button = QtWidgets.QPushButton("下达命令")
@@ -68,7 +69,7 @@ class MyWidget(QtWidgets.QWidget):
             self.step_num = step_num
             self.text.setText(status_str)
             # 这个get_status_str是在main里面调的，调到就说明态势更新了，所以传就完事儿了
-            self.socket_server.send_str(status_str)
+            self.socket_server.send_to_players(status_str)
             self.step_signal.emit(step_num)
     
     def get_human_order(self):

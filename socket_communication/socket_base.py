@@ -77,11 +77,13 @@ class socket_base():
         # 这个是用来接收字符串的。任何时候调这个，总能读取出东西来。至于说是不是新的，得从标志位来看。
         # 按照目前这个写法，标志位只保持一帧。
         new_received_str = self.client_socket.recv(4096).decode('utf-8')
+        # print("new_received_str in receive_str:"+new_received_str)
+        # 经过测试，这个就是堵塞的，不发一次收一次这个线程就不会接着往下走。
         
         # 判断一下是不是收重了，都是好事儿
         if new_received_str != self.received_str:
             self.received_str = new_received_str
-            print(self.received_str)
+            # print(self.received_str)
             self.flag_new = True
         else:
             self.flag_new = False
