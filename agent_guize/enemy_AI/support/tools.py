@@ -4,6 +4,9 @@ import os
 import sys
 import random
 import numpy as np
+import json
+# import resource # caole 这个只在unix的里面有，win的里面没有
+# import psutil # 算了，考虑到内网更新库的蛋疼性，不引入其他包了凑活用把
 
 def get_states(env):
     result = env.GetCurrentStatus()
@@ -98,3 +101,45 @@ def auto_save_overall(str_buffer, log_file = r'C:\Users\42418\Desktop\2024ldjs\E
     file.write(str_buffer + '\n')
     file.close()
     return 0
+
+def load_bridge_json(json_file):
+    # 这个是用来从桥梁的json文件里面读取出坐标的，暂时只要坐标就行了。
+    with open(json_file, 'r', encoding='utf-8') as wenjian:
+        json_data = json.load(wenjian)
+
+    # 先夹杂JSON文件
+
+    bridge_list = [] 
+
+    # 然后循环一波
+    for i in range(len(json_data)):
+        field_single = json_data[i]
+        for Neighbor in field_single["Neighbor"]:
+            try:
+                BridgeState_single = Neighbor["BrigeState"] # 这里JSON里有拼写错误，将错就错了。
+                for j in range(len(BridgeState_single)): 
+                    try:
+                        bridge_LLA_single =  [BridgeState_single[j]["start_lon"], BridgeState_single[j]["start_lat"],0]
+                        bridge_list.append(bridge_LLA_single)
+                    except:
+                        pass
+            except:
+                pass
+            
+    return bridge_list
+
+# def check_memory():
+#     # 这个是用于辅助调试的，检测内存占用，如果超过了一定程度就杀线程。
+#     # memory_usage =resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024*1024)
+#     memory_usage = psutil.virtual_memory()
+#     memory_usage = memory_usage.used / (1024*1024)
+#     print(memory_usage)
+
+if __name__ == "__main__":
+    flag = 1
+    if flag==0:
+        json_file = "beifen\\Bridge.json"
+        jieguo = load_bridge_json(json_file)
+    elif flag ==1:
+        # check_memory()
+        pass 

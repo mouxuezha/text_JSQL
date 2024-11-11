@@ -11,7 +11,9 @@ import sys, os
 import xlrd
 import queue
 import time
+import random
 from enum import Enum
+from support.tools import load_bridge_json
 
 class BaseAgent(object):
     def __init__(self):
@@ -61,6 +63,9 @@ class BaseAgent(object):
         self.building_loaction_list.append([100.103974397,13.63564213,0])
         self.building_loaction_list.append([100.1167513,13.6432282,0])
         self.building_loaction_list.append([100.140676439,13.607695814,0])
+
+        self.bridge_location_list = load_bridge_json("beifen\\Bridge.json")
+        # 算了这个直接读取JSON好了，不然一个一个复制粘贴不理想。
 
 
  
@@ -393,17 +398,23 @@ class BaseAgent(object):
             status = kargs["status"]
         else:
             status = self.status
+
         try:
-            lon = status[ID]["VehicleState"]["lon"]
-            lat = status[ID]["VehicleState"]["lat"]
-            alt = status[ID]["VehicleState"]["alt"]
+            if "this" in status[ID]:
+                LLA = status[ID]["this"]["LLA"]
+            else:
+                lon = status[ID]["VehicleState"]["lon"]
+                lat = status[ID]["VehicleState"]["lat"]
+                if lon ==None: # 还有奇怪的没有抓到的异常，再处理一下。
+                    lon = 0 
+                if lat == None:
+                    lat = 0 
+                alt = status[ID]["VehicleState"]["alt"]
+                LLA = [lon, lat, alt]
         except:
             # 直接用异常处理吧，来处理万一单位炸了之后会发生什么。
-            lon = 0
-            lat = 0
-            alt = 0
-
-        LLA = [lon, lat, alt]
+            LLA = [0, 0, 0]   
+            print("get_LLA fail, attention")
 
         return LLA
 
@@ -535,11 +546,19 @@ class BaseAgent(object):
         if (type(attacker_ID) == dict) or (type(attacker_ID) == list):
             # 说明是直接把status输入进来了。那就得循环。
             for attacker_ID_single in attacker_ID:
-                self.abstract_state[attacker_ID_single] = {"abstract_state": "move_and_attack",
-                                                           "target_LLA": target_LLA,
-                                                           "flag_moving": False, "jvli": 114514}
+                if "Jamming" in attacker_ID_single:
+                    # 做一层兼容，让干扰车走这个也能有点用。
+                    self.set_move_and_jammer(attacker_ID,target_LLA,model=2)
+                else:
+                    self.abstract_state[attacker_ID_single] = {"abstract_state": "move_and_attack",
+                                                            "target_LLA": target_LLA,
+                                                            "flag_moving": False, "jvli": 114514}
         else:
-            self.abstract_state[attacker_ID] = {"abstract_state": "move_and_attack", "target_LLA": target_LLA,
+            if "Jamming" in attacker_ID:
+                # 做一层兼容，让干扰车走这个也能有点用。
+                self.set_move_and_jammer(attacker_ID,target_LLA,model=2)
+            else:
+                self.abstract_state[attacker_ID] = {"abstract_state": "move_and_attack", "target_LLA": target_LLA,
                                                 "flag_moving": False, "jvli": 114514}
         pass
 
@@ -668,14 +687,16 @@ class BaseAgent(object):
                                                            "R": R,
                                                            "flag_circle": True, # 这个是用来标记顺时针还是逆时针的。True是顺时针
                                                            "center_LLA": center_LLA,
-                                                           "flag_done": False # 这个用来标记巡飞弹是不是用过了。
+                                                           "flag_done": False, # 这个用来标记巡飞弹是不是用过了。
+                                                           "turn_cd" : 0 # 这个是用来防止转方向转不过去了卡在边上的。
                                                            }
         else:
             self.abstract_state[attacker_ID] = {"abstract_state": "UAV_scout",
                                                            "R": R,
                                                            "flag_circle": True, # 这个是用来标记顺时针还是逆时针的。True是顺时针
                                                            "center_LLA": center_LLA,
-                                                           "flag_done": False # 这个用来标记巡飞弹是不是用过了。
+                                                           "flag_done": False, # 这个用来标记巡飞弹是不是用过了。
+                                                           "turn_cd" : 0 # 这个是用来防止转方向转不过去了卡在边上的。
                                                            }
         # 逻辑就是，顺着圆的走切线，有威胁就往外，到地图边上就反向。多搞点向量运算。
         pass
@@ -767,6 +788,7 @@ class BaseAgent(object):
             if flag_done and "CruiseMissile" in attacker_ID:
                 # 巡飞弹用了就用了，用了再发move指令我怕它抽风。
                 self.abstract_state[attacker_ID]["flag_done"] = False
+                return
         else:
             print("XXHtest: attack disabled in __handle_UAV_scout")
         
@@ -775,8 +797,12 @@ class BaseAgent(object):
             return
 
         # 先操作一下，是不是靠边了，如果是靠边了，就要换方向了。
-        if self.num % 11 == 0:
-            flag_edge = self.check_edge(attacker_LLA,d_l=0.005) # 不用去的太靠边也行的奥。
+        # mod_num = random.randint(0,10) # 这个改成随机也是为了防止在边上转来转去。但是效果不好反而飞出去了
+        # 算了，不偷懒了，强行规定一个，转方向有CD
+        mod_num = 0 
+        if self.num % 1 == mod_num:
+            # 这里参数得弄好，不然会出现转完了下一步还满足转的条件，就一直在边上转来转去。
+            flag_edge = self.check_edge(attacker_ID,d_l=0.004) # 不用去的太靠边也行的奥。
             if flag_edge:
                 # 把这个flag换了，就算是到了边上了呗。
                 self.abstract_state[attacker_ID]["flag_circle"] = not flag_circle
@@ -790,28 +816,42 @@ class BaseAgent(object):
             attacker_LLA[2] = 0 
             n_vector = np.array(center_LLA) - np.array(attacker_LLA)
             n_vector = n_vector / np.linalg.norm(n_vector)
+
+            # 来点儿地转偏向力。
+            n_vector_tan_origin = self.get_n_vector_tan(attacker_LLA, center_LLA) # 这个就是没有修改过的方向
+            # 然后顺时针逆时针
+            if flag_circle:
+                n_vector_tan_origin = n_vector_tan_origin*(-1) 
+
+            n_vector = n_vector_tan_origin*0.3 + n_vector*0.7 # 让它能够向外点去，拉开距离
+            # 确实，加了这个之后不会有原地卡住了，卡着也会逐渐移动，一直到退出卡顿。鉴定为舒服。
+
         else:
             # 那就是距离已经到了，那就改成走切线方向了
-            n_vector_tan = self.get_n_vector_tan(attacker_LLA, center_LLA)
+            n_vector_tan_origin = self.get_n_vector_tan(attacker_LLA, center_LLA) # 这个就是没有修改过的方向
 
             # 然后根据探测到的威胁进行调整。遍历探测到的东西，把距离靠近到有威胁的东西弄出来，
             # 然后根据这个距离最近的的东西重新求一个切线的向量出来。相当于一段一段的飞小圆弧，逻辑上比较通顺。
             enemy_ID_nearst = "" # 这个是用于存“对我有威胁的最近一个敌方防空的ID”
             jvli_nearest = 114514 
+            jvli_nearest_threshold = 123
             for enemy_id_single in list(self.detected_state2.keys()): # 顺利的话，见过一次的敌方防空车都是在这里面的。
                 if ("missile_truck" in enemy_id_single) and ("Combat_plane" in attacker_ID):
                     jvli_threshold = 2000
                     flag_check = True
+                    jvli_nearest_threshold = 2000 # 这个是防空导弹范围。
                 elif ("JammingTruck" in enemy_id_single) and ("CruiseMissile" in attacker_ID): 
-                    jvli_threshold = 2000
+                    jvli_threshold = 2300
                     flag_check = True
+                    jvli_nearest_threshold = 2300 # 讲道理这个是干扰范围。
                 else:
                     flag_check=False
+                    
 
                 if flag_check == True:
                     # 那就说明这个是有危险的了，就得check一下距离
-                    # enemy_LLA = self.get_LLA(enemy_id_single,status=self.detected_state2)
-                    enemy_LLA = self.detected_state2[enemy_id_single]["this"]["LLA"]
+                    enemy_LLA = self.get_LLA(enemy_id_single,status=self.detected_state2)
+                    # enemy_LLA = self.detected_state2[enemy_id_single]["this"]["LLA"] # 
                     jvli = self.distance2(attacker_LLA, enemy_LLA)
                     if jvli < jvli_threshold: # 别接近到它的射程内，如果接近到了，就要考虑赶紧跑路了
                         if jvli < jvli_nearest:
@@ -819,17 +859,34 @@ class BaseAgent(object):
                             jvli_nearest = jvli
                             enemy_ID_nearst = enemy_id_single
             # 至此搜完了，最有威胁的敌方防空应该应该是搜出来了
-            if jvli_nearest < 1500:
+            if jvli_nearest < jvli_nearest_threshold:
                 # 那就是搜到了，那就采取措施
                 enemy_LLA = self.get_LLA(enemy_ID_nearst,status=self.detected_state2)
-                n_vector_tan = self.get_n_vector_tan(attacker_LLA, center_LLA)
+                n_vector_tan = self.get_n_vector_tan(attacker_LLA, enemy_LLA)
+                # 干脆法向切向都弄出来
+                n_vector_n = np.array(enemy_LLA) - np.array(attacker_LLA)
+                n_vector_n = n_vector_n / np.linalg.norm(n_vector_n) 
+                # 增加一个逻辑，比较修改前后的方向，取他们内积为正的那边，防止巡飞弹反复横跳。
+                if np.dot(n_vector_tan, n_vector_tan_origin)>0:
+                    # 那就说明方向是还可以
+                    pass
+                else:
+                    n_vector_tan = n_vector_tan*(-1) 
+                
+                
+                
+            else:
+                # 那就是说没有监测到新的需要威胁的。
+                n_vector_n = np.array([0,0,0])
+                n_vector_tan = n_vector_tan_origin
             # 然后顺时针逆时针
             if flag_circle:
                 n_vector_tan = n_vector_tan*(-1) 
-            n_vector = n_vector_tan
+
+            n_vector = n_vector_tan*0.6 + n_vector_n*0.4 # 让它能够向外点去，拉开距离
 
         # 然后这里定出了方向，后面就是往那个方向走一段。
-        if self.num %  5 == 0 : # 或许不用每一步都做这个决策。节省一些运算量也是好的。
+        if self.num %  2 == 0 : # 或许不用每一步都做这个决策。节省一些运算量也是好的。
             target_LLA = attacker_LLA + n_vector * 0.01
             self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
 
@@ -885,6 +942,9 @@ class BaseAgent(object):
                         # 然后到这里终于可以发出攻击指令了。
                         # 有些武器直瞄好，有些武器间瞄好。# 有些武器只允许直瞄
                         flag_done = self.check_zhimiao(attacker_ID, target_ID_local, weapon_selected)
+                        # 巡飞弹的话还得check一下目标是不是在敌方干扰的覆盖范围内。
+                        flag_ganrao = self.check_CruiseMissile_ganrao(attacker_ID, target_ID_local)
+                        flag_done = flag_done and flag_ganrao
                         if flag_done:  # 根据策略，武器类型和直瞄间瞄是不是匹配。如果判出来彳亍就打
                             self._Attack_Action(attacker_ID, target_LLA_local_modified[0], target_LLA_local_modified[1],
                                                 target_LLA_local_modified[2], weapon_selected)
@@ -978,7 +1038,7 @@ class BaseAgent(object):
             else:
                 # 意思需要生成周边的点。比如300米左右半径的范围内
                 if ("truck" in attacker_ID) or ("Infantry" in attacker_ID):
-                    LLA_around_list = self.__get_LLA_around(target_LLA, n_R=1, n_theta=1, dR=0.0005)
+                    LLA_around_list = self.__get_LLA_around(target_LLA, n_R=1, n_theta=1, dR=0.005)
                 else:
                     LLA_around_list = self.__get_LLA_around(target_LLA, n_R=1, n_theta=1, dR=0.003)
                 self.abstract_state[attacker_ID]["flag_arrived"] = True  # 改了之后标志位也得改。
@@ -1378,6 +1438,7 @@ class BaseAgent(object):
         # 方案2，尝试加入优先级。
         # 方案2改，这个是改了发现概率之后。恐怕目标ID还不能只从当前帧的位置来，因为现在detectinfo里面的变量是若有若无的。
         # 方案2改2，这个是增加了子弹不打车的，或者说无效的就不打。
+        # 2024：增加一个说法，识别目标是不是静止的。AGM之类的是想让它只炸静止的目标。
         prior_list = self.get_prior_list(attacker_ID)
         for i in range(len(prior_list)):
             prior_str = prior_list[i]  # 其实就是根据优先级多做几次方案1，而已。
@@ -1385,7 +1446,7 @@ class BaseAgent(object):
             # for enemy_ID in detectinfo:
             for enemy_ID in self.detected_state2:
                 # 检测这个目标是不是新鲜的。
-                if self.detected_state2[enemy_ID]["this"]["num"] < self.num - 5:
+                if self.detected_state2[enemy_ID]["this"]["num"] < self.num - 500:
                     # 就说明目标信息已经不新鲜了，就不打了 # 正常情况下，这里面有的肯定都有this属性
                     # 如果这帧是能够detectinfo里有的，那肯定已经更新到deteced_state2里面了。
                     continue
@@ -1393,6 +1454,21 @@ class BaseAgent(object):
                 # 如果目标是新鲜的，就检测是不是合适打。
                 attacker_LLA = self.__get_LLA(attacker_ID)
                 target_LLA = self.detected_state2[enemy_ID]["this"]["LLA"]
+                
+                flag_enemy_stay = False
+                # 检测一下，目标是不是固定的。如果是固定的就改个flag。
+                try:
+                    target_LLA_last = self.detected_state2[enemy_ID]["last"]["LLA"]
+                except:
+                    target_LLA_last = target_LLA
+                # 坐标取出来之后直接比较了。复用距离程序
+                enemy_distance_last = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
+                                    target_LLA_last[0], target_LLA_last[1], target_LLA_last[2])
+                if enemy_distance_last<0.1:
+                    # 还是来个容错，不要求完全相等
+                    flag_enemy_stay =True # 那就认为目标是静止的。
+
+
                 enemy_distance = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
                                                attacker_LLA[0], attacker_LLA[1], attacker_LLA[2])
                 flag_select = False
@@ -1405,8 +1481,13 @@ class BaseAgent(object):
                                   or (("Infantry" in attacker_ID) and (enemy_distance < 800 * bili)) \
                                   or (("missile_truck" in attacker_ID) and (enemy_distance < 600000 * bili)) \
                                   or (("ShipboardCombat_plane" in attacker_ID) and (enemy_distance < 2000 * bili)) \
-                                  or (("CruiseMissile" in attacker_ID) and (enemy_distance < 2000 * bili))
+                                  or (("CruiseMissile" in attacker_ID) and (enemy_distance < 3000 * bili))
                     # or (("ShipboardCombat_plane" in attacker_ID) and (enemy_distance < 15000 * bili))
+                    
+                    # 增加一个处理，如果自己是无人机，那就只打静止的目标。
+                    if ("ShipboardCombat_plane" in attacker_ID) or ("CruiseMissile" in attacker_ID):
+                        flag_select = flag_select and flag_enemy_stay
+
                 if flag_select:
                     enemy_distance_min_list.append(enemy_distance)
                     enemy_ID_selected_list.append(enemy_ID)
@@ -1649,6 +1730,10 @@ class BaseAgent(object):
             target_state_single = {}
             lon = detectinfo[target_ID]["targetLon"]
             lat = detectinfo[target_ID]["targetLat"]
+            if lon==None:
+                lon=0
+            if lat==None:
+                lat=0
             alt = detectinfo[target_ID]["targetAlt"]
             LLA = [lon, lat, alt]
 
@@ -1694,15 +1779,29 @@ class BaseAgent(object):
 
         elif ("ShipboardCombat_plane" in type):
             prior_list = []
-            if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
-                if self.num < 480:  # 先不打小车，反正打不中。
-                    pass
-                    # 调试用的。
-                    # prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
-                elif self.num < 1000:
-                    prior_list = ["Howitzer"]
-                else:
-                    prior_list = ["Howitzer", "missile_truck", "ArmoredTruck",  "Infantry"]
+            # 这里面还得详细区分一下，蓝方的主要打红方的榴弹炮，红方的就自由一些
+            if "ShipboardCombat_plane1" in type: # 这个type其实输入进来的是attacker ID。
+                if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
+                    if self.num < 480:  # 先不打小车，反正打不中。
+                        pass
+                        # 调试用的。
+                        # prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
+                    elif self.num < 1000:
+                        prior_list = ["Howitzer"]
+                    else:
+                        # prior_list = ["Howitzer", "missile_truck", "ArmoredTruck",  "Infantry"]
+                        prior_list = ["Howitzer", "missile_truck", "ArmoredTruck"]
+            elif "ShipboardCombat_plane0" in type:
+                # 红方反而可以有啥打啥，不用特别去针对。
+                if self.num % 20 == 0:  # 这个没有CD，手动给它加个CD
+                    if self.num < 480:
+                        pass
+                    else:
+                        prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
+            else:
+                # 容错的，以防万一。
+                if self.num % 20 == 0:  # 这个没有CD，手动给它加个CD
+                    prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
 
 
         elif ("Infantry" in type):
@@ -1721,13 +1820,39 @@ class BaseAgent(object):
             # 子弹应该很难消耗完，所以子弹打到车上去了讲道理也不是很有所谓。
             prior_list = ["Infantry", "Truck", "Howitzer", "missile_truck", "MainBattleTank"]
         elif("CruiseMissile" in type):
-            # 统一设定成巡飞弹开始不开火，除非遇到敌方防空，后面快爆炸了就是有什么来什么了。
-            if self.num < 1700:  # 先打机械的
-                prior_list = ["missile_truck", "MainBattleTank"]
-            else:
-                # 有什么打什么了。
-                prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
+            # # 统一设定成巡飞弹开始不开火，除非遇到敌方防空，后面快爆炸了就是有什么来什么了。
+            # if self.num < 1700:  # 先打机械的
+            #     # prior_list = ["missile_truck", "MainBattleTank"]
+            #     prior_list = [] # 先探测，先不打
+            # else:
+            #     # 有什么打什么了。
+            #     prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
 
+            if "RedCruiseMissile" in type:
+                # 那这个就是红方的，省着点儿炸。
+                if "RedCruiseMissile_0" in type:
+                    yuzhi = 1700 
+                else:
+                    yuzhi = 1800
+                if self.num < 1700: 
+                    prior_list = [] # 先探测，先不打
+                else:
+                    # 有什么打什么了。
+                    prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
+            elif "BlueCruiseMissile" in type:
+                # 那这个就是蓝方的，就得早点给它炸了
+                if "BlueCruiseMissile_0" in type:
+                    yuzhi = 800 
+                else:
+                    yuzhi = 1000
+
+                if self.num < yuzhi:  
+                    prior_list = [] # 先探测，先不打
+                else:
+                    # 有什么打什么了。# 按理说是打不了"JammingTruck"的
+                    prior_list = [ "MainBattleTank",  "Howitzer","JammingTruck"]         
+            else:
+                    prior_list = [ "MainBattleTank",  "Howitzer","JammingTruck"]              
         else:
             # 以防万一
             prior_list = ["missile_truck", "MainBattleTank", "Howitzer", "Infantry", "ArmoredTruck",
@@ -1751,6 +1876,42 @@ class BaseAgent(object):
                     self.missile_truck_attacked[target_ID] =  1
         pass
 
+    def check_CruiseMissile_ganrao(self, attacker_ID, target_ID):
+        # 这个用来check一下，巡飞弹攻击目标是不是在敌方干扰的范围之内。如果是在敌方干扰范围之内就不打了先，如果不是再打。
+        # 其实也不安全，因为还可能飞过去的途中就变成在干扰范围内了。比较理想的是一直巡飞，只攻击比较靠近的敌方的东西。
+        # 约定：具备攻击条件返回True，不具备就返回False
+        flag_target_ganrao = True
+        if "CruiseMissile" in attacker_ID:
+            # 那就是需要进行check
+
+            # 尝试取出敌方干扰车的坐标。
+            flag_detected = False
+            self.flag_standingby = False # 这个就先不收别的指令了
+            enemy_id_selected = ""
+            for enemy_id in self.detected_state2:
+                if "Jamm" in enemy_id:
+                    flag_detected=True
+                    enemy_id_selected = enemy_id
+            if flag_detected == True:
+                # 那就是对面开着干扰呢，那就check距离
+                Jammer_LLA = self.detected_state2[enemy_id_selected]["this"]["LLA"]
+                target_LLA = self.detected_state2[target_ID]["this"]["LLA"]
+                jvli_target_Jammer = self.distance2(Jammer_LLA,target_LLA)
+                if jvli_target_Jammer>2500:
+                    # 大于干扰半径的才去A，否则不去A
+                    flag_target_ganrao = True
+                else:
+                    flag_target_ganrao = False
+            else:
+                # 如果对面没开干扰，那也无事发生
+                flag_target_ganrao = True
+                pass
+        else:
+            # 如果不是巡飞弹，那就无事发生。
+            flag_target_ganrao = True
+            pass
+
+        return flag_target_ganrao    
 
 
     def check_zhimiao(self, attacker_ID, target_ID, weapon_selected):
@@ -1844,13 +2005,23 @@ class BaseAgent(object):
                 break
         return flag
 
-    def check_edge(self,attacker_LLA,d_l=0.004):
+    def check_edge(self,attacker_ID,d_l=0.004):
         # 输出一个是否接近边界。如果接近边界就想别的办法。
+        turn_cd = 70
+        attacker_LLA = self.get_LLA(attacker_ID)
         flag_near = False
-        if (attacker_LLA[0] < 100.0923 + d_l) or (attacker_LLA[0] > 100.18707 - d_l):
-            flag_near = True
-        elif (attacker_LLA[1] < 13.6024 + d_l) or (attacker_LLA[1] > 13.6724 - d_l):
-            flag_near = True
+        if self.abstract_state[attacker_ID]["turn_cd"] == 0:
+            if (attacker_LLA[0] < 100.0923 + d_l) or (attacker_LLA[0] > 100.18707 - d_l):
+                flag_near = True
+                self.abstract_state[attacker_ID]["turn_cd"] = turn_cd
+            elif (attacker_LLA[1] < 13.6024 + d_l) or (attacker_LLA[1] > 13.6724 - d_l):
+                flag_near = True
+                self.abstract_state[attacker_ID]["turn_cd"] = turn_cd
+        else:
+            # 那就是不符合转的条件，CD减1,最小减少到0
+            self.abstract_state[attacker_ID]["turn_cd"] = self.abstract_state[attacker_ID]["turn_cd"]-1
+            if self.abstract_state[attacker_ID]["turn_cd"]<0:
+                self.abstract_state[attacker_ID]["turn_cd"] = 0 
         return flag_near
     
     def __status_filter(self, status):
@@ -1898,18 +2069,31 @@ class BaseAgent(object):
         # 然后开始布阵了
         vector_n_LLA = np.array([-1 * vector_LLA[1], vector_LLA[0], 0])  # 生成一个法向量
         # dL = 0.0003  # 别吃三十米的导弹aoe
-        dL = 0.003  # 在此基础上加一点。
+        dL = 0.0005  # 在此基础上加一点。不要离得太远，太远就不好了
 
         # 先来个最基本的方方正正的好了,方阵往里面填就是了
+        # 增加一些设定，就是根据装备的数量来确定要出几个点。
+        ID_list = list(status.keys())
         LLA_list = []
-        for j in range(3):
-            for i in range(5):
-                d_vector = (-2 + i) * vector_n_LLA + (-1 + j) * vector_LLA
+        geshu = len(ID_list)
+
+        if geshu==1:
+            p_config = [1,1,0,0] 
+        elif geshu<=3:
+            p_config = [1,3,1,0] 
+        elif geshu<=9: # 还是不太理想，当前这种
+            p_config = [3,3,1,1]
+        elif geshu<=15:
+            p_config = [3,5,2,1] 
+        
+        for j in range(p_config[0]):
+            for i in range(p_config[1]):
+                d_vector = (-1*p_config[2] + i) * vector_n_LLA + (-1*p_config[3] + j) * vector_LLA
                 d_LLA = d_vector * dL
                 LLA_single = target_LLA + d_LLA
                 LLA_list.append(LLA_single)
 
-        ID_list = list(status.keys())
+        
         # 然后开始往这一堆的点里面填充装备
         for i in range(min(len(status), len(LLA_list))):
             # 写成有序的形式是为了能够保证输入的序列顺序一样,输出的阵型形状就一样.
@@ -1919,8 +2103,8 @@ class BaseAgent(object):
             # 2024:这里得根据装备类型改一下，不再所有都是默认的move_and_attack了。
             if "JammingTruck" in attacker_ID:
                 # 干扰的就用干扰的。
-                # self.set_move_and_jammer(attacker_ID, target_LLA, model=2)
-                self.set_move_and_jammer(attacker_ID, target_LLA, model=0)
+                self.set_move_and_jammer(attacker_ID, target_LLA, model=2)
+                # self.set_move_and_jammer(attacker_ID, target_LLA, model=0)
             else:
                 self.set_move_and_attack(attacker_ID, target_LLA)
 
@@ -2122,31 +2306,40 @@ class BaseAgent(object):
         # 这个是“根据输入的态势。判断敌方来的方向”，先不管什么分兵诱敌之类的。
         # 显然，这个需要平滑，不然一跳变都傻逼了。刚好用一下detected_state2里面的两帧数据
         # 输出一个法向量，记录了敌方相对于那个点的进攻方向。
+        # 只算这几个种类的地面装备，不然全烂了。
+        filter_list = ["MainBattleTank","ArmoredTruck","WheeledCmobatTruck","JammingTruck"] 
         
         # 敌方位置直接求平均了。
         LLA_all = np.zeros((3,))
         base_LLA = np.array(base_LLA)
         num_counted = 0 # 不整花活儿了，直接加起来计数除一下算了。反正没几个，溢出不了。
         for enemy_id in detected_state2:
-            # 后面如果有需求，要加权的时候这里可以加权。
-            this_LLA = detected_state2[enemy_id]["this"]["LLA"]
-            # 如果还存了上一步的，就把上一步的也纳入计算。没有的话就自己把自己再来一遍。
-            try:
-                last_LLA = detected_state2[enemy_id]["last"]["LLA"]
-            except:
-                last_LLA = this_LLA
-            LLA_all[0] = LLA_all[0] + (this_LLA[0] + last_LLA[0]) / 2 
-            LLA_all[1] = LLA_all[1] + (this_LLA[1] + last_LLA[1]) / 2
-            num_counted = num_counted + 1
+            flag_is_ground = False
+            for filter_str in filter_list:
+                if filter_str in enemy_id:
+                    flag_is_ground = True
+            if flag_is_ground:
+                this_LLA = detected_state2[enemy_id]["this"]["LLA"]
+                # 如果还存了上一步的，就把上一步的也纳入计算。没有的话就自己把自己再来一遍。
+                try:
+                    last_LLA = detected_state2[enemy_id]["last"]["LLA"]
+                except:
+                    last_LLA = this_LLA
+                LLA_all[0] = LLA_all[0] + (this_LLA[0] + last_LLA[0]) / 2 
+                LLA_all[1] = LLA_all[1] + (this_LLA[1] + last_LLA[1]) / 2
+                num_counted = num_counted + 1
         
         # 然后把平均值算出来。
-        LLA_all = LLA_all / num_counted 
+        if num_counted==0:
+            LLA_all = np.zeros((3,))
+        else:
+            LLA_all = LLA_all / num_counted 
 
         # 然后求个向量。
         n_fangxiang = base_LLA - LLA_all # 由于是敌方来的方向，所以是末减初
         n_fangxiang = n_fangxiang / np.linalg.norm(n_fangxiang)
 
-        return n_fangxiang
+        return n_fangxiang, LLA_all 
 
     def check_enemy_group(self, detected_state2, R_threshold=1500):
         # 这个做个聚类，求出detected_state2的子集，返回一个列表，以及一个“聚合度指标”，来衡量是不是一起来的。
@@ -2194,7 +2387,63 @@ class BaseAgent(object):
 
         return  result_state_list, variance, index
 
+    def check_enemy_direction2(self,detected_state2,base_LLA,**kargs):
+        # 这个是一开始准备用于红方的，返回的是“是否探到了足够的数量的敌方地面单位”，以及“敌方主力往什么方向去了”
+        filter_list = ["MainBattleTank","ArmoredTruck","WheeledCmobatTruck","JammingTruck","Howitzer_C100"] 
+        LLA_all = np.zeros((3,))
+        num_counted = 0 
+        if "num_threshold" in kargs:
+            num_threshold = kargs["num_threshold"]
+        else:
+            num_threshold = 4 
 
+        for enemy_id in detected_state2:
+            flag_is_ground = False
+            for filter_str in filter_list:
+                if filter_str in enemy_id:
+                    flag_is_ground = True
+            if flag_is_ground:
+                this_LLA = detected_state2[enemy_id]["this"]["LLA"]
+                # 如果还存了上一步的，就把上一步的也纳入计算。没有的话就自己把自己再来一遍。
+                try:
+                    last_LLA = detected_state2[enemy_id]["last"]["LLA"]
+                except:
+                    last_LLA = this_LLA
+                LLA_all[0] = LLA_all[0] + (this_LLA[0] + last_LLA[0]) / 2 
+                LLA_all[1] = LLA_all[1] + (this_LLA[1] + last_LLA[1]) / 2
+                num_counted = num_counted + 1
+        
+        # 然后把平均值算出来。
+        if num_counted==0:
+            LLA_all = np.zeros((3,))
+        else:
+            LLA_all = LLA_all / num_counted 
+        # 看探测到的数量够不够，够了就然后对比，对比第一个L。
+        flag_detected = False
+        if num_counted>num_threshold:
+            flag_detected = True
+        
+        enemy_direction = "none"
+        # 然后就是处理一下返回值，红蓝方的返回值不一样的。
+        if self.player == "red":
+            if LLA_all[0]>base_LLA[0]:
+                # 那就说明平均出来是在地图偏右边的地方，
+                # 需要的话还可以加一点阈值，比如足够右才算右
+                enemy_direction = "right" 
+            else:
+                enemy_direction = "left"
+        elif self.player == "blue":
+            if LLA_all[0]<base_LLA[0][0]:
+                # 那就是最左边
+                enemy_direction = "left"
+            elif LLA_all[0]<base_LLA[1][0]:
+                enemy_direction = "center"
+            elif LLA_all[0]>base_LLA[1][0]:
+                enemy_direction = "right"
+                
+        # 然后看返回值
+        return flag_detected, enemy_direction
+    
     # 后面是服务于大模型的
     def set_commands(self, command_list:list):
         # print("set_commands: unfinished yet")
@@ -2293,4 +2542,23 @@ class BaseAgent(object):
             jvli_nearest = 1145141919
         
         return id_nearest,jvli_nearest
+    
+    def get_nearest_bridge(self, target_LLA):
+        # 这个是输出离指定位置最近的一个桥的位置，预备是用来守桥的
 
+        jvli_list = [] 
+        
+        for LLA_single in self.bridge_location_list:
+            jvli_single = self.distance(target_LLA[0], target_LLA[1], target_LLA[2], LLA_single[0], LLA_single[1], LLA_single[2])
+            jvli_list.append(jvli_single)
+
+
+        # 然后找最近的.
+        if len(jvli_list)>0:
+            jvli_nearest = min(jvli_list)
+            index_min = jvli_list.index(jvli_nearest)
+            bridge_LLA = self.bridge_location_list[index_min]
+        else:
+            jvli_nearest = 1145141919
+        
+        return bridge_LLA,jvli_nearest

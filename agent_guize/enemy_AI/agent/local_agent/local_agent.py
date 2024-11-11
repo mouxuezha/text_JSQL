@@ -12,16 +12,25 @@ class LocalAgent(BaseAgent):
         super().__init__()
         self.target_LLA = [100.165, 13.6586,0 ] 
         self.__init_function_dict()
+        self.reset_here()
+
+    def reset(self):
+        super().reset()
+        self.reset_here()
+
+    def reset_here(self):
         self.status_unit_memory = dict()
         self.flag_standingby = True # 这个标志位用来区分能不能接收命令。主要是如果开了反干扰那个，就不更新命令了。
         self.num_order_start = 0 
+        
 
     def __init_function_dict(self):
         self.step_function_dict = dict()
         # 此处应当给出通信受限条件下各种情况的处理方式。本例给出一个字典，以实现不同装备类型的单位和其行为函数的对应关系。
         for i in range(len(self.unit_type_list)):
             unit_type_single = self.unit_type_list[i]
-            if ("ArmoredTruck" in unit_type_single) or ("ShipboardCombat" in unit_type_single) \
+            if ("ArmoredTruck" in unit_type_single) \
+                or ("ShipboardCombat" in unit_type_single) \
                 or ("MainBattleTank" in unit_type_single):
                 # 用跑的快的东西去把它冲了
                 self.step_function_dict[self.unit_type_list[i]] = self.step_ours_anti_Jammer
@@ -99,11 +108,13 @@ class LocalAgent(BaseAgent):
             self.set_move_and_attack(unit_id, target_LLA)
         
         self.act = self.Gostep_abstract_state()
-        # 需要设定一个退出机制。比如多少步看不见敌方干扰车的话就算了。
-        if (self.num - self.detected_state2[enemy_id_selected]["this"]["num"]>100) or \
-           (self.num - self.num_order_start > 500):
-            self.flag_standingby = True 
-            self.num_order_start = 0 
+        # 1111修，有bug，需要修一下,防止一下报错。貌似会出现前面有后面没有的状况。
+        if flag_detected==True and enemy_id_selected in self.detected_state2:
+            # 需要设定一个退出机制。比如多少步看不见敌方干扰车的话就算了。
+            if (self.num - self.detected_state2[enemy_id_selected]["this"]["num"]>100) or \
+            (self.num - self.num_order_start > 500):
+                self.flag_standingby = True 
+                self.num_order_start = 0 
         return self.act
 
 
