@@ -46,7 +46,7 @@ class command_processor(QtCore.QThread):
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage
-        self.LLM_model = "zhipu" # 这里可以改，默认是qianfan,还有智谱啥的
+        self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
         self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
         # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
         # 要用多个的话等后面再来改罢。
@@ -88,7 +88,7 @@ class command_processor(QtCore.QThread):
         # parser.add_argument("--ip", type=str, default="192.168.43.93", help="Ip to connect")
         parser.add_argument("--port", type=str, default=20001, help="port to connect")
         parser.add_argument("--epochs", type=int, default=200, help="Number of training epochs to run")  # 设置训练轮次数
-        parser.add_argument("--max-episode-len", type=int, default=3000, help="maximum episode length")
+        parser.add_argument("--max-episode-len", type=int, default=5000, help="maximum episode length")
         net_args = parser.parse_args()
         return net_args
 

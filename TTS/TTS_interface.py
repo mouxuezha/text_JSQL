@@ -25,7 +25,10 @@ class TTS_interface():
         if "config" in kargs:
             self.config = kargs["config"] # 里面应该有flag generate 和flag play
         else:
-            self.config = {"flag_generate":True,"flag_play":True}
+            # flag_TTS表示开不开整体的解说。
+            self.config = {"flag_generate":True,"flag_play":True,"flag_TTS":True}
+        
+        self.config["flag_TTS"] = False # 这个用False就是关闭大模型解说功能。
 
         self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication_debug(Comm_type ="jieshuo")
@@ -82,6 +85,11 @@ class TTS_interface():
         return self.pcm_name_list
 
     def run_mul(self):
+        # 做成可以选择开启还是关闭的，原则上只要这个run是关了，就相当于解说是关了，就比较安全。
+        if not(self.check_config("flag_TTS")):
+            # 那就是解说的总开关被关了，鉴定为，直接返回。
+            print("提示，LLM解说已经关闭")
+            return
         # 跟socket那个里面一样，需要启动新的线程一直跑着的东西放在这里面。
 
         # 这里面的逻辑应该是：不管外面是怎么操作，这里面就固定的念完一句再念最新的一句。

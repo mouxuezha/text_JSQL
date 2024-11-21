@@ -179,6 +179,7 @@ class text_transfer(object):
         if std_dis > cur_dis:
             return True
         return False
+
     def select_by_type(self, status, type = "坦克"):
         return [ obj_id for obj_id , values_ in status.items() if type in values_["type"]]
     
@@ -267,8 +268,6 @@ class text_transfer(object):
         return detect_json
         pass 
 
-
-
     def text_to_commands(self, text:str):
         
         commands = []
@@ -331,9 +330,12 @@ class text_transfer(object):
     
     def get_initial_prompt(self):
         print("get_initial_prompt unfinished yet,return a demo")
-        initial_prompt = "请作为兵棋推演游戏的玩家，设想一个陆战作战场景，我方为红方，拥有坦克、步兵战车、自行迫榴炮、无人突击车和无人机、导弹发射车等装备，步兵下车后作战，我方需要攻取位于经纬度坐标(2.7100,39.7600)的夺控点，要将陆战装备移动到夺控点处并消灭夺控点附近敌人，地图范围为经度2.6000到2.8000，纬度范围为39.6500到39.8500，导弹发射车不能机动。在每一步，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。"
+        initial_prompt = '请作为兵棋推演游戏的玩家，设想一个陆战攻防场景。'
+        '我方为红方，拥有坦克、步兵战车、步兵、自行迫榴炮、无人突击车、巡飞弹、无人机、导弹发射车、电子干扰车等装备，步兵下车后作战，'
+        '我方需要攻取位于经纬度坐标(100.1247, 13.6615)的夺控点，将陆战装备移动到夺控点处并消灭夺控点附近敌人可占领夺控点，地图范围为经度100.0923到100.18707，纬度范围为13.6024到13.6724，导弹发射车不能机动。'
+        '每隔一定步数，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。\n'
         # 还需要一些描述地图的prompt
-        initial_prompt = initial_prompt + "地图西北方向为海洋，其余部分为陆地。陆地中间部分为山区，装备单位经过山区会由于坡度地形因素，导致行进速度减慢，夺控点周围是一片平原。"
+        initial_prompt = initial_prompt + "地图大部分为陆地，具有河流、桥梁和路网，在经纬度坐标(100.137,13.644),(100.116,13.643),(100.164,13.658)有可供步兵占领和建立防线的建筑物。"
         return initial_prompt
     
     
@@ -342,7 +344,7 @@ class text_transfer(object):
 
     def get_order_guize(self):
         # 这里面是给大模型设定的规则的格式。
-        order_guize = "请按照以下格式给出作战指令。进攻指令：[move, obj_id , x=int, y=int], 如坦克mbt_1进攻坐标为(2.7100, 39.7600)，则指令为[move, obj_id=mbt_1, x=2.7100, y=39.7600] \n 停止指令：[stop, obj_id], 如坦克mbt_1停止当前行动,则指令为[stop, obj_id=mbt_1]。步兵下车指令: [off_board, obj_id],如步战车ifv_1内步兵立刻下车,则指令为[off_board, obj_id=ifv_1]"
+        order_guize = '请按照以下格式给出作战指令。进攻指令：[move, obj_id , x=int, y=int], 如坦克mbt_1进攻坐标(100.1247, 13.6615)，则指令为[move, obj_id=mbt_1, x=100.1247, y=13.6615] \n停止指令：[stop, obj_id], 如坦克mbt_1停止当前行动，则指令为[stop, obj_id=mbt_1] \n步兵下车指令: [off_board, obj_id],如步战车ifv_1内步兵立刻下车,则指令为[off_board, obj_id=ifv_1]'
         return order_guize
     
     def find_all_str(self, text:str, sub_str:str):
