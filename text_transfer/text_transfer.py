@@ -11,6 +11,14 @@ class text_transfer(object):
         self.ed_lat,  self.ed_lon =  39.70, 2.68984
         self.tar_lat, self.tar_lon = 39.7600, 2.7100
 
+        self.__init_type()
+    
+    def __init_type(self):
+        # 这个就是把那些ID的类型弄过来整成一个列表以备后用。
+        # 红方坦克：MainBattleTank_ZTZ100，蓝方坦克：MainBattleTank_ZTZ200，红方步兵战车：WheeledCmobatTruck_ZB100，蓝方步兵战车：WheeledCmobatTruck_ZB200，步兵班：Infantry，自行迫榴炮：Howitzer_C100，无人突击车：ArmoredTruck_ZTL100，无人机：ShipboardCombat_plane，导弹发射车：missile_truck。
+        self.type_list = ["MainBattleTank_ZTZ100","MainBattleTank_ZTZ200","WheeledCmobatTruck_ZB100","WheeledCmobatTruck_ZB200","Infantry","Howitzer_C100","ArmoredTruck_ZTL100","ShipboardCombat_plane","missile_truck","JammingTruck","RedCruiseMissile","BlueCruiseMissile"]
+        self.type_list_CN = ["坦克","坦克","步兵战车","步兵战车","步兵班","自行迫榴炮","无人突击车","无人机","导弹发射车","电子干扰车","巡飞弹","巡飞弹"]
+        self.command_type_list = ["move","stop","offboard"] # 
     def LLA2XYZ(self, lon, lat, alt):
         Earthe = 0.0818191908426
         Radius_Earth = 6378140.0
@@ -77,8 +85,6 @@ class text_transfer(object):
         distance = math.sqrt(x2tox1 * x2tox1 + y2toy1 * y2toy1 + z2toz1 * z2toz1)
         return distance
 
-
-
     def status_to_text(self, status):
         # print("status_to_text unfinished yet,return a demo")
         status_str = ""
@@ -107,6 +113,44 @@ class text_transfer(object):
                 status_str += f"{unit_type_zhongwen}位置在({lon},{lat})处 \n"
         return status_str
     
+    def status_to_text2(self,status_json):
+        # 这个是来一个简化版的，只说有几个什么东西了。
+        # 这个把读出来的JSON文件转换成一段叙述。
+        unit_all = status_json
+        unit_all_list = list(unit_all.keys())
+        result_text_red = "红方："
+        result_text_blue = "蓝方："
+        for unit_type in self.type_list:
+            count_red = 0 
+            count_blue = 0 
+            record_LLA_red = [] 
+            record_LLA_blue = [] 
+            record_ID_red = [] 
+            record_ID_blue = []             
+            for unit_id_single in unit_all_list:
+                if unit_type in unit_id_single:
+                    
+                    lon = unit_all[unit_id_single]["VehicleState"]["lon"]
+                    lat = unit_all[unit_id_single]["VehicleState"]["lat"]
+                    
+                    if unit_all[unit_id_single]["PlayerName"] == "redPlayer":
+                        count_red += 1
+                        record_LLA_red.append([lon,lat])
+                        record_ID_red.append(unit_id_single)
+                    else:
+                        count_blue += 1
+                        record_LLA_blue.append([lon,lat])
+                        record_ID_blue.append(unit_id_single)
+            # 1112增加的说法：得把坐标也想个办法弄进来
+
+            #然后生成一段话
+            if count_red != 0:
+                result_text_red += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_red) + "个，obj_id为" + str(record_ID_red)
+            if count_blue != 0:
+                result_text_blue += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_blue) + "个，obj_id为" + str(record_ID_blue)
+            result_text = result_text_red + result_text_blue
+        return result_text        
+
     def detected_to_text(self, detected_state):
         # 这里面的探测到的数据结构还不太一样，所以需要另外开一个函数来实现
         detected_str = ""
@@ -159,18 +203,24 @@ class text_transfer(object):
         our_tank_lat_avg, our_tank_lon_avg = self.get_avg_pos(our_tank_id, our_status)
         enemy_direct = self.relative_pos(our_tank_lat_avg, our_tank_lon_avg, enemy_tank_lat_avg, enemy_tank_lon_avg)
         group_dis = self.distance(enemy_tank_lon_avg, enemy_tank_lat_avg, 0, our_tank_lon_avg, our_tank_lat_avg, 0)
-        enemy_in_range_dict = self.find_nearest_enemy(our_tank_lat_avg, our_tank_lon_avg, detect_state, 3000)
+        enemy_in_range_dict = self.find_nearest_enemy(our_tank_lat_avg, our_tank_lon_avg, detect_state, 2500)
         enemy_in_range_renhua =  self.turn_dict_to_renhua(enemy_in_range_dict)
         # messages = f"""
         #     当前探测到对方主力装备位于我方装备的{enemy_direct}方向，我方平均距离为{group_dis} , 敌方在我方射程范围内的装备有 {enemy_in_range_renhua}, 
         # """
-        messages = f"探测到敌方在{enemy_direct}方向，平均距离" + str(round(group_dis,1))
-        if len(enemy_in_range_renhua)>0:
-            messages = messages + ", 射程内敌人有" +str(enemy_in_range_renhua)+","
-        if self.check_enemy_closer_to_target(enemy_tank_lon_avg, enemy_tank_lat_avg):
-            left_time = self.distance(enemy_tank_lon_avg, enemy_tank_lat_avg, 0, self.tar_lon, self.tar_lat, 0)/20
-            left_time = int(left_time)
-            messages += f" 敌预计 {left_time}后到达夺控点" 
+
+        # xxh20241122:如果没有探测到就别要这段了。
+        if len(detect_state)>0:
+            # 有探测再来这个，没有探测就别来了。
+            messages = f"探测到敌方在{enemy_direct}方向，平均距离" + str(round(group_dis,1)) + "米"
+            if len(enemy_in_range_renhua)>0:
+                messages = messages + ", 射程内敌人有" +str(enemy_in_range_renhua)+","
+            if self.check_enemy_closer_to_target(enemy_tank_lon_avg, enemy_tank_lat_avg):
+                left_time = self.distance(enemy_tank_lon_avg, enemy_tank_lat_avg, 0, self.tar_lon, self.tar_lat, 0)/20
+                left_time = int(left_time)
+                messages += f" 敌预计 {left_time}后到达夺控点" 
+        else:
+            messages = "注意，尚未探测到敌人。"
         return messages 
     # 加一个用来判断是不是靠近夺控点的方法
     def check_enemy_closer_to_target(self, elon, elat):
@@ -277,8 +327,17 @@ class text_transfer(object):
                 for i in range(len(index_list)):
                     sub_str = text[index_list[i]:-1]
                     try:
-                        x = float(self.cut_from_str(sub_str, "x=", ","))
-                        y = float(self.cut_from_str(sub_str, "y=", "]"))
+                        try:
+                            # 再来一层容错，不然遇到能力不够的就傻逼了。
+                            x = float(self.cut_from_str(sub_str, "x=", ","))
+                        except:
+                            x = 100.138
+                            print("坐标识别失败，来个容错")
+                        try:
+                            y = float(self.cut_from_str(sub_str, "y=", "]"))
+                        except:
+                            y = 13.644
+                            print("坐标识别失败，来个容错")
                         obj_id = self.cut_from_str(sub_str, "obj_id=", ",")
                         command_single = {"type": command_type, "obj_id": obj_id, "x": x, "y": y}
                         commands.append(command_single)
