@@ -420,7 +420,7 @@ class auto_run(object):
                     target_landform=target_landform, target_location=target_location, target_state=target_state)
 
         # 一定步数后完成运行，开个log记录相应的输出。
-
+            
 if __name__ == "__main__":
 
     runner = auto_run()

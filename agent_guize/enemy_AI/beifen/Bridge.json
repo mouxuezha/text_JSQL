@@ -1,0 +1,303 @@
+[
+   {
+      "fieldID" : 101,
+      "Neighbor" : [
+         {
+            "neighborFieldID" : 102,
+            "BrigeState" : [
+               {
+                  "brigeID" : 1,
+                  "start_lon" : 100.1784021,
+                  "start_lat" : 13.666998599999999,
+                  "end_lon" : 100.1774661,
+                  "end_lat" : 13.666391600000001
+               }
+            ]
+         },
+         {}
+      ]
+   },
+   {
+      "fieldID" : 102,
+      "Neighbor" : [
+         {
+            "neighborFieldID" : 101,
+            "BrigeState" : [
+               {
+                  "brigeID" : 1,
+                  "start_lon" : 100.1774661,  
+                  "start_lat" : 13.666391600000001,
+                  "end_lon" : 100.1784021,
+                  "end_lat" : 13.666998599999999
+               },{}
+             
+            ]
+         },
+         {
+            "neighborFieldID":103,
+            "BrigeState":[
+               {                
+                  "brigeID" : 1,
+                  "start_lon" : 100.1546821, 
+                  "start_lat" : 13.6669801, 
+                  "end_lon" : 100.1550556,   
+                  "end_lat" : 13.6677076                  
+               },
+               {
+                  "brigeID" : 2,
+                  "start_lon" :   100.1657179,   
+                  "start_lat" : 13.6618136 ,
+                  "end_lon" :  100.1655901,
+                  "end_lat" :   13.6614155
+               }, 
+               {
+                  "brigeID":3,
+                  "start_lon":100.1701755,   
+                  "start_lat":13.6594688,    
+                  "end_lon"  : 100.1699962,
+                  "end_lat"  :13.6590105 
+               }
+            ]
+         }
+      ]
+   },
+   {
+      "fieldID" : 103,
+      "Neighbor" : [
+         {
+            "neighborFieldID" : 102,
+            "BrigeState" : [
+               {
+                  "brigeID" : 1,
+                  "start_lon" : 100.1655901,    
+                  "start_lat" : 13.6614155,
+                  "end_lon" : 100.1657179,  
+                  "end_lat" : 13.6618136
+               },
+               {
+                  "brigeID" : 2,
+                  "start_lon" : 100.1546821, 
+                  "start_lat" : 13.6669801, 
+                  "end_lon" : 100.1550556,   
+                  "end_lat" : 13.6677076
+               },
+               {
+                  "brigeID":3,
+                  "start_lon": 100.1699962,
+                  "start_lat":  13.6590105,
+                  "end_lon"  :  100.1701755,  
+                  "end_lat"  : 13.6594688  
+               }
+            ]
+         },
+         {
+            "neighborFieldID":105,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" :  100.1399545, 
+                  "start_lat" : 13.6433698,    
+                  "end_lon" : 100.1394089,    
+                  "end_lat" :  13.6432248
+               }
+            ]
+         },{
+            "neighborFieldID":104,
+            "BrigeState":[ 
+               {
+                  "brigeID":1,
+                  "start_lon" :100.1699749,     
+                  "start_lat" :13.6230973,
+                  "end_lon" : 100.1703780,
+                  "end_lat" : 13.6224780
+               }
+            ]
+
+         }
+      ]
+   },
+   {
+      "fieldID":105,
+      "Neighbor": [
+         {
+            "neighborFieldID":103,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" : 100.1394089,      
+                  "start_lat" : 13.6432248,
+                  "end_lon" : 100.1399545,   
+                  "end_lat" : 13.6433698
+               },{}
+            ]
+
+         },{
+            "neighborFieldID":107,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" : 100.1166724,      
+                  "start_lat" : 13.6422455,
+                  "end_lon" : 100.1157658,     
+                  "end_lat" : 13.6419367
+               },{}
+            ]
+
+         }
+      ]  
+   },
+   {
+      "fieldID":104,
+      "Neighbor":[
+         {
+            "neighborFieldID":103,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" :100.1703780,     
+                  "start_lat" :13.6224780,
+                  "end_lon" : 100.1699749,   
+                  "end_lat" : 13.6230973
+               },{}
+            ]
+         }
+
+      ]
+   },
+   {
+      "fieldID":107,
+      "Neighbor": [
+         {
+            "neighborFieldID":105,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" : 100.1157658, 
+                  "start_lat" : 13.6419367,
+                  "end_lon" :  100.1166724,    
+                  "end_lat" :  13.6422455
+               },{}
+            ]
+
+         },{
+            "neighborFieldID":108,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" : 100.1025575,      
+                  "start_lat" : 13.6368643,
+                  "end_lon" : 100.1021789,       
+                  "end_lat" : 13.6366974
+               },{}
+            ]
+         }
+      ]  
+   },
+   {
+      "fieldID":108,
+      "Neighbor": [
+         {
+            "neighborFieldID":107,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" : 100.1021789,       
+                  "start_lat" :  13.6366974,
+                  "end_lon" : 100.1025575,       
+                  "end_lat" : 13.6368643
+               },{}
+            ]
+
+         },{
+            "neighborFieldID":109,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" :  100.0963780,       
+                  "start_lat" : 13.6192574,
+                  "end_lon" :   100.0964976,      
+                  "end_lat" : 13.6186995
+               },{}
+            ]
+         }
+      ]  
+   },
+   {
+      "fieldID":109,
+      "Neighbor": [
+         {
+            "neighborFieldID":110,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" :  100.0984129,  
+                  "start_lat" : 13.6077279,
+                  "end_lon" :  100.0986222,    
+                  "end_lat" :  13.6071202
+               },{}
+            ]
+
+         },{
+            "neighborFieldID":108,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" :  100.0964976,       
+                  "start_lat" : 13.6186995,
+                  "end_lon" :    100.0963780,       
+                  "end_lat" :   13.6192574
+               },{}
+            ]
+         },
+         {
+            "neighborFieldID":111,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" : 100.0923748,   
+                  "start_lat" : 13.6107323,
+                  "end_lon" :  100.0923474,   
+                  "end_lat" :   13.6105455
+               },{}
+            ]
+         }
+      ]  
+   },
+   {
+      "fieldID":110,
+      "Neighbor": [
+         {
+            "neighborFieldID":109,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" :  100.0986222,  
+                  "start_lat" : 13.6071202,
+                  "end_lon" :  100.0984129,  
+                  "end_lat" :  13.6077279
+               },{}
+            ]
+         }
+      ]
+   },
+   {
+      "fieldID":111,
+      "Neighbor": [
+         {
+            "neighborFieldID":109,
+            "BrigeState":[
+               {
+                  "brigeID":1,
+                  "start_lon" :  100.0923474,   
+                  "start_lat" : 13.6105455,
+                  "end_lon" :  100.0923748,  
+                  "end_lat" :  13.6107323
+               },{}
+            ]
+         }
+      ]
+   }
+
+
+   
+]

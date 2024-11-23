@@ -1,7 +1,8 @@
 # 这个是主函数，到时候就运行这个就完事了。
-# from agent_guize.agent import Agent
 from agent_guize.enemy_AI.agent.agent_dispatch import agent_dispatch
 # from agent_guize.me_AI.agent.agent_dispatch import agent_dispatch
+# 原则上应该分开两个文件夹导入的，但是现在红蓝方都是我的，所以就也没什么所谓了。
+
 from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer, text_demo
@@ -45,10 +46,10 @@ class command_processor(QtCore.QThread):
             self.__init_socket(role =role, config=kargs["config"])
 
         self.text_transfer = text_transfer()
-        self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage
-        self.LLM_model = "zhipu" # 这里可以改，默认是qianfan,还有智谱啥的
-        self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
-        # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
+        self.stage_prompt = StagePrompt(flag_kaiguan=True) # 这里可以改开不开stage，开了可以用于调试。
+        self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
+        # self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
+        self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
         # 要用多个的话等后面再来改罢。
 
         # 解说的直接弄进去也没啥不好的。都置为False就是直接不要解说功能了，应该能够不影响程序其他部分的使用
@@ -60,7 +61,7 @@ class command_processor(QtCore.QThread):
         self.detected_state = {} # 这个是敌方的
         self.timestep = 0 
         self.flag_human_interact = False #这个用来标志当前时间步是否引入人类交互。
-        self.flag_regular_interacte = False # 这个用来改是不是定时和大模型交互的，关了就是只有人说话才交互。
+        self.flag_regular_interacte = True # 这个用来改是不是定时和大模型交互的，关了就是只有人说话才交互。
         self.human_order = "" # 这个用来常态化地存人类交互指令，以防人类意图只出现一帧就被盖了
 
         # 搞一个用来存复盘的东西。
@@ -88,7 +89,7 @@ class command_processor(QtCore.QThread):
         # parser.add_argument("--ip", type=str, default="192.168.43.93", help="Ip to connect")
         parser.add_argument("--port", type=str, default=20001, help="port to connect")
         parser.add_argument("--epochs", type=int, default=200, help="Number of training epochs to run")  # 设置训练轮次数
-        parser.add_argument("--max-episode-len", type=int, default=3000, help="maximum episode length")
+        parser.add_argument("--max-episode-len", type=int, default=5000, help="maximum episode length")
         net_args = parser.parse_args()
         return net_args
 
@@ -230,7 +231,9 @@ class command_processor(QtCore.QThread):
         self.status, self.detected_state= self.redAgent.get_status()
 
         # 把态势转成大模型能看懂的文本形式
-        status_str = self.text_transfer.status_to_text(self.status)
+        # status_str = self.text_transfer.status_to_text(self.status) # 这个是原版的
+        status_str = self.text_transfer.status_to_text2(self.status) # 这个是简化版的
+
         detected_str = self.text_transfer.detected_to_text(self.detected_state)
         # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
         zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)
@@ -243,7 +246,8 @@ class command_processor(QtCore.QThread):
 
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
-        all_str = status_str + detected_str + status_str_new + stage_str +additional_str + "\n 请按照格式给出指令。" 
+        # all_str = status_str + detected_str + status_str_new  +additional_str + stage_str + "\n 请按照格式直接给出指令，省略描述和解释。" 
+        all_str = status_str + detected_str + status_str_new  +additional_str + stage_str + "\n 请按照格式直接给出指令，省略描述和解释。" 
         # 把文本发给大模型，获取返回来的文本
         if status_str_new=="test":
             # 说明是在单独调试这个

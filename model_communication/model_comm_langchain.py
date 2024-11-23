@@ -35,7 +35,7 @@ MODEL_KWARGS = {
         'temperature': 0.1
     },
     'qianfan': {
-        'model': 'ERNIE-Bot-turbo', # Qianfan-Chinese-Llama-2-7B
+        'model': 'ERNIE-3.5-8K', # 'ERNIE-Bot-turbo', # Qianfan-Chinese-Llama-2-7B
         'temperature': 0.1
     },
     'moon': {
@@ -81,7 +81,7 @@ class ModelCommLangchain():
         self.log_model_communication_name = r"auto_test\log"+"_"+model_name+"_"+Comm_type+"_.txt"
         load_dotenv()
         chat_model = CHAT_MODELS[model_name](**MODEL_KWARGS[model_name])
-        if Comm_type == "duizhan":
+        if Comm_type == "duizhan": # TODO: 从这里来分红蓝方。
             system_template = PROMPT_TEMPLATES['llm_chat']['embrace']
         elif Comm_type == "jieshuo":
             system_template = PROMPT_TEMPLATES['llm_chat']['jieshuo_embrace']
