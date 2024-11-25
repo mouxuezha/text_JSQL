@@ -33,7 +33,7 @@ class socket_client(socket_base,QtCore.QThread):
         pass
 
     def run_single_debug(self):
-        # 这个是用来跑死循环的。死死呗。
+        # 这个是用来跑死循环的。死死呗。用途是测试通信部分本身对不对
         self.flag_new = False # 暴力一点，这个用来标识有没有收到新的
         self.flag_send = False # 这个是标识发没发
         i = 0 

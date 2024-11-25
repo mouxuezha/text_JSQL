@@ -108,7 +108,8 @@ if __name__ == "__main__":
     # 跑起来看看成色
 
     config = {"red_ip":"192.168.1.140", "red_port": "20001",
-            "blue_ip": "192.168.1.140", "blue_port": "20002" }
+            "blue_ip": "192.168.1.140", "blue_port": "20002", 
+            "dialog_box_model": "QtPython"}    
             
     app = QtWidgets.QApplication([])
 

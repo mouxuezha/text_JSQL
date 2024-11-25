@@ -12,6 +12,8 @@ from model_communication.model_comm_langchain import ModelCommLangchain
 from dialog_box.dialog_box_debug import *
 from socket_communication.socket_server import *
 from socket_communication.socket_client import *
+from socket_communication.socket_debug import *
+
 from TTS.TTS_interface import TTS_interface
 
 import json
@@ -44,6 +46,7 @@ class command_processor(QtCore.QThread):
             pass 
         else:
             self.__init_socket(role =role, config=kargs["config"])
+            self.config = kargs["config"] # 后面需要的配置项越加越多，还是专门开一个设置的来弄一下好了。
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=True) # 这里可以改开不开stage，开了可以用于调试。
@@ -133,11 +136,17 @@ class command_processor(QtCore.QThread):
         self.socket_server.run_mul() # 这个得在合适的敌方给它开起来
 
     def __init_socket_client(self,config:dict):
-        # 看自己是红蓝方了。
-        if self.role == "red_player":
-            self.socket_client = socket_client(self.dialog_box, ip=config["red_ip"],port=config["red_port"])
-        elif self.role == "blue_player":
-            self.socket_client = socket_client(self.dialog_box, ip=config["blue_ip"],port=config["blue_port"])
+        if "socket_debug_model" in config:
+            if config["socket_debug_model"] == "local_debug":
+                self.socket_client = socket_debug(self.dialog_box, ip=config["red_ip"],port=config["red_port"])
+            else:
+                raise Exception("undifined socket_model")
+        else:
+            # 看自己是红蓝方了。
+            if self.role == "red_player":
+                self.socket_client = socket_client(self.dialog_box, ip=config["red_ip"],port=config["red_port"])
+            elif self.role == "blue_player":
+                self.socket_client = socket_client(self.dialog_box, ip=config["blue_ip"],port=config["blue_port"])
 
     def get_agent_out(self,role="blue",location = r""):
         # 这个是搞一个方便地装载外部agent的接口。从去年劳动竞赛的craft manager的基础上开发出来的。
@@ -442,7 +451,16 @@ class command_processor(QtCore.QThread):
         if self.role == "offline":
             panju = self.dialog_box.flag_order_renewed
         else:
-            panju = self.socket_client.flag_human_interact
+            # 这里再加一层检测
+            if "dialog_box_model" in self.config:
+                if self.config["dialog_box_model"] == "QtC++":
+                    # 那就是和雪楠哥他们给弄的那个窗口去对，那就不是从self.socket_client去读了，得是从self.dialog_box去读。
+                    panju = self.dialog_box.flag_order_renewed
+                else:
+                    panju = self.socket_client.flag_human_interact
+            else:
+                panju = self.socket_client.flag_human_interact
+                    
         # if self.dialog_box.flag_order_renewed: 
         if panju == True:
             
