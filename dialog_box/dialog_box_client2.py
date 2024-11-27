@@ -77,7 +77,7 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
             status_str_received = self.socket_client.status_str
             # status_str_received = self.socket_client.receive_str()
 
-            print(status_str_received)
+            # print("status_single: status_str_received = " + status_str_received)
 
             self.env.send_str(status_str_received)
 
@@ -92,7 +92,15 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
             if self.flag_order_renewed:
                 # 如果没有收重，而是确实是新的，那就更新一下
                 self.order_now = receiver_str
-                print(receiver_str)
+                print("command_single:receiver_str"+receiver_str)
+                # 把命令从env里取出来之后要把标志位改回去，不然就会一直刷。
+                self.env.reset_str()
+
+                flag_exit = self.check_exit(receiver_str)
+                if flag_exit:
+                    # 检测到就关了这个功能到时候是不是实装还有待考虑。其实关后台不是一个好的选择
+                    print("command_single: flag_exit="+str(flag_exit))
+                    break
             time.sleep(0.5) # 没有任何的必要一直刷刷刷，差不多就行了，加一下这个，控制一下速度。
             pass
     def command_used(self):
@@ -109,8 +117,18 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         # 这个也是带界面的时候用来刷新显示的，这里不带界面了那就无所谓了奥。
         # 不过标志位还是得改一下。
         self.command_used()
-        
+
         pass
+
+    def check_exit(self, order_new):
+        # 这个的目的很单纯，就是检测一下进来的是不是退出命令。是就返回true
+        if "客户端命令：结束推演" in order_new:
+            # 那就说明进来的是退出命令，
+            flag_exit = True
+        else:
+            flag_exit = False
+
+        return flag_exit
 
 if __name__ == "__main__":
     # 跑起来看看成色

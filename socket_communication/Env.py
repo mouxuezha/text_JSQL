@@ -119,7 +119,7 @@ class Env_server():
 
     def send_str(self,status_str:str):
         # 这个就是发字符串的。现阶段怎么快怎么来，什么延迟啊那些一概先不管。
-        print('连接地址：', self.client_socket)
+        # print('连接地址：', self.client_socket)
 
         self.client_socket.send(status_str.encode('utf-8'))
         pass 
@@ -140,4 +140,8 @@ class Env_server():
             self.flag_new = False
 
         return self.received_str
-      
+    
+    def reset_str(self):
+        # 主要是清一清标志位和收到的字符串啥的。
+        self.flag_new = False
+        # self.received_str =""# 这个不能清了，不然比较就失效了。

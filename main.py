@@ -446,9 +446,9 @@ class command_processor(QtCore.QThread):
         # 输入输出怎么做还两说呢，整个窗口？然后用信号槽机制实现人输入的这个异步，可行。
         command_str = "test"
 
-        # print("debug: human_intervene_check reached")
-        # print(self.dialog_box.flag_order_renewed)
-        # time.sleep(0.5)
+        print("debug: human_intervene_check reached")
+        print(self.dialog_box.flag_order_renewed)
+        time.sleep(0.5)
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
         if self.role == "offline":
             panju = self.dialog_box.flag_order_renewed
