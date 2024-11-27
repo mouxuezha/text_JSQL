@@ -431,7 +431,9 @@ class command_processor(QtCore.QThread):
             response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) # 加个随机数主要是为了防止字符串被识别成一样的
             
             # 然后把交互好了的内容发到服务器那端去。
-            self.socket_client.send_str(response_str)               
+            self.socket_client.send_str(response_str)       
+
+            # 本来应该是这里识别成命令再传过去，但是似乎会涉及一些重复的字符串转JSON，JSON转字符串之类的重复的事情，所以姑且先不慌在客户端解析，反正也没多少计算量。        
         pass
 
     def get_status_dixing(self,status):
@@ -444,9 +446,9 @@ class command_processor(QtCore.QThread):
         # 输入输出怎么做还两说呢，整个窗口？然后用信号槽机制实现人输入的这个异步，可行。
         command_str = "test"
 
-        print("debug: human_intervene_check reached")
-        print(self.dialog_box.flag_order_renewed)
-        time.sleep(0.1)
+        # print("debug: human_intervene_check reached")
+        # print(self.dialog_box.flag_order_renewed)
+        # time.sleep(0.5)
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
         if self.role == "offline":
             panju = self.dialog_box.flag_order_renewed
@@ -471,6 +473,10 @@ class command_processor(QtCore.QThread):
             self.flag_human_interact = True
             # 外面不能直接用self.dialog_box.flag_order_renewed，因为服从于界面的逻辑，这个变量得重置
             # 刷新一下窗口并重置标志位。考虑一下是不是需要延时。
+            
+            print("debug: human_intervene_check human_order "+self.human_order)
+            time.sleep(0.5)
+
             self.dialog_box.reset_all(0.02)
         else:
             # 那就是窗口那头没有下过命令，那就先不管了

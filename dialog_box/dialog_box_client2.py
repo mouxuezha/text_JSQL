@@ -35,6 +35,7 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         self.max_episode_len = self.net_args.max_episode_len
         # self.env = Env(self.net_args.ip, self.net_args.port)
         self.env = Env_server(self.net_args.ip, self.net_args.port)
+        
 
     def __init_net(self):
         parser = argparse.ArgumentParser(description='Provide arguments for agent.')
@@ -50,6 +51,8 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
     def run_mul(self):
         # 这个由于传态势到QT和传命令到服务器是异步的，所以这里不能搞阻塞的事情了。
         # 原则上可以用类似唐燃哥Qt里那种直接connect的机制实现，但是从自主可控的角度，宁愿傻逼点，写点能看懂能改明白的。
+
+        self.env.init_socket()
 
         # 准确的说，这里面开了三个进程，一个转发态势，一个转发命令，一个command_process
         thread1 = threading.Thread(target=self.status_single)
@@ -69,23 +72,44 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         pass
 
     def status_single(self):
-        
-        # 把收到的态势拿出来，刷到Qt那里面去。
-        status_str_received = self.socket_client.status_str
+        while(True):
+            # 把收到的态势拿出来，刷到Qt那里面去。这个道理上和那边到底收没收成功是无关的
+            status_str_received = self.socket_client.status_str
+            # status_str_received = self.socket_client.receive_str()
 
-        self.env.send_str(status_str_received)
+            print(status_str_received)
 
-        time.sleep(0.5) # 没有任何的必要一直刷刷刷，差不多就行了，加一下这个，控制一下速度。
+            self.env.send_str(status_str_received)
+
+            time.sleep(0.5) # 没有任何的必要一直刷刷刷，差不多就行了，加一下这个，控制一下速度。
 
     def command_single(self):
-        # 从Qt那边把态势收过来，然后更新到command process里面。
-        receiver_str = self.env.receive_str()
-        # self.env.receive_str()这里面已经判断过一次是不是收重了，所以直接拿来用就行了。
-        self.flag_order_renewed = self.env.flag_new
-        if self.flag_order_renewed:
-            # 如果没有收重，而是确实是新的，那就更新一下
-            self.order_now = receiver_str
-        time.sleep(0.5) # 没有任何的必要一直刷刷刷，差不多就行了，加一下这个，控制一下速度。
+        while(True):
+            # 从Qt那边把命令收过来，然后更新到command process里面。
+            receiver_str = self.env.receive_str()
+            # self.env.receive_str()这里面已经判断过一次是不是收重了，所以直接拿来用就行了。
+            self.flag_order_renewed = self.env.flag_new # 标志位不要一直刷，理想的是那边点一下，这边只进一次大模型。
+            if self.flag_order_renewed:
+                # 如果没有收重，而是确实是新的，那就更新一下
+                self.order_now = receiver_str
+                print(receiver_str)
+            time.sleep(0.5) # 没有任何的必要一直刷刷刷，差不多就行了，加一下这个，控制一下速度。
+            pass
+    def command_used(self):
+        # 命令用过之后调一下这个。清理内存、重置标志位，之类的。
+        self.flag_order_renewed = False
+        self.order_now = ""
+        print("command_used, reset human intent")
+
+    def get_status_str(self,status_str, step_num):
+        # 这个本来是带界面的时候用来改前端显示的字的，这里不带界面了那就无所谓了奥
+        pass 
+
+    def reset_all(self,time_delay=0.01):
+        # 这个也是带界面的时候用来刷新显示的，这里不带界面了那就无所谓了奥。
+        # 不过标志位还是得改一下。
+        self.command_used()
+        
         pass
 
 if __name__ == "__main__":
