@@ -133,9 +133,10 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
 if __name__ == "__main__":
     # 跑起来看看成色
 
-    config = {"red_ip":"192.168.1.140", "red_port": "20001",
+    config = {"red_ip":"127.0.0.1", "red_port": "20001",
             "blue_ip": "192.168.1.140", "blue_port": "20002", 
-            "dialog_box_model": "QtC++","socket_debug_model":"local_debug"}    # dialog_box_model能选QtC++和QtPython，socket_debug_model暂时只有local_debug
+            "dialog_box_model": "QtC++","socket_debug_model":"net_debug"}    # dialog_box_model能选QtC++和QtPython，socket_debug_model有local_debug和net_debug，区别是用不用那个假的socket类。
+    # 这个config其实是服务于command_processor的，不是服务于dialogbox，所以原则上其他的dialogbox也可以用。
     
     widget = MyWidget(role="red_player",config = config)
     widget.run_mul()

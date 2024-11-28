@@ -137,16 +137,20 @@ class command_processor(QtCore.QThread):
 
     def __init_socket_client(self,config:dict):
         if "socket_debug_model" in config:
-            if config["socket_debug_model"] == "local_debug":
-                self.socket_client = socket_debug(self.dialog_box, ip=config["red_ip"],port=config["red_port"])
-            else:
-                raise Exception("undifined socket_model")
+            socket_debug_model = config["socket_debug_model"]
         else:
+            socket_debug_model = "net_debug"
+
+        if socket_debug_model == "local_debug":
+            self.socket_client = socket_debug(self.dialog_box, ip=config["red_ip"],port=config["red_port"])
+        elif socket_debug_model == "net_debug":
             # 看自己是红蓝方了。
             if self.role == "red_player":
                 self.socket_client = socket_client(self.dialog_box, ip=config["red_ip"],port=config["red_port"])
             elif self.role == "blue_player":
                 self.socket_client = socket_client(self.dialog_box, ip=config["blue_ip"],port=config["blue_port"])
+        else:
+            raise Exception("undifined socket_model")
 
     def get_agent_out(self,role="blue",location = r""):
         # 这个是搞一个方便地装载外部agent的接口。从去年劳动竞赛的craft manager的基础上开发出来的。
