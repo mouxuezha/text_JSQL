@@ -74,7 +74,8 @@ class socket_client(socket_base,QtCore.QThread):
             # 好像不太对了，每一帧得从服务器收态势。
             if "态势" in status_str:
                 # 那就鉴定为收到的是态势，那就显示一下。
-                self.dialog_box.text.setText(status_str)
+                # self.dialog_box.text.setText(status_str) # 如果是dialog_box_client就是这个，
+                self.dialog_box.get_status_from_socket(status_str) # 如果是dialog_box_client2就是这个，得考虑发过去的事情。
             
             if self.dialog_box.flag_order_renewed == True:
                 # 人类改过命令，所以这里要给它传过去。

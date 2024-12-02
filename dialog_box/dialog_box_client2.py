@@ -19,6 +19,7 @@ from PySide6.QtWidgets import QDialog
 class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继承那个了。
     def __init__(self, role="red_player",**kargs):
         self.order_now = "none"
+        self.status_str = "none"
         self.flag_order_renewed = False
 
         self.step_num = 0
@@ -77,7 +78,10 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
             status_str_received = self.socket_client.status_str
             # status_str_received = self.socket_client.receive_str()
 
-            # print("status_single: status_str_received = " + status_str_received)
+            # 由于是异步的，这里不能再检查这个了，不然刷没了。
+            # if self.socket_client.flag_new == True:
+
+            print("status_single: status_str_received = " + status_str_received)
 
             self.env.send_str(status_str_received)
 
@@ -92,15 +96,21 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
             if self.flag_order_renewed:
                 # 如果没有收重，而是确实是新的，那就更新一下
                 self.order_now = receiver_str
-                print("command_single:receiver_str"+receiver_str)
+                print("command_single:receiver_str from QtC++"+receiver_str)
                 # 把命令从env里取出来之后要把标志位改回去，不然就会一直刷。
                 self.env.reset_str()
 
-                flag_exit = self.check_exit(receiver_str)
+                flag_exit,flag_start = self.check_start_and_exit(receiver_str)
                 if flag_exit:
                     # 检测到就关了这个功能到时候是不是实装还有待考虑。其实关后台不是一个好的选择
                     print("command_single: flag_exit="+str(flag_exit))
-                    break
+                    self.socket_client.send_str(receiver_str)
+                    
+                if flag_start:
+                    print("command_single: flag_start="+str(flag_start))
+                    # 检测到这个就直接把命令发过去算了，往python服务器那里去发。
+                    self.socket_client.send_str(receiver_str)
+
             time.sleep(0.5) # 没有任何的必要一直刷刷刷，差不多就行了，加一下这个，控制一下速度。
             pass
     def command_used(self):
@@ -113,6 +123,9 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         # 这个本来是带界面的时候用来改前端显示的字的，这里不带界面了那就无所谓了奥
         pass 
 
+    def get_status_from_socket(self, status_str):
+        self.status_str = status_str
+
     def reset_all(self,time_delay=0.01):
         # 这个也是带界面的时候用来刷新显示的，这里不带界面了那就无所谓了奥。
         # 不过标志位还是得改一下。
@@ -120,20 +133,26 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
 
         pass
 
-    def check_exit(self, order_new):
+    def check_start_and_exit(self, order_new):
         # 这个的目的很单纯，就是检测一下进来的是不是退出命令。是就返回true
+        flag_exit = False
+        flag_start = False
         if "客户端命令：结束推演" in order_new:
             # 那就说明进来的是退出命令，
             flag_exit = True
         else:
             flag_exit = False
 
-        return flag_exit
+        if "客户端命令：开始推演" in order_new:
+            # 那就说明进来的是退出命令，
+            flag_start = True
+
+        return flag_exit,flag_start
 
 if __name__ == "__main__":
     # 跑起来看看成色
 
-    config = {"red_ip":"127.0.0.1", "red_port": "20001",
+    config = {"red_ip":"192.168.1.140", "red_port": "20001",
             "blue_ip": "192.168.1.140", "blue_port": "20002", 
             "dialog_box_model": "QtC++","socket_debug_model":"net_debug"}    # dialog_box_model能选QtC++和QtPython，socket_debug_model有local_debug和net_debug，区别是用不用那个假的socket类。
     # 这个config其实是服务于command_processor的，不是服务于dialogbox，所以原则上其他的dialogbox也可以用。

@@ -432,7 +432,7 @@ class command_processor(QtCore.QThread):
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
             # response_str = self.model_communication.communicate_with_model(all_str)
             # response_str = self.model_communication.communicate_with_model_single(all_str)
-            response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) # 加个随机数主要是为了防止字符串被识别成一样的
+            response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) + "\n" # 加个随机数主要是为了防止字符串被识别成一样的
             
             # 然后把交互好了的内容发到服务器那端去。
             self.socket_client.send_str(response_str)       
@@ -450,8 +450,7 @@ class command_processor(QtCore.QThread):
         # 输入输出怎么做还两说呢，整个窗口？然后用信号槽机制实现人输入的这个异步，可行。
         command_str = "test"
 
-        print("debug: human_intervene_check reached")
-        print(self.dialog_box.flag_order_renewed)
+        print("debug: human_intervene_check reached" + str(self.dialog_box.flag_order_renewed))
         time.sleep(0.5)
         # 检测窗口是不是被下过命令，是就读出来，重置标志位，不是就再说
         if self.role == "offline":
