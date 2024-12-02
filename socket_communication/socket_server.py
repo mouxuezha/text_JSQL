@@ -61,9 +61,11 @@ class socket_server(socket_base, QtCore.QThread):
             if command_str == '客户端命令：开始推演':
                 # 那就说明是点了按钮了
                 self.dialog_box.p.start()
+                # self.config["flag_server_waiting"] == False # 换了一种方式去时实现
             elif command_str == '客户端命令：结束推演':
                 # 那就说明是点了按钮了
                 self.dialog_box.p.terminate()
+                # self.config["flag_server_waiting"] == True # 换了一种方式去时实现
             if self.flag_new == True:
                 self.dialog_box.flag_order_renewed = True
                 self.dialog_box.reset_all(0.01)
@@ -90,9 +92,13 @@ class socket_server_2player(QtCore.QThread):
         else:
             self.model = "debug" # "normal"
 
+        if self.model == "debug":
+            print("attension: socket_server_2player running in debug model, only 1 socket connection established")
+
         self.red_server = socket_base("server",ip=config["red_ip"],port=config["red_port"])
         if self.model == "normal":
             self.blue_server = socket_base("server",ip=config["blue_ip"],port=config["blue_port"])
+            print("socket_server_2player running in normal model, 2 socket connections established")
         self.dialog_box = dialog_box
         self.flag_new = False # 暴力一点，这个用来标识有没有收到新的
         self.flag_send = False # 这个是标识发没发
@@ -115,12 +121,14 @@ class socket_server_2player(QtCore.QThread):
 
             # red_command_str, blue_command_str = self.human_intervene_check()
             # 专门处理一下那边按按钮传过来的命令
-            if (red_command_str == '客户端命令：开始推演') and (blue_command_str == '客户端命令：开始推演'):
+            if (red_command_str == '客户端命令：开始推演') or (blue_command_str == '客户端命令：开始推演'):
                 # 那就说明是点了按钮了.两个都开始那就是真的开始了
-                self.dialog_box.p.start()
-            elif (red_command_str == '客户端命令：结束推演') and (blue_command_str == '客户端命令：结束推演'):
+                # self.dialog_box.p.start()
+                self.dialog_box.p.config["flag_server_waiting"] == False # 换了一种方式去时实现
+            elif (red_command_str == '客户端命令：结束推演') or (blue_command_str == '客户端命令：结束推演'):
                 # 一样的，两个都结束了那就是真的结束了。
-                self.dialog_box.p.terminate()
+                # self.dialog_box.p.terminate()
+                self.dialog_box.p.config["flag_server_waiting"] == True # 换了一种方式去时实现
 
             if self.red_server.flag_new == True:
                 self.dialog_box.flag_order_renewed = True
@@ -170,6 +178,8 @@ class socket_server_2player(QtCore.QThread):
         if ("玩家指令" in red_response_str) :
             # 那就是红方玩家给过来的是指令
             # print("human_intervene_check，红方命令："+red_response_str)
+            pass
+        elif ("客户端命令" in red_response_str) :
             pass
         else:
             red_response_str = "" # 来个空的，防止报错
