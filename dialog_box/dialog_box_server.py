@@ -8,6 +8,7 @@ from socket_communication.socket_server import socket_server_2player
 from main import command_processor
 import random
 import time 
+import threading
 
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtWidgets import QDialog 
@@ -28,7 +29,8 @@ class MyWidget(QtWidgets.QWidget):
         self.status_to_send = "态势："
 
         self.step_num = 0
-        self.p_status ="on" # 为了后面能走，这个得默认是on
+        # self.p_status ="on" # 为了后面能走，这个得默认是on
+        self.p_status ="off" # 由于server里面加了新逻辑，这个得是off了
         config = kargs["config"]
         self.p = command_processor(self,role="server",config=config)
 
@@ -56,6 +58,23 @@ class MyWidget(QtWidgets.QWidget):
 
         self.socket_server.run_mul() # 试一下放这里行不行。在这里原则上还没有结束init呢
 
+        # 新的逻辑：为了实现服务器端的监听，直接开局的时候就触发一下
+        # 偷懒了，开局直接按按钮，照道理说是没问题的。
+        # self.click_button()  # 这个是用Qthread去开
+        self.run_mul() # 这个是用原来的threading去开，不要信号槽的
+    
+    def run_mul(self):
+        # 换个方式开多线程。那个Qthread那个调试不了就很伤，搞得很傻逼。
+        self.thread1 = threading.Thread(target=self.run_single)
+
+        self.thread1.start()
+
+        print("main_loop_wrap start in threading")
+    
+    def run_single(self):
+        # 这个就是为了分线程而设置的
+        self.p.main_loop_wrap()
+
     def reset_all(self,time_delay=0.01):
         time.sleep(time_delay)
         self.text.setText("小弈人混-人机互动界面")
@@ -63,7 +82,8 @@ class MyWidget(QtWidgets.QWidget):
         self.flag_order_renewed = False
     
     def get_status_str(self,status_str,step_num):
-        if self.step_num == step_num and self.step_num>100 :
+        if (self.step_num == step_num and self.step_num>100) and False :
+            # 后面那个and是用来方便开关的。
             pass # 以防万一
         else:
             self.step_num = step_num
@@ -108,8 +128,8 @@ class MyWidget(QtWidgets.QWidget):
 if __name__ == "__main__":
     # 跑起来看看成色
     app = QtWidgets.QApplication([])
-    config = {"red_ip":"127.0.0.1", "red_port": "20001",
-                "blue_ip": "192.168.1.115", "blue_port": "20002" }
+    config = {"red_ip":"192.168.1.140", "red_port": "20001",
+                "blue_ip": "192.168.1.140", "blue_port": "20002","flag_server_waiting":True }
     widget = MyWidget(config=config)
     widget.resize(800, 300)
     widget.show()

@@ -48,6 +48,12 @@ class command_processor(QtCore.QThread):
             self.__init_socket(role =role, config=kargs["config"])
             self.config = kargs["config"] # 后面需要的配置项越加越多，还是专门开一个设置的来弄一下好了。
 
+        if "flag_server_waiting" in self.config:
+            pass
+        else:
+            # 没有的话补充默认值。
+            self.config["flag_server_waiting"]=False
+
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=True) # 这里可以改开不开stage，开了可以用于调试。
         self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
@@ -230,13 +236,16 @@ class command_processor(QtCore.QThread):
         # 这个是Qthread要求实现的主循环
         while True:
             if self.dialog_box.p_status == "on":
-                print("command_processor is running")
-                if (self.role == "offline") or (self.role == "server"):
+                print("command_processor is running as "+self.role)
+                if (self.role == "offline"):
                     self.main_loop()
+                elif (self.role == "server"):
+                    self.main_loop_wrap()
                 elif (self.role == "red_player") or (self.role=="blue_player"):
                     self.main_loop_client() # 这不一样的，得进行一点定制才行，用于实现客户端电脑和大模型的通信。
             else:
                 print("command_processor is off")
+                time.sleep(1)
                 pass
 
     def run_one_step(self,additional_str=""):
@@ -375,10 +384,14 @@ class command_processor(QtCore.QThread):
 
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+        # 理论上态势得分红蓝方，但是这个先放在 TODO 里面吧
         all_str = "当前态势："+status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"      
 
         # 这些要socket发到client里面，然后检测有没有东西发回来。
-        self.dialog_box.get_status_str(all_str,self.timestep) # 这个又是一种方案
+        # 倒也不用每一步都发。调试的时候每一步都发可也
+        if (self.timestep % 10 == 9) or True:
+            self.dialog_box.get_status_str(all_str,self.timestep) # 这个又是一种方案
+            print("run_one_step_server: status_str transfered ")
 
         print("run_one_step_server, stepping")
         time.sleep(0.5)
@@ -502,6 +515,19 @@ class command_processor(QtCore.QThread):
         # 这个是有说法的了，检测两个server看是不是收到了那边传来的东西。
         # 异步的存在时间差的问题，那边收到了之后只保留1帧，所以得好好设计时间差，甚至直接不要时间差了
         red_response_str_new, blue_response_str_new = self.dialog_box.socket_server.human_intervene_check()
+        print("human_intervene_check_server")
+        if ("开始推演" in red_response_str_new) or ("开始推演" in blue_response_str_new):
+            # 那就开呗。然而写在这里应该是开不了的。
+            # 开始逻辑得改改，上来先把循环开了，然后加个标志位。
+            self.config["flag_server_waiting"] = False
+            print("human_intervene_check_server: 开始推演")
+            pass
+        if ("结束推演" in red_response_str_new) or ("结束推演" in blue_response_str_new):
+            # 那就结束，在这里写至少是能结束的。
+            self.terminate()
+            print("human_intervene_check_server: 结束推演")
+            self.config["flag_server_waiting"] = True # 按理说这个没啥用，但是保险起见
+            pass
 
         if red_response_str_new != self.red_response_str:
             # 那就是命令被更新过了。
@@ -519,6 +545,21 @@ class command_processor(QtCore.QThread):
 
         # 算了，这里再做一个好了，来个检测有没有更新的机制。如果有更新，就来新的，没有更新，就来空的，而不要重复的一直刷，没意思。
         return red_response_str_return, blue_response_str_return
+    
+    def main_loop_wrap(self,**kargs):
+        # 这个是复用main_loop，实现一个"监听等待客户端都准备完毕”
+        while True:
+            if self.config["flag_server_waiting"] == True:
+                # 那就说明是在等着.检测的功能集成到这个里面去了。
+                flag_human_intervene, status_str_new = self.human_intervene_check_server()
+                print("command_processor as server: waiting")
+                time.sleep(1.14514)
+                # if self.config["flag_server_waiting"] == False:
+                #     break
+            elif self.config["flag_server_waiting"] == False:
+                # 那就是无事发生
+                self.main_loop()
+
 
     def main_loop(self,**kargs):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
@@ -616,6 +657,7 @@ class command_processor(QtCore.QThread):
                 elif self.role =="server":
                     # 这个就是本线程为服务器，不再取模了，直接拉满。
                     self.run_one_step_server()
+                    # 这里还得增加一个逻辑，就是服务器端直接给它跑着，等待用户命令。
                 elif (self.role == "red_player") or (self.role == "blue_player"):
                     self.run_one_step_client()
             else:
