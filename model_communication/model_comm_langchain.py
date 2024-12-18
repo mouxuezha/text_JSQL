@@ -86,6 +86,8 @@ class ModelCommLangchain():
                 system_template = PROMPT_TEMPLATES['llm_chat']['embrace_red']
             elif role == "blue_player":
                 system_template = PROMPT_TEMPLATES['llm_chat']['embrace_blue']
+            else:
+                system_template = PROMPT_TEMPLATES['llm_chat']['embrace']
         elif Comm_type == "jieshuo":
             system_template = PROMPT_TEMPLATES['llm_chat']['jieshuo_embrace']
         prompt_template = ChatPromptTemplate.from_messages(
