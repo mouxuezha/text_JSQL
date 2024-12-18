@@ -24,7 +24,6 @@ class socket_server(socket_base, QtCore.QThread):
         self.thread1 = threading.Thread(target=self.run_single)
         # self.thread1 = threading.Thread(target=self.run_single_test)
 
-        self.thread1.start()
 
         print("socket_server ready")
 
@@ -125,6 +124,7 @@ class socket_server_2player(QtCore.QThread):
                 # 那就说明是点了按钮了.两个都开始那就是真的开始了
                 # self.dialog_box.p.start()
                 self.dialog_box.p.config["flag_server_waiting"] == False # 换了一种方式去时实现
+                # 我草，写成双等号都能好使？解锁了奇怪的知识。
             elif (red_command_str == '客户端命令：结束推演') or (blue_command_str == '客户端命令：结束推演'):
                 # 一样的，两个都结束了那就是真的结束了。
                 # self.dialog_box.p.terminate()
@@ -156,13 +156,60 @@ class socket_server_2player(QtCore.QThread):
 
         pass
 
+    def run_single2(self,server_single:socket_base):
+        # 这个是升级一下搞成更加阳间的架构，命令随发随执行，然后分成红蓝两方各自一个线程的。
+        # 只开red的前提下，它应该跟run_single是一样的。
+        # 这个是用来和一个server端dialog_box类似物来协作的。
+        self.flag_new = False # 暴力一点，这个用来标识有没有收到新的
+        self.flag_send = False # 这个是标识发没发 
+
+        while True:
+            time.sleep(0.5)
+            oneside_command_str = server_single.receive_str() # 这个设定就是公平器件，得两边都下了指令之后，服务器才对其进行一起处理。
+
+            # red_command_str, blue_command_str = self.human_intervene_check()
+            # 专门处理一下那边按按钮传过来的命令
+            # 这里得改一下逻辑，一个开始就是就是开始，两个结束才是结束。搞点逻辑运算符，不然开不起来了
+            if (oneside_command_str == '客户端命令：开始推演'):
+                # 那就说明是点了按钮了.两个都开始那就是真的开始了
+                # self.dialog_box.p.start()
+                self.dialog_box.p.config["flag_server_waiting"] = \
+                self.dialog_box.p.config["flag_server_waiting"] and False # 换了一种方式去时实现
+            elif (oneside_command_str == '客户端命令：结束推演'):
+                # 一样的，两个都结束了那就是真的结束了。
+                # self.dialog_box.p.terminate()
+                self.dialog_box.p.config["flag_server_waiting"] = \
+                    self.dialog_box.p.config["flag_server_waiting"] and True # 换了一种方式去时实现
+
+            if server_single.flag_new == True:
+                self.dialog_box.flag_order_renewed = True
+                server_single.flag_new = False
+                print("服务器收到一方玩家命令：", oneside_command_str)
+                server_single.received_str = oneside_command_str # 这个更新的好像不太正确，来一波逃避可耻但有用。
+         
+            if self.dialog_box.flag_order_renewed == True:
+                # 人类改过命令，所以这里要给它传过去。两个都传，这才叫健全。
+                # server这头的态势是要分发到所有玩家去的去的。
+                self.flag_send = True
+                command_str = self.dialog_box.order_now
+                server_single.send_str(command_str)
+                self.dialog_box.flag_order_renewed = False
+
     def run_mul(self):
         # 这个是用来开多线程的。原则上只要我启动接收线程之后不对齐，就不会卡主线程。
         # 原则上，需要多个socket的话就在这里面开一堆多线程，然后标一下序号啥的，反正都简单
-        self.thread1 = threading.Thread(target=self.run_single)
-        # self.thread1 = threading.Thread(target=self.run_single_test)
+        # self.thread1 = threading.Thread(target=self.run_single)
+        # # self.thread1 = threading.Thread(target=self.run_single_test)
+
+        # self.thread1.start()
+
+        # 新的，真的实现了多线程的。
+        self.thread1 = threading.Thread(target=self.run_single2,args = (self.red_server,))
+        self.thread2 = threading.Thread(target=self.run_single2,args = (self.blue_server,))
 
         self.thread1.start()
+        self.thread2.start()
+
 
         print("socket_server ready")
 
@@ -207,6 +254,17 @@ class socket_server_2player(QtCore.QThread):
         if self.model == "normal":
             self.blue_server.send_str(status_str)
         self.flag_send = True
+
+    def send_to_players2(self, status_list:list):
+        # 进一步的统一接口，搞一个兼容红蓝方分别发态势的东西
+        status_str_red = status_list[0]
+        status_str_blue = status_list[1]
+
+        self.red_server.send_str(status_str_red)
+        if self.model == "normal":
+            self.blue_server.send_str(status_str_blue)
+        self.flag_send = True
+
                 
 if __name__ == "__main__":
     server = socket_server(dialog_box=None,ip="192.168.1.117",port="20001")

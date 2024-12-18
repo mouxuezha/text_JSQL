@@ -35,8 +35,8 @@ class MyWidget(QtWidgets.QWidget):
         self.p = command_processor(self,role="server",config=config)
 
         # IP是服务器这台电脑在内网的IP，端口用个不一样的。
-        self.socket_server = socket_server_2player(config,dialog_box=self,model="debug")
-        # self.socket_server = socket_server_2player(config,dialog_box=self,model="normal")
+        # self.socket_server = socket_server_2player(config,dialog_box=self,model="debug")
+        self.socket_server = socket_server_2player(config,dialog_box=self,model="normal")
         
         
         self.button = QtWidgets.QPushButton("下达命令")
@@ -88,9 +88,16 @@ class MyWidget(QtWidgets.QWidget):
             pass # 以防万一
         else:
             self.step_num = step_num
-            self.text.setText(status_str)
+            
             # 这个get_status_str是在main里面调的，调到就说明态势更新了，所以传就完事儿了
-            self.socket_server.send_to_players(status_str)
+            if type(status_str)==list:
+                # 那就说明是红蓝方态势都进来了，那就要来一个分开的说法搞到
+                self.text.setText(status_str[0])
+                self.socket_server.send_to_players2(status_str)
+            else:
+                self.text.setText(status_str)
+                self.socket_server.send_to_players(status_str)
+            
             self.step_signal.emit(step_num)
     
     def get_human_order(self):

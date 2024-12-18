@@ -66,7 +66,7 @@ class socket_base():
     def send_str(self,status_str:str):
         # 这个就是发字符串的。现阶段怎么快怎么来，什么延迟啊那些一概先不管。
         print('连接地址：', self.client_socket)
-
+        print(status_str)
         self.client_socket.send(status_str.encode('utf-8'))
         pass 
     

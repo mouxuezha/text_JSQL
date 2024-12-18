@@ -371,10 +371,17 @@ class command_processor(QtCore.QThread):
         # 就每一步检测是不是更新，如果有更新就搞，没有就算了。和平台的交互是在这里面。
         # 从agent把态势拿出来
         self.status, self.detected_state= self.redAgent.get_status()
+        # 还得分红蓝方，不然给过去乱的
+        # status_red, detected_state_red = self.redAgent.get_status()
+        status_blue, detected_state_blue = self.blueAgent.get_status()
 
         # 把态势转成大模型能看懂的文本形式
         status_str = self.text_transfer.status_to_text(self.status)
+        status_str_blue = self.text_transfer.status_to_text(status_blue)
+       
+
         detected_str = self.text_transfer.detected_to_text(self.detected_state)
+        detected_str_blue = self.text_transfer.detected_to_text(detected_state_blue)
         # 再加一个子航给整的“人类指挥员注意力管理机制”，更新到dialog_box里面。
         zhuyili_str = self.text_transfer.turn_taishi_to_renhua(self.status, self.detected_state)        
 
@@ -385,13 +392,15 @@ class command_processor(QtCore.QThread):
         # 增加态势阶段的提示。
         stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
         # 理论上态势得分红蓝方，但是这个先放在 TODO 里面吧
-        all_str = "当前态势："+status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"      
+        all_str = "当前态势："+status_str + detected_str  + stage_str + "\n 请按照格式给出指令。"     
+        all_str_blue =  "当前态势："+status_str_blue + detected_str_blue  + stage_str + "\n 请按照格式给出指令。"     
 
         # 这些要socket发到client里面，然后检测有没有东西发回来。
         # 倒也不用每一步都发。调试的时候每一步都发可也
         if (self.timestep % 10 == 9) or True:
-            self.dialog_box.get_status_str(all_str,self.timestep) # 这个又是一种方案
-            print("run_one_step_server: status_str transfered ")
+            all_str_list = [all_str, all_str_blue]
+            self.dialog_box.get_status_str(all_str_list, self.timestep) # 这个又是一种方案
+            print("run_one_step_server: status_str_list transfered ")
 
         print("run_one_step_server, stepping")
         time.sleep(0.5)
@@ -410,7 +419,7 @@ class command_processor(QtCore.QThread):
 
             # 然后分别给到两个智能体。 # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
             self.redAgent.set_commands(red_commands) # 得专门给它定制一个发命令的才行，不然不行。
-            self.blueAgent.set_commands(blue_commands)
+            self.blueAgent.set_commands(blue_commands) 
 
             self.add_fupan_info(self.timestep, (red_commands + blue_commands), all_str, (red_response_str+blue_response_str))
             print("run_one_step_server, commands, done")
