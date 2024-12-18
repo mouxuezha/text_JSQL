@@ -59,7 +59,7 @@ class command_processor(QtCore.QThread):
         self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
         # 这里还得把红蓝方作为一个参数传进去。
-        self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type,player=role)
+        self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type,role=role)
         # 要用多个的话等后面再来改罢。
 
         # 解说的直接弄进去也没啥不好的。都置为False就是直接不要解说功能了，应该能够不影响程序其他部分的使用
