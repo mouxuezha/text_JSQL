@@ -35,8 +35,8 @@ class MyWidget(QtWidgets.QWidget):
         self.p = command_processor(self,role="server",config=config)
 
         # IP是服务器这台电脑在内网的IP，端口用个不一样的。
-        # self.socket_server = socket_server_2player(config,dialog_box=self,model="debug")
-        self.socket_server = socket_server_2player(config,dialog_box=self,model="normal")
+        self.socket_server = socket_server_2player(config,dialog_box=self,model="debug")
+        # self.socket_server = socket_server_2player(config,dialog_box=self,model="normal")
         
         
         self.button = QtWidgets.QPushButton("下达命令")
