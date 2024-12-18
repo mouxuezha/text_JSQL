@@ -61,9 +61,9 @@ class GlobalAgent(BaseAgent):
             # 当前智能体是蓝方
             # self.act = self.step_blue_shishi1(status)
             # self.act = self.step_blue_shishi2(status)
-            self.act = self.step_blue_shishi3(status)
+            # self.act = self.step_blue_shishi3(status)
             # self.act = self.step_blue_shangxiache(status)
-            # self.act = self.step_LLM(status)
+            self.act = self.step_LLM(status)
             pass 
         return self.act
     

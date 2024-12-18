@@ -74,7 +74,7 @@ class TokenHandler(BaseCallbackHandler):
         self.tokens.append(tmp)
 
 class ModelCommLangchain():
-    def __init__(self, model_name='qianfan',Comm_type ="duizhan"):
+    def __init__(self, model_name='qianfan',Comm_type ="duizhan", role="red_player"):
         self.model_name = model_name
         self.history_output_tokens = []
         # self.log_model_communication_name = r"auto_test\log.txt"
@@ -82,7 +82,10 @@ class ModelCommLangchain():
         load_dotenv()
         chat_model = CHAT_MODELS[model_name](**MODEL_KWARGS[model_name])
         if Comm_type == "duizhan": # TODO: 从这里来分红蓝方。
-            system_template = PROMPT_TEMPLATES['llm_chat']['embrace']
+            if role == "red_player":
+                system_template = PROMPT_TEMPLATES['llm_chat']['embrace_red']
+            elif role == "blue_player":
+                system_template = PROMPT_TEMPLATES['llm_chat']['embrace_blue']
         elif Comm_type == "jieshuo":
             system_template = PROMPT_TEMPLATES['llm_chat']['jieshuo_embrace']
         prompt_template = ChatPromptTemplate.from_messages(
