@@ -443,9 +443,9 @@ class command_processor(QtCore.QThread):
             # 把文本发给大模型，获取返回来的文本
             # 说明是在单独调试这个
             # response_str = self.model_communication.communicate_with_model_debug(all_str)
-            # response_str = self.model_communication.communicate_with_model(all_str)
+            response_str = self.model_communication.communicate_with_model(all_str)
             # response_str = self.model_communication.communicate_with_model_single(all_str)
-            response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) + "\n" # 加个随机数主要是为了防止字符串被识别成一样的
+            # response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) + "\n" # 加个随机数主要是为了防止字符串被识别成一样的
             
             # 然后把交互好了的内容发到服务器那端去。
             self.socket_client.send_str(response_str)       
@@ -626,6 +626,11 @@ class command_processor(QtCore.QThread):
         self.flag_finished = False # 这个是用来给其他线程看的。
         # 智能体与环境交互生成训练数据
         while True:
+            
+            # 调试的时候，这里每一步加一个比较大的时间延迟，让它别太快推完。
+            time.sleep(2.71828)
+            print("debug, time delay in main_loop.")
+
             self.env.SetRender(True) # 训练界面可视化：False --> 关闭
             act = []
             action = {"Action": act}

@@ -35,7 +35,8 @@ class MyWidget(QtWidgets.QWidget):
         self.p = command_processor(self,role="server",config=config)
 
         # IP是服务器这台电脑在内网的IP，端口用个不一样的。
-        self.socket_server = socket_server_2player(config,dialog_box=self,model="debug")
+        # self.socket_server = socket_server_2player(config,dialog_box=self,model="debug")
+        self.socket_server = socket_server_2player(config,dialog_box=self,model="normal")
         
         
         self.button = QtWidgets.QPushButton("下达命令")
@@ -128,8 +129,8 @@ class MyWidget(QtWidgets.QWidget):
 if __name__ == "__main__":
     # 跑起来看看成色
     app = QtWidgets.QApplication([])
-    config = {"red_ip":"192.168.1.140", "red_port": "20001",
-                "blue_ip": "192.168.1.140", "blue_port": "20002","flag_server_waiting":True }
+    config = {"red_ip":"192.168.1.114", "red_port": "20001",
+                "blue_ip": "192.168.1.114", "blue_port": "20002","flag_server_waiting":True }
     widget = MyWidget(config=config)
     widget.resize(800, 300)
     widget.show()
