@@ -55,7 +55,7 @@ class command_processor(QtCore.QThread):
             self.config["flag_server_waiting"]=False
 
         self.text_transfer = text_transfer()
-        self.stage_prompt = StagePrompt(flag_kaiguan=True) # 这里可以改开不开stage，开了可以用于调试。
+        self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage，开了可以用于调试。
         self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
         # self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
         self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type)
@@ -432,21 +432,21 @@ class command_processor(QtCore.QThread):
         status_str_received = self.socket_client.status_str
 
         # 然后显示一下。以及交互，在这里面了
-        flag_human_intervene, status_str_new = self.human_intervene_check(status_str_received)
+        flag_human_intervene, command_str = self.human_intervene_check(status_str_received)
             
         # if self.dialog_box.flag_order_renewed == True: # 这个失效了，原因不明。可能是什么线程不共享内存一类的？或者偷懒导致复制了
         if flag_human_intervene:
             # 那就是人下了命令。得分开，别跟人下命令那个耦合在一起。
             # 增加态势阶段的提示。
             stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
-            all_str = status_str_received + stage_str + "\n 请按照格式给出指令。" 
+            all_str = status_str_received + stage_str + command_str + "\n 请按照格式给出指令。" 
             # 把文本发给大模型，获取返回来的文本
             # 说明是在单独调试这个
-            # response_str = self.model_communication.communicate_with_model_debug(all_str)
             response_str = self.model_communication.communicate_with_model(all_str)
-            # response_str = self.model_communication.communicate_with_model_single(all_str)
+            # response_str = '进攻指令：\n[move, obj_id=MainBattleTank_ZTZ100_0, x=100.138, y=13.6196],\n[move, obj_id=MainBattleTank_ZTZ100_1, x=100.138, y=13.6196],\n[move, obj_id=MainBattleTank_ZTZ100_2, x=100.138, y=13.6196],\n[move, obj_id=MainBattleTank_ZTZ100_3, x=100.138, y=13.6196],\n[move, obj_id=ArmoredTruck_ZTL100_0, x=100.138, y=13.6196],\n[move, obj_id=ArmoredTruck_ZTL100_1, x=100.138, y=13.6196],\n[move, obj_id=WheeledCmobatTruck_ZB100_0, x=100.138, y=13.6196],\n[move, obj_id=WheeledCmobatTruck_ZB100_1, x=100.138, y=13.6196],\n[move, obj_id=Howitzer_C100_0, x=100.138, y=13.6196],\n[move, obj_id=ShipboardCombat_plane0, x=100.137, y=13.644],\n[move, obj_id=RedCruiseMissile_0, x=100.116, y=13.643],\n[move, obj_id=RedCruiseMissile_1, x=100.164, y=13.658]'
             # response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) + "\n" # 加个随机数主要是为了防止字符串被识别成一样的
-            
+            response_str = "玩家指令：" + response_str  
+
             # 然后把交互好了的内容发到服务器那端去。
             self.socket_client.send_str(response_str)       
 
@@ -483,7 +483,11 @@ class command_processor(QtCore.QThread):
         if panju == True:
             
             # 把人类的命令读出来
-            command_str = "现在我的具体意图是：" + self.dialog_box.order_now
+            # command_str = "现在我的具体意图是：" + self.dialog_box.order_now # 这个更新的有问题，但是来不及排查为啥了，只好屎山化了。
+            try:
+                command_str = "现在我的具体意图是：" + self.dialog_box.env.received_str
+            except:
+                command_str = "现在我的具体意图是：" + self.dialog_box.order_now
             self.human_order = command_str
 
             self.flag_human_interact = True
@@ -491,7 +495,7 @@ class command_processor(QtCore.QThread):
             # 刷新一下窗口并重置标志位。考虑一下是不是需要延时。
             
             print("debug: human_intervene_check human_order "+self.human_order)
-            time.sleep(0.5)
+            # time.sleep(0.5)
 
             self.dialog_box.reset_all(0.02)
         else:
