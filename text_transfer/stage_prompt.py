@@ -72,3 +72,15 @@ class StagePrompt:
         if self.flag_kaiguan == False:
             # 关闭状态，直接返回个空的。
             return ""
+
+        if self.stage_now == "机动":
+            prompt = prompt+ "请命令我方全部坦克、步战车搜索前进，向经纬度(100.137, 13.6459)处集结，步兵不下车，无人机和巡飞弹前出至建筑物附近侦察。"
+        elif self.stage_now == "交战":
+            prompt = prompt+  "请命令我方全部坦克、步战车等地面力量沿地图东侧推进，到(100.148, 13.6538)附近分散布置防御，无人机和巡飞弹前出到东边建筑物附近。"
+        elif self.stage_now == "推进":
+            prompt = prompt+  "请命令坦克和电子干扰车进行回防，到经纬度(100.13, 13.6452)附近分散部署，派遣一个巡飞弹到电子干扰车附近游走"
+        elif self.stage_now == "侦察":
+            prompt = prompt+  "请命令坦克停止前进，步兵下车，全部装备转为隐蔽状态，并命令无人机和巡飞弹移动到东南方向移动以探查敌情"
+        elif self.stage_now == "默认":
+            prompt = prompt+ "请命令所有地面部队向夺控点机动，在夺控点附近分散布防"
+        return prompt        
