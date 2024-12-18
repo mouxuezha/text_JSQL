@@ -58,19 +58,29 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         # 准确的说，这里面开了三个进程，一个转发态势，一个转发命令，一个command_process
         thread1 = threading.Thread(target=self.status_single)
         thread2 = threading.Thread(target=self.command_single)  
+        thread3 = threading.Thread(target=self.run_main_loop_client)  
+        
         # 然后就启动线程呗
         thread1.start()
         thread2.start()
-        self.p_status = "on"
-        self.p.start()
+        # self.p_status = "on"
+        # self.p.start()
+        thread3.start()
         
 
         # 然后就等待线程结束呗
         thread1.join()
         thread2.join()
+        thread3.join()
+        
         # 然后就返回结果呗
 
         pass
+
+    def run_main_loop_client(self):
+        # 这个是包装一下，用于从Qthread迁移到Python自带的多线程的。因为现在不需要信号槽机制但是需要断点调试了。
+        # 哎，还是调试工具不够、水平没玩明白。
+        self.p.main_loop_client()
 
     def status_single(self):
         while(True):
