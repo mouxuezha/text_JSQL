@@ -642,7 +642,7 @@ class command_processor(QtCore.QThread):
         while True:
             
             # 调试的时候，这里每一步加一个比较大的时间延迟，让它别太快推完。
-            time.sleep(2.71828)
+            time.sleep(0.5)
             print("debug, time delay in main_loop.")
 
             self.env.SetRender(True) # 训练界面可视化：False --> 关闭
