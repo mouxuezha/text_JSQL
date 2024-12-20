@@ -136,8 +136,8 @@ class MyWidget(QtWidgets.QWidget):
 if __name__ == "__main__":
     # 跑起来看看成色
     app = QtWidgets.QApplication([])
-    config = {"red_ip":"192.168.1.115", "red_port": "20001",
-                "blue_ip": "192.168.1.115", "blue_port": "20002","flag_server_waiting":True }
+    config = {"red_ip":"192.168.1.114", "red_port": "20001",
+                "blue_ip": "192.168.1.114", "blue_port": "20002","flag_server_waiting":True }
     widget = MyWidget(config=config)
     widget.resize(800, 300)
     widget.show()
