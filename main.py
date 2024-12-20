@@ -5,7 +5,7 @@ from agent_guize.enemy_AI.agent.agent_dispatch import agent_dispatch
 
 from agent_guize.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
-from text_transfer.text_transfer import text_transfer, text_demo
+from text_transfer.text_transfer import text_transfer, text_demo, text_demo_blue
 from text_transfer.stage_prompt import StagePrompt
 from model_communication.model_communication import model_communication, model_communication_debug
 from model_communication.model_comm_langchain import ModelCommLangchain
@@ -452,7 +452,16 @@ class command_processor(QtCore.QThread):
             all_str = status_str_received + stage_str + command_str + "\n 请按照格式给出指令。" 
             # 把文本发给大模型，获取返回来的文本
             # 说明是在单独调试这个
-            response_str = self.model_communication.communicate_with_model(all_str)
+            try:
+                response_str = self.model_communication.communicate_with_model(all_str)
+            except:
+                # 这个说明大模型返回的API报错了
+                print("寄，大模型API返回报错！")
+                if self.role == "blue_player":
+                    response_str = text_demo
+                else:
+                    response_str = text_demo_blue
+            
             # response_str = '进攻指令：\n[move, obj_id=MainBattleTank_ZTZ100_0, x=100.138, y=13.6196],\n[move, obj_id=MainBattleTank_ZTZ100_1, x=100.138, y=13.6196],\n[move, obj_id=MainBattleTank_ZTZ100_2, x=100.138, y=13.6196],\n[move, obj_id=MainBattleTank_ZTZ100_3, x=100.138, y=13.6196],\n[move, obj_id=ArmoredTruck_ZTL100_0, x=100.138, y=13.6196],\n[move, obj_id=ArmoredTruck_ZTL100_1, x=100.138, y=13.6196],\n[move, obj_id=WheeledCmobatTruck_ZB100_0, x=100.138, y=13.6196],\n[move, obj_id=WheeledCmobatTruck_ZB100_1, x=100.138, y=13.6196],\n[move, obj_id=Howitzer_C100_0, x=100.138, y=13.6196],\n[move, obj_id=ShipboardCombat_plane0, x=100.137, y=13.644],\n[move, obj_id=RedCruiseMissile_0, x=100.116, y=13.643],\n[move, obj_id=RedCruiseMissile_1, x=100.164, y=13.658]'
             # response_str = "玩家指令：" + text_demo + str(random.randint(0,114514)) + "\n" # 加个随机数主要是为了防止字符串被识别成一样的
             response_str = "玩家指令：" + response_str  
