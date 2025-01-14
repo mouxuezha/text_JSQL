@@ -16,6 +16,8 @@ from socket_communication.socket_debug import *
 
 from TTS.TTS_interface import TTS_interface
 
+from plan_interface.plan_interface import plan_interface
+
 import json
 import time 
 import argparse
@@ -471,6 +473,25 @@ class command_processor(QtCore.QThread):
 
             # 本来应该是这里识别成命令再传过去，但是似乎会涉及一些重复的字符串转JSON，JSON转字符串之类的重复的事情，所以姑且先不慌在客户端解析，反正也没多少计算量。        
         pass
+   
+    def run_one_step_model3(self,**kargs):
+        # 这个是服务于那个辅助决策的模块3的。其实逻辑可以先简单一点。但是这么写的话留出了之后扩展的可能性。
+        
+        # 从agent把态势拿出来
+        self.status, self.detected_state= self.redAgent.get_status()
+
+        # 然后就可以直接快进到“模块三”了。初始化是在外面做，这里只调用one step那个
+        plan_input = kargs["plan_interface"] 
+
+        commands = plan_input.get_action_one_step(self.timestep,self.status)
+
+        # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
+        self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
+
+        all_str = "no all_str, this is " + self.role
+        response_str = "no response_str, this is " + self.role
+
+        self.add_fupan_info(self.timestep, commands, all_str, response_str)        
 
     def get_status_dixing(self,status):
         # 这个想要实现的是把每一个装备的当前地形都拿出来，然后再塞回去status里面。反正多点儿没有坏处就是了。
@@ -594,6 +615,12 @@ class command_processor(QtCore.QThread):
         else:
             fupan_name = ""
         
+        if "role" in kargs:
+            # 说明是复盘模式
+            self.role = kargs["role"]
+        else:
+            self.role = "offline"
+        
         # 训练环境初始化，并返回红蓝方舰船编号
         print("begin resetting")
         unit_ids_dict = self.env.Reset()
@@ -687,6 +714,9 @@ class command_processor(QtCore.QThread):
                     # 这里还得增加一个逻辑，就是服务器端直接给它跑着，等待用户命令。
                 elif (self.role == "red_player") or (self.role == "blue_player"):
                     self.run_one_step_client()
+                elif self.role == "model3":
+                    # 这个是后面的辅助决策用来和其他部分联系的。
+                    self.run_one_step_model3(**kargs) # 直接把那个interface作为引用传进去好了，反正也没有什么特别大的所谓。
             else:
                 self.run_one_step_fupan()
             
@@ -838,3 +868,18 @@ if __name__ == "__main__":
         # # 由于dialog box和command_processor的相互引用关系，理智的做法是改在dialogbox_sserver里面，而不是直接开这个。
         # # 然后相应的client进程得从dialog_box里面去跑，真是一点也不可喜，一点也不可贺啊，越搞越乱了属于是。
         pass
+    elif flag == 6:
+        # 这个是一个简化的模块3，用于先连起来。
+        shishi_interface = plan_interface()
+        plan_location_list = [] 
+        plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo0.pkl")
+        plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo1.pkl")
+        plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo2.pkl")
+        shishi_interface.load_plans(plan_location_list) 
+        shishi_interface.set_plan(0) # 设定一下准备用哪个。       
+
+        # 这个是单跑这个不跑dialog box，拟似人混，启动！ # 20241012里面还加持了大模型解说。
+        shishi = command_processor(shishi_debug)
+        shishi.main_loop(role ="model3", plan_interface = shishi_interface)
+    else:
+        print("undefined running model yet. ")

@@ -1,0 +1,153 @@
+# 这里提供一个简化版的从子任务序列映射到行动序列的东西。
+import os.path
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+import dill 
+
+from agent_guize.enemy_AI.agent.base_agent import BaseAgent
+import random
+class plan_interface(BaseAgent):
+    def __init__(self):
+        super().__init__()
+
+        model2_location = r"E:/EnglishMulu/text_decision"
+        if not(os.path.exists(model2_location)):
+            raise Exception("没能正确找到模块2相关代码")
+        else:
+            sys.path.insert(0, model2_location)
+        self.index = 0
+        self.plan_list = [] # 这个还是得存的嘛。
+        self.plan_location_list = [] 
+        self.action_list = [] # 里面的元素应该是个dict，num:int, commands:list # 跟这个一个数据结构应该。commands = self.text_transfer.text_to_commands(response_str)
+        # 讲道理，action不是提前生成的，得是根据态势啥的现场计算一个才行。但是在最拉的初始版本里面，先尽量简化
+        # 这得琢磨一下咋弄。
+
+        self.num = 0 
+        pass
+
+    def load_plans(self,plan_location_list:list):
+        # 这个就是读入方案了，plan_location_list里面是各个方案的路径。
+        self.plan_location_list = plan_location_list
+        for i in range(len(self.plan_location_list)):
+            plan_single = self.load_plan(self.plan_location_list[i])
+            self.plan_list.append(plan_single)
+            # try:
+            #     plan_single = self.load_plan(self.plan_location_list[i])
+            #     self.plan_list.append(plan_single)
+            # except:
+            #     print("plan {} load failed".format(i))
+        
+        print("plan_interface: finish load plans.")
+
+    def load_plan(self,plan_location:str):
+        # 这个就是读入单个方案了。
+        with open(plan_location, 'rb') as f:
+            plan = dill.load(f)
+        # self.plan_list.append(plan)
+        return plan
+    
+    def set_plan(self, index:int):
+        # 这个就是选择第几个计划的意思。
+        self.index = index
+        print("选定的计划为第"+str(self.index)+"个")
+
+    def get_action_one_step(self, num:int, status:dict):
+        # 这个应该是每一步都调用一次，然后根据态势和步数判断是不是需要增加或者修改新commands。
+        self.num = num # 不要自增，而是从外面同步进来。
+
+        # 先遍历每一个子任务，选出开始于当前步数的，然后根据子任务和status来生成action
+        submissions_this_step = self.check_submission()
+
+        # 然后开始生成了。
+        commands_all = []
+        for submission in submissions_this_step:
+            # 每一个子任务生成一组commands，然后联系起来
+            commands_single = self.generate_actions(submission,status)
+            commands_all = commands_all + commands_single
+            pass
+
+        # 然后把这玩意记录到数据结构里面。
+        action_list_single = {"num":self.num, "commands":commands_all}
+        self.action_list.append(action_list_single)
+        return commands_all
+
+    def check_submission(self):
+        selected_plan = self.plan_list[self.index]
+        submissions_this_step = [] 
+        for i in range(len(selected_plan)):
+            # 检查每一个子任务。
+            if selected_plan[i].self.time_arrange[0] == self.num:
+                submissions_this_step.append(selected_plan[i])
+        return submissions_this_step
+
+    def generate_actions(self,submission,status):
+        # 先把涉及的装备整出来
+        unit_selected = self.type_filter(submission.force_arrange,status)
+        
+        LLA_ave = self.get_LLA_ave(status=unit_selected)
+        LLA_target = LLA_ave
+        commands = []
+        index_local = 0 
+        for unit in unit_selected:
+            index_local = index_local + 1 
+            obj_id = unit.obj_id
+            # 然后定制一系列的目标点。原则上这一步应该是之前就做好的，但是这里做一下也罢。
+            if submission.config_json["出击方向"] == "偏东":
+                # 那就根据平均值往东边去一些。一样的，搞点随机数显得比较阳间
+                LLA_target[0] = LLA_target[0] + 0.01 + random.randint(0,10) * 0.0005
+                LLA_target[1] = LLA_target[1] + 0.005 + random.randint(0,10) * 0.0001
+                pass
+            elif submission.config_json["出击方向"] == "偏西":
+                # 那就根据平均值往西边去一些。
+                LLA_target[0] = LLA_target[0] + 0.01 + random.randint(0,10) * 0.0005
+                LLA_target[1] = LLA_target[1] - 0.005 - random.randint(0,10) * 0.0001            
+                pass
+            elif submission.config_json["出击方向"] == "中间":
+                # 那就根据平均值往中间多去一些。
+                LLA_target[0] = LLA_target[0] + 0.01 + random.randint(0,10) * 0.0005
+                LLA_target[1] = LLA_target[1] - 0.00005 + random.randint(0,10) * 0.0001  
+                pass
+
+            if submission.type_str == "陆地进攻":
+                command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0], "y": LLA_target[1]}
+            elif submission.type_str == "空中侦察":
+                # 加一些check
+                if LLA_target[1]>13.65:
+                    LLA_target[1] = 13.65
+                command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0] + 0.015*(-3+index_local), "y": LLA_target[1]}
+            else:
+                raise Exception("invalid submission type in generate_actions, G. ")
+
+            commands.append(command_single)
+        return commands
+            
+    
+    def type_filter(self,force_arrange,status):
+        bin_status = self.select_by_type("Infantry",status)
+        tank_status = self.select_by_type("MainBattleTank",status)
+        xiaoche_status = self.select_by_type("ArmoredTruck",status)
+        che_status = self.select_by_type("WheeledCmobatTruck",status)
+        feiji_status = self.select_by_type("ShipboardCombat_plane",status)
+        xunfeidan_status = self.select_by_type("CruiseMissile",status)
+        daodan_status = self.select_by_type("missile_truck",status)
+        pao_status = self.select_by_type("Howitzer",status)
+        ganraoche_status = self.select_by_type("JammingTruck",status)
+
+        if force_arrange == "坦克和自行迫榴炮":
+            unit_selected = tank_status + pao_status + daodan_status
+        elif force_arrange == "装甲车等其他地面力量":
+            unit_selected = xiaoche_status + che_status + ganraoche_status + bin_status
+        elif force_arrange == "无人机和巡飞弹":
+            unit_selected = xunfeidan_status + feiji_status
+        else:
+            raise Exception("invalid force_arrange type in submission, G. ")
+
+        return unit_selected
+    
+if __name__ == "__main__":
+    shishi_interface = plan_interface()
+    plan_location_list = [] 
+    plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo0.pkl")
+    plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo1.pkl")
+    plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo2.pkl")
+    shishi_interface.load_plans(plan_location_list)
