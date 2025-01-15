@@ -5,14 +5,15 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import dill 
 
 from agent_guize.enemy_AI.agent.base_agent import BaseAgent
-import random
+import random,copy 
+
 class plan_interface(BaseAgent):
     def __init__(self):
         super().__init__()
 
-        model2_location = r"E:/EnglishMulu/text_decision"
+        model2_location = r"D:/EnglishMulu/test_decision"
         if not(os.path.exists(model2_location)):
-            raise Exception("没能正确找到模块2相关代码")
+            raise Exception("plan_interface：没能正确找到模块2相关代码")
         else:
             sys.path.insert(0, model2_location)
         self.index = 0
@@ -67,54 +68,83 @@ class plan_interface(BaseAgent):
             pass
 
         # 然后把这玩意记录到数据结构里面。
-        action_list_single = {"num":self.num, "commands":commands_all}
-        self.action_list.append(action_list_single)
-        return commands_all
+        # action_list_single = {"num":self.num, "commands":commands_all}
+        # self.action_list.append(action_list_single)
+
+        # 搞专业点，这里做个异步的机制。这些命令在随后的一定步数中随机出。
+        # 先加上随机数存到list里面。
+        for command_single in commands_all:
+            num_randm = self.num + random.randint(0,50)
+            action_single = {"num":num_randm, "commands":command_single}
+            self.action_list.append(action_single)
+        
+        # 然后再从list里面找当前的。注意保持数据结构的一致性。
+        commands_this_step = self.check_action_list(self.num)
+
+        return commands_this_step
 
     def check_submission(self):
         selected_plan = self.plan_list[self.index]
+        selected_submissions = selected_plan.submission_list
         submissions_this_step = [] 
-        for i in range(len(selected_plan)):
+        for i in range(len(selected_submissions)):
             # 检查每一个子任务。
-            if selected_plan[i].self.time_arrange[0] == self.num:
-                submissions_this_step.append(selected_plan[i])
+            if selected_submissions[i].time_arrange[0] == self.num:
+                submissions_this_step.append(selected_submissions[i])
         return submissions_this_step
+    
+    def check_action_list(self,num:int):
+        # 从现有的action list里面检索出符合当前步数的，然后输出成一个commands_all。
+        # 现在姑且先不管检索效率的事情，现在就突出一个能用就行。
+        commands_all = [] 
+        for action_single in self.action_list:
+            if num == action_single["num"]:
+                # 那就是这步应该执行的东西。那就拿出去
+                commands_all.append(action_single["commands"])
+            else:
+                # 那就不是这步的东西。
+                pass
+        return commands_all
 
     def generate_actions(self,submission,status):
         # 先把涉及的装备整出来
         unit_selected = self.type_filter(submission.force_arrange,status)
         
         LLA_ave = self.get_LLA_ave(status=unit_selected)
-        LLA_target = LLA_ave
+        
         commands = []
         index_local = 0 
-        for unit in unit_selected:
+        for unit_id in unit_selected:
             index_local = index_local + 1 
-            obj_id = unit.obj_id
+            obj_id = unit_id
+            LLA_target = copy.deepcopy(LLA_ave)
+
             # 然后定制一系列的目标点。原则上这一步应该是之前就做好的，但是这里做一下也罢。
-            if submission.config_json["出击方向"] == "偏东":
+            direction = submission.config_json["出击方向"]
+            if direction == "偏东":
                 # 那就根据平均值往东边去一些。一样的，搞点随机数显得比较阳间
-                LLA_target[0] = LLA_target[0] + 0.01 + random.randint(0,10) * 0.0005
-                LLA_target[1] = LLA_target[1] + 0.005 + random.randint(0,10) * 0.0001
+                LLA_target[0] = LLA_target[0] + 0.02 + random.randint(0,10) * 0.0005
+                LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001
                 pass
-            elif submission.config_json["出击方向"] == "偏西":
+            elif direction == "偏西":
                 # 那就根据平均值往西边去一些。
-                LLA_target[0] = LLA_target[0] + 0.01 + random.randint(0,10) * 0.0005
-                LLA_target[1] = LLA_target[1] - 0.005 - random.randint(0,10) * 0.0001            
+                LLA_target[0] = LLA_target[0] - 0.02 - random.randint(0,10) * 0.0005
+                LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001            
                 pass
-            elif submission.config_json["出击方向"] == "中间":
+            elif direction == "中间":
                 # 那就根据平均值往中间多去一些。
-                LLA_target[0] = LLA_target[0] + 0.01 + random.randint(0,10) * 0.0005
-                LLA_target[1] = LLA_target[1] - 0.00005 + random.randint(0,10) * 0.0001  
+                LLA_target[0] = LLA_target[0] - 0.00005 + random.randint(0,10) * 0.0001  
+                LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001     
                 pass
 
             if submission.type_str == "陆地进攻":
                 command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0], "y": LLA_target[1]}
             elif submission.type_str == "空中侦察":
                 # 加一些check
+                LLA_target[1] = LLA_target[1] + 0.005
                 if LLA_target[1]>13.65:
                     LLA_target[1] = 13.65
-                command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0] + 0.015*(-3+index_local), "y": LLA_target[1]}
+                command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0] + 0.06*(-2+index_local), "y": LLA_target[1]}
             else:
                 raise Exception("invalid submission type in generate_actions, G. ")
 
@@ -123,22 +153,24 @@ class plan_interface(BaseAgent):
             
     
     def type_filter(self,force_arrange,status):
-        bin_status = self.select_by_type("Infantry",status)
-        tank_status = self.select_by_type("MainBattleTank",status)
-        xiaoche_status = self.select_by_type("ArmoredTruck",status)
-        che_status = self.select_by_type("WheeledCmobatTruck",status)
-        feiji_status = self.select_by_type("ShipboardCombat_plane",status)
-        xunfeidan_status = self.select_by_type("CruiseMissile",status)
-        daodan_status = self.select_by_type("missile_truck",status)
-        pao_status = self.select_by_type("Howitzer",status)
-        ganraoche_status = self.select_by_type("JammingTruck",status)
+        self.status = status
+        bin_status = self.select_by_type("Infantry")
+        tank_status = self.select_by_type("MainBattleTank")
+        xiaoche_status = self.select_by_type("ArmoredTruck")
+        che_status = self.select_by_type("WheeledCmobatTruck")
+        feiji_status = self.select_by_type("ShipboardCombat_plane")
+        xunfeidan_status = self.select_by_type("CruiseMissile")
+        daodan_status = self.select_by_type("missile_truck")
+        pao_status = self.select_by_type("Howitzer")
+        ganraoche_status = self.select_by_type("JammingTruck")
 
         if force_arrange == "坦克和自行迫榴炮":
-            unit_selected = tank_status + pao_status + daodan_status
+            # unit_selected = tank_status | pao_status | daodan_status
+            unit_selected = tank_status | pao_status # 导弹发射车先不要纳入里面，不然算平均值算的就有问题了。
         elif force_arrange == "装甲车等其他地面力量":
-            unit_selected = xiaoche_status + che_status + ganraoche_status + bin_status
+            unit_selected = xiaoche_status | che_status | ganraoche_status | bin_status
         elif force_arrange == "无人机和巡飞弹":
-            unit_selected = xunfeidan_status + feiji_status
+            unit_selected = xunfeidan_status | feiji_status
         else:
             raise Exception("invalid force_arrange type in submission, G. ")
 

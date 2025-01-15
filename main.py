@@ -45,7 +45,10 @@ class command_processor(QtCore.QThread):
             self.args = self.__init_net()
             self.__init_env()
             self.__init_agent()
-            pass 
+            if "config" in kargs:
+                self.config = kargs["config"]  
+            else:
+                self.config = {}
         else:
             self.__init_socket(role =role, config=kargs["config"])
             self.config = kargs["config"] # 后面需要的配置项越加越多，还是专门开一个设置的来弄一下好了。
@@ -837,7 +840,7 @@ class command_processor(QtCore.QThread):
 
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 0
+    flag = 6
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
@@ -872,9 +875,9 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo0.pkl")
-        plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo1.pkl")
-        plan_location_list.append(r"E:/EnglishMulu/text_decision/auto_test/temp/jieguo2.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/temp/jieguo0.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/temp/jieguo1.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/temp/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 
         shishi_interface.set_plan(0) # 设定一下准备用哪个。       
 
