@@ -27,8 +27,12 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         self.p = command_processor(self,role=role, config=kargs["config"])  # 和大模型交互的通信在这里面实现了。
         self.socket_client = self.p.socket_client # 看看能不能偷个懒
         self.socket_client.run_mul() # 试一下放这里行不行。在这里原则上还没有结束init呢
-
-        self.__init_net()
+        
+        if "UI_port" in kargs["config"]:
+            UI_port = kargs["config"]["UI_port"]
+        else:
+            UI_port = 30001
+        self.__init_net(port=UI_port)
         self.__init_env()
 
 
@@ -38,11 +42,11 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         self.env = Env_server(self.net_args.ip, self.net_args.port)
         
 
-    def __init_net(self):
+    def __init_net(self,port=30001):
         parser = argparse.ArgumentParser(description='Provide arguments for agent.')
         parser.add_argument("--ip", type=str, default="127.0.0.1", help="Ip to connect")
         # parser.add_argument("--ip", type=str, default="192.168.43.93", help="Ip to connect")
-        parser.add_argument("--port", type=str, default=30001, help="port to connect")
+        parser.add_argument("--port", type=str, default=port, help="port to connect")
         parser.add_argument("--epochs", type=int, default=200, help="Number of training epochs to run")  # 设置训练轮次数
         parser.add_argument("--max-episode-len", type=int, default=3000, help="maximum episode length")
         net_args = parser.parse_args()
