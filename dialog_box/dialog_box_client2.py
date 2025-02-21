@@ -67,8 +67,6 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         # 然后就启动线程呗
         thread1.start()
         thread2.start()
-        # self.p_status = "on"
-        # self.p.start()
         thread3.start()
         
 
