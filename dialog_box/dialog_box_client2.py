@@ -31,7 +31,7 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         if "UI_port" in kargs["config"]:
             UI_port = kargs["config"]["UI_port"]
         else:
-            UI_port = 30001
+            UI_port = 30005
         self.__init_net(port=UI_port)
         self.__init_env()
 
@@ -42,7 +42,7 @@ class MyWidget(): # 这里就先不显示窗口了，原则上应该就不用继
         self.env = Env_server(self.net_args.ip, self.net_args.port)
         
 
-    def __init_net(self,port=30001):
+    def __init_net(self,port=30005):
         parser = argparse.ArgumentParser(description='Provide arguments for agent.')
         parser.add_argument("--ip", type=str, default="127.0.0.1", help="Ip to connect")
         # parser.add_argument("--ip", type=str, default="192.168.43.93", help="Ip to connect")

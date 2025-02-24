@@ -725,7 +725,8 @@ class BaseAgent(object):
             jvli = self.distance2(attacker_LLA, target_LLA)
             if(jvli<114.514):
                 # 那就认为是到了。到了就是原地隐蔽吃减伤。
-                self._Change_State(attacker_LLA, "hidden")
+                # self._Change_State(attacker_LLA, "hidden")
+                pass
             else:
                 # 那就是没到，没到就过去
                 self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
@@ -768,7 +769,7 @@ class BaseAgent(object):
                 pass
         if model == -1:
             # 调试用的，到一定步数就打开，不到就别开。
-            if self.num > 114.514:
+            if self.num > 5:
                 self._SetJammer_Action(attacker_ID, 2)
                 self.abstract_state[attacker_ID]["flag_on"] == True
 

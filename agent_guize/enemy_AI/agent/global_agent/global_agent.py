@@ -996,5 +996,13 @@ class GlobalAgent(BaseAgent):
 
     def step_LLM(self,status:dict):
         # 用于配合大模型的。说白了就是啥也不干，只走一波抽象状态。
+        
+        # 为了配合演示，这里强行加一个开干扰的
+        ganraoche_status = self.select_by_type("JammingTruck")
+        jamming_LLA = [100.167, 13.6472, 0]
+        if (self.num > 5) :
+            self.set_move_and_jammer(ganraoche_status,jamming_LLA,-1) # 直接开干扰
+
+        
         self.Gostep_abstract_state()
         return self.act         
