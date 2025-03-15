@@ -32,7 +32,7 @@ class auto_run(object):
         # parser.add_argument("--ip", type=str, default="192.168.43.93", help="Ip to connect")
         parser.add_argument("--port", type=str, default=20001, help="port to connect")
         parser.add_argument("--epochs", type=int, default=200, help="Number of training epochs to run")  # 设置训练轮次数
-        parser.add_argument("--max-episode-len", type=int, default=3000, help="maximum episode length")
+        parser.add_argument("--max-episode-len", type=int, default=5000, help="maximum episode length")
         net_args = parser.parse_args()
         self.net_args = net_args
         return net_args    

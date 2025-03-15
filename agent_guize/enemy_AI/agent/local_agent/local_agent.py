@@ -32,7 +32,7 @@ class LocalAgent(BaseAgent):
             if ("ArmoredTruck" in unit_type_single) \
                 or ("ShipboardCombat" in unit_type_single) \
                 or ("MainBattleTank" in unit_type_single):
-                # 用跑的快的东西去把它冲了
+                # 用跑的快的东西去把它冲了。但是蓝方要不要这么干还得想想。
                 self.step_function_dict[self.unit_type_list[i]] = self.step_ours_anti_Jammer
             # if i %2 == 0:
             #     self.step_function_dict[self.unit_type_list[i]] = self.step_ours_anti_Jammer
@@ -71,17 +71,26 @@ class LocalAgent(BaseAgent):
     
     # 定义不同装备类型、不同情况下的单位行为。
     def step_0(self,status_local,unit_id):
-        d_l = random.uniform(0,1) * 0.001
-        self._Move_Action(unit_id,self.target_LLA[0],self.target_LLA[1]+d_l,self.target_LLA[2])
+        if self.num%200==0:
+            d_l = random.uniform(0,1) * 0.001
+            self._Move_Action(unit_id,self.target_LLA[0],self.target_LLA[1]+d_l,self.target_LLA[2])
         pass 
     
     def step_1(self,status_local,unit_id):
-        d_l = random.uniform(0,1) * 0.001
-        self._Move_Action(unit_id,self.target_LLA[0]+d_l,self.target_LLA[1],self.target_LLA[2])
+        if self.num%200==0:
+            d_l = random.uniform(0,1) * 0.001
+            self._Move_Action(unit_id,self.target_LLA[0]+d_l,self.target_LLA[1],self.target_LLA[2])
         pass 
 
     def step_ours_basic(self, status_local,unit_id):
         # 原则上什么也不做，继续根据之前的抽象状态来执行。
+
+        # 也不是完全都是什么也不做，搞一个“超过了一定步数就往点里冲的机制”
+        if self.num > 3500:
+            # 那就触发冲点的机制。
+            target_LLA = [100.12472961, 13.66152304, 0]
+            self.set_move_and_attack(unit_id, target_LLA)
+
         # 但是探测还是得探测的，好在探测已经写入Gostep_abstract_state里面了
         self.act = self.Gostep_abstract_state()
         return self.act
@@ -106,6 +115,11 @@ class LocalAgent(BaseAgent):
             # 先把敌方的位置拿出来
             target_LLA = self.detected_state2[enemy_id_selected]["this"]["LLA"]
             self.set_move_and_attack(unit_id, target_LLA)
+
+        elif self.num>4000:
+            # 那就触发冲点的机制。
+            target_LLA = [100.12472961, 13.66152304, 0]
+            self.set_move_and_attack(unit_id, target_LLA)            
         
         self.act = self.Gostep_abstract_state()
         # 1111修，有bug，需要修一下,防止一下报错。貌似会出现前面有后面没有的状况。
@@ -115,6 +129,7 @@ class LocalAgent(BaseAgent):
             (self.num - self.num_order_start > 500):
                 self.flag_standingby = True 
                 self.num_order_start = 0 
+                
         return self.act
 
 

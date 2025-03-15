@@ -201,7 +201,19 @@ class Env():
             return None
         result = json.loads(result)
         return result
-
+    def SetRedRecvScene(self):
+        command = {"CMD": "RedReceiveSence"}
+        command = json.dumps(command)
+        result = self._send(command)
+        # print("GetPisResult OK")
+        return result
+    
+    def SetBlueRecvScene(self):
+        command = {"CMD": "BlueReceiveSence"}
+        command = json.dumps(command)
+        result = self._send(command)
+        # print("GetPisResult OK")
+        return result   
 class Env_demo():
     def __init__(self, ip, port):
         # 这东西存在的意义只是为了调试的时候不报错。

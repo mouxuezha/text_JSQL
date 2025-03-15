@@ -548,7 +548,7 @@ class BaseAgent(object):
             for attacker_ID_single in attacker_ID:
                 if "Jamming" in attacker_ID_single:
                     # 做一层兼容，让干扰车走这个也能有点用。
-                    self.set_move_and_jammer(attacker_ID,target_LLA,model=2)
+                    self.set_move_and_jammer(attacker_ID,target_LLA,model=1)
                 else:
                     self.abstract_state[attacker_ID_single] = {"abstract_state": "move_and_attack",
                                                             "target_LLA": target_LLA,
@@ -721,12 +721,11 @@ class BaseAgent(object):
             # 那就说明输入的是ID了，那就需要转化一下了。也是这么搞一下，这么搞一下之后该命令直接就可以支持追踪使用了。
             target_LLA = self.__get_LLA(target_LLA)
         # check一个距离看看到了是没到。
-        if self.num %3 == 0: # 量入为出，适度消费。能省点儿计算量是点儿，也不差这几秒。
+        if self.num % 114 == 0: # 量入为出，适度消费。能省点儿计算量是点儿，也不差这几秒。
             jvli = self.distance2(attacker_LLA, target_LLA)
             if(jvli<114.514):
                 # 那就认为是到了。到了就是原地隐蔽吃减伤。
-                # self._Change_State(attacker_LLA, "hidden")
-                pass
+                self._Change_State(attacker_LLA, "hidden")
             else:
                 # 那就是没到，没到就过去
                 self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
@@ -769,7 +768,7 @@ class BaseAgent(object):
                 pass
         if model == -1:
             # 调试用的，到一定步数就打开，不到就别开。
-            if self.num > 5:
+            if self.num > 114.514:
                 self._SetJammer_Action(attacker_ID, 2)
                 self.abstract_state[attacker_ID]["flag_on"] == True
 
@@ -804,8 +803,10 @@ class BaseAgent(object):
         if self.num % 1 == mod_num:
             # 这里参数得弄好，不然会出现转完了下一步还满足转的条件，就一直在边上转来转去。
             flag_edge = self.check_edge(attacker_ID,d_l=0.004) # 不用去的太靠边也行的奥。
-            if flag_edge:
-                # 把这个flag换了，就算是到了边上了呗。
+            flag_distance = self.check_distance(attacker_ID,d_l=3000) # 检测一下当前单位和地面单位集群的平均距离，如果距离大了就转弯。
+
+            if flag_edge or flag_distance:
+                # 把这个flag换了.在特定条件下改变飞的方向。这样不会飞到太远的没有意义的地方去应该。
                 self.abstract_state[attacker_ID]["flag_circle"] = not flag_circle
         
         
@@ -904,16 +905,43 @@ class BaseAgent(object):
         attacker_LLA = self.__get_LLA(attacker_ID)
         jvli = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
                              attacker_LLA[0], attacker_LLA[1], target_LLA[2])  # 这里alt两个用成一样的，防止最后结束不了。
-        if jvli > 10:
+        if jvli > 25:
             # 那就是还没到，那就继续移动
-            if self.abstract_state[attacker_ID]["flag_moving"] == False:
+            # 来个平滑化机制，来让它分散在不同的范围内
+            mod_num = random.randint(1,20)
+
+            if (self.num % 300 == mod_num) and (self.abstract_state[attacker_ID]["flag_moving"] == False) :
                 # 那就是没动起来，那就得让它动起来。
-                self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
-                self.abstract_state[attacker_ID]["flag_moving"] = True
-            if (self.abstract_state[attacker_ID]["jvli"] == jvli) and (self.num>100):
+                rand_dl_1 = random.randint(-5,5) * 0.0001
+                rand_dl_2 = random.randint(-5,5) * 0.0001
+                self._Move_Action(attacker_ID, target_LLA[0]+rand_dl_1, target_LLA[1]+rand_dl_2, target_LLA[2])
+                self.abstract_state[attacker_ID]["flag_moving"] = True                
+                # if (self.num<3000) or (self.num%114==0):
+                #     # # 加点随机，这样应该动起来的概率能大一些。
+                #     rand_dl_1 = random.randint(-5,5) * 0.0001
+                #     rand_dl_2 = random.randint(-5,5) * 0.0001
+                #     self._Move_Action(attacker_ID, target_LLA[0]+rand_dl_1, target_LLA[1]+rand_dl_2, target_LLA[2])
+                #     self.abstract_state[attacker_ID]["flag_moving"] = True
+
+                # elif (self.num%114==50):
+                #     # 另一种策略，卡了之后往自己周围走一段看看。
+                #     rand_dl_1 = random.randint(-5,5) * 0.001
+                #     rand_dl_2 = random.randint(-5,5) * 0.001
+                #     self._Move_Action(attacker_ID, attacker_LLA[0]+rand_dl_1, attacker_LLA[1]+rand_dl_2, attacker_LLA[2])
+                #     self.abstract_state[attacker_ID]["flag_moving"] = True    
+
+                # 这个机制似乎影响了A正面，感觉不是很理想。
+                pass
+                            
+                
+            # if (self.abstract_state[attacker_ID]["jvli"] == jvli) and (self.num>700):
+            if (self.abstract_state[attacker_ID]["jvli"] == jvli) and (self.num>300):
                 # self.__finish_abstract_state(attacker_ID)
+                # 这里面是存着的距离等于这次的距离，那就认为是没动，改标志位准备走
+                self.abstract_state[attacker_ID]["flag_moving"] = False # 那就认为是停了，卡住了
                 pass 
             else:
+                # 那就把距离更新过去。
                 self.abstract_state[attacker_ID]["jvli"] = jvli
         else:
             # 那就是到了，那就要改抽象状态里面了。
@@ -950,16 +978,48 @@ class BaseAgent(object):
                             self._Attack_Action(attacker_ID, target_LLA_local_modified[0], target_LLA_local_modified[1],
                                                 target_LLA_local_modified[2], weapon_selected)
                             
+                            self.__handle_mul_shot_attack(attacker_ID, target_ID_local,target_LLA_local_modified, weapon_selected) # 这个是补刀用的。
+                            
                             # 2024，增加一个记录函数，用来记打了几次导弹车，从而间接判断毁伤了多少导弹车。
                             self.check_attack_missile_truck(weapon_selected, target_ID_local)
+                            self.check_attack_all(weapon_selected, target_ID_local) # 干脆都记录了算了。
+
                             break  # 打出来了，那就完事了
             if flag_done:
                 # 开过火就变回去
-                self._Change_State(attacker_ID, "hidden")
-                self.abstract_state[attacker_ID]["flag_shelter"] = True
+                # self._Change_State(attacker_ID, "hidden")  # 这个写法会造成迫榴炮直接停下来打炮。
+                # self.abstract_state[attacker_ID]["flag_shelter"] = True
+
+                # 直接change成hidden似乎会导致直接停下不走了。
+                if "target_LLA" in self.abstract_state[attacker_ID]:
+                    # 试一下，开完火继续走。原则上这个不会破坏group A，但是会增加路径规划的调用次数
+                    target_LLA = self.abstract_state[attacker_ID]["target_LLA"]
+                    # 为了防止一直重复调用，这里也再加一些过滤。
+                    if self.num % 100 == 49:
+                        self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
+                pass 
         else:
             pass
+
         return flag_done
+    
+    def __handle_mul_shot_attack(self, attacker_ID, target_ID_local,target_LLA_local_modified, weapon_selected):
+        # 这个是打个补丁，用于实现坦克和炮的连续开火的。
+        # 说法应该是，目标如果是车辆，就补上一发高爆弹。
+        if "ZTZ" in target_ID_local:
+            if (weapon_selected == "ArmorPiercingShot"):
+                # 那就是坦克打坦克，那就再补一发爆炸弹。
+                weapon_selected2 = "HighExplosiveShot"
+            elif(weapon_selected == "ArmorPiercingShot_ZT"):
+                weapon_selected2 = "HighExplosiveShot_ZT"
+            else:
+                # 那就是不需要触发追加射击。
+                weapon_selected2 = "none"
+            
+            if not (weapon_selected2 == "none"):
+                self._Attack_Action(attacker_ID, target_LLA_local_modified[0], target_LLA_local_modified[1],
+                                                target_LLA_local_modified[2], weapon_selected2)
+
 
     def __handle_hidden_and_alert(self, attacker_ID, GetLandForm=0):
         # 在这里集成一个“寻找周围安全区域”的逻辑
@@ -988,7 +1048,8 @@ class BaseAgent(object):
             else:
                 # 还没到，那就移动过去。
                 # 本来应该是移动攻击过去，但是防止抽象命令互相调用，直接挪过去好了。
-                self._Move_Action(attacker_ID, LLA_shelter[0], LLA_shelter[1], LLA_shelter[2])
+                if self.num % 49 == 7:
+                    self._Move_Action(attacker_ID, LLA_shelter[0], LLA_shelter[1], LLA_shelter[2])
 
         # 然后，如果攻击范围里有敌人，就找个合适的打。这段跟搜索攻击里面攻击那段是一样的。
         flag_done = self.__handle_one_shot_attack(attacker_ID)
@@ -1433,7 +1494,8 @@ class BaseAgent(object):
         # 先搞一点默认值
         enemy_ID_selected = ""
         enemy_distance_min = 1145141919810
-        bili = 0.95  # 不要极限距离开火的超参数
+        # bili = 0.95  # 不要极限距离开火的超参数
+        bili = 0.95 # 2024年，弹药相对来说是足够的，因此距离可以放开了，不用再压制自己的火力了，可以拼一枪。
         enemy_LLA_selected = [0, 0, 0]
 
         # 方案2，尝试加入优先级。
@@ -1498,7 +1560,12 @@ class BaseAgent(object):
             # if len(enemy_ID_selected_list)>=5:
             #     # 找五个选一个很给面子了，还想咋样嘛。
             #     break
-
+        # 增加一个处理：如果自己是导弹车，那么事实上不需要根据距离来选，那么就是取靠前的几个，然后洗牌
+        if "missile" in attacker_ID:
+            index_max = min(6, len(enemy_ID_selected_list))
+            ID_list = enemy_ID_selected_list[0:index_max]
+            random.shuffle(ID_list)
+            enemy_ID_selected_list[0:index_max] = ID_list
         return enemy_ID_selected_list, enemy_LLA_selected_list, enemy_distance_min_list
 
     def range_estimate2(self, attacker_ID, detectinfo):
@@ -1748,14 +1815,24 @@ class BaseAgent(object):
             target_state["this"] = copy.deepcopy(target_state_single)
             self.detected_state2[target_ID] = target_state
 
-        # 整个过滤机制，时间太长的探测信息就直接不保存了
+        # 整个过滤机制，时间太长的探测信息就直接不保存了。被打爆的也不存了。
         list_deleted = []
         for target_ID in self.detected_state2:
             if (self.num - self.detected_state2[target_ID]["this"]["num"]) > 500:
                 # 姑且是500帧之前的东西就认为是没用了。
                 list_deleted.append(target_ID)
+            # 然后被打过且从态势里消失的东西也先不存了。就认为是炸了。
+            elif "num_attacked" in self.detected_state2[target_ID]:
+                num_attacked = self.detected_state2[target_ID]["num_attacked"]
+                if num_attacked>2:
+                    # 那就视为被打了，如果此时新鲜态势里没有，就认为是被打爆了。
+                    if not(target_ID in detectinfo):
+                        # 这个就是被打了。
+                        list_deleted.append(target_ID)
+
         for target_ID in list_deleted:
             del self.detected_state2[target_ID]
+        
         return
 
     def get_prior_list(self, type):
@@ -1765,9 +1842,9 @@ class BaseAgent(object):
             # 有机械化突击能力的东西，就先打机械化的东西。
             if self.num < 1000:  # 先不打小车
                 # prior_list = ["MainBattleTank", "ArmoredTruck", "missile_truck", "Howitzer"]
-                prior_list = ["MainBattleTank","JammingTruck", "missile_truck", "Howitzer"] # 先不打小车，用于调试
+                prior_list = [ "missile_truck", "MainBattleTank","JammingTruck", "Howitzer", "Infantry"] # 先不打小车，用于调试
             else:
-                prior_list = ["MainBattleTank","JammingTruck", "ArmoredTruck", "WheeledCmobatTruck", "Infantry", "missile_truck", "Howitzer"]
+                prior_list = ["missile_truck", "MainBattleTank","JammingTruck", "ArmoredTruck", "WheeledCmobatTruck", "Infantry",  "Howitzer", "Infantry"]
         elif ("ArmoredTruck" in type):
             if self.num < 20:  # 先不打别的，就打防空车。
                 prior_list = ["missile_truck", "MainBattleTank"]
@@ -1775,7 +1852,7 @@ class BaseAgent(object):
                 prior_list = ["missile_truck","JammingTruck", "MainBattleTank", "ArmoredTruck", "Infantry", "missile_truck",
                               "Howitzer"]
         elif ("Howitzer" in type) or ("Infantry" in type):
-            prior_list = ["MainBattleTank","JammingTruck", "ArmoredTruck", "WheeledCmobatTruck", "Infantry", "missile_truck",
+            prior_list = ["MainBattleTank", "missile_truck", "JammingTruck", "ArmoredTruck", "WheeledCmobatTruck", "Infantry",
                           "Howitzer"]
 
         elif ("ShipboardCombat_plane" in type):
@@ -1791,12 +1868,13 @@ class BaseAgent(object):
                         prior_list = ["Howitzer"]
                     else:
                         # prior_list = ["Howitzer", "missile_truck", "ArmoredTruck",  "Infantry"]
-                        prior_list = ["Howitzer", "missile_truck", "ArmoredTruck"]
+                        prior_list = ["Howitzer", "MainBattleTank", "ArmoredTruck"]
             elif "ShipboardCombat_plane0" in type:
                 # 红方反而可以有啥打啥，不用特别去针对。
                 if self.num % 20 == 0:  # 这个没有CD，手动给它加个CD
                     if self.num < 480:
-                        pass
+                        prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
+                        # pass
                     else:
                         prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
             else:
@@ -1814,32 +1892,32 @@ class BaseAgent(object):
 
         elif ("missile_truck" in type):
             # 优先打击敌方火力单位好了。
-            prior_list = ["missile_truck", "MainBattleTank", "Howitzer", "ArmoredTruck", "Infantry",
-                          "WheeledCmobatTruck"]
+            # 这个也来实现一个“导弹先不慌开火”
+            if self.num<2200:
+                prior_list = [] 
+            else:
+                prior_list = ["MainBattleTank",  "missile_truck", "Howitzer", "ArmoredTruck", "Infantry",
+                            "WheeledCmobatTruck"]
         elif ("WheeledCmobatTruck" in type):
             # 只能打兵的，那就打兵了。
             # 子弹应该很难消耗完，所以子弹打到车上去了讲道理也不是很有所谓。
             prior_list = ["Infantry", "Truck", "Howitzer", "missile_truck", "MainBattleTank"]
         elif("CruiseMissile" in type):
             # # 统一设定成巡飞弹开始不开火，除非遇到敌方防空，后面快爆炸了就是有什么来什么了。
-            # if self.num < 1700:  # 先打机械的
-            #     # prior_list = ["missile_truck", "MainBattleTank"]
-            #     prior_list = [] # 先探测，先不打
-            # else:
-            #     # 有什么打什么了。
-            #     prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
-
             if "RedCruiseMissile" in type:
                 # 那这个就是红方的，省着点儿炸。
                 if "RedCruiseMissile_0" in type:
-                    yuzhi = 1700 
+                    yuzhi = 1200 
                 else:
-                    yuzhi = 1800
-                if self.num < 1700: 
+                    yuzhi = 1400
+                if self.num < yuzhi: 
                     prior_list = [] # 先探测，先不打
+                elif self.num < yuzhi+400:
+                    prior_list = ["missile_truck"]
                 else:
                     # 有什么打什么了。
                     prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
+
             elif "BlueCruiseMissile" in type:
                 # 那这个就是蓝方的，就得早点给它炸了
                 if "BlueCruiseMissile_0" in type:
@@ -1875,7 +1953,19 @@ class BaseAgent(object):
                 else:
                     # 稍微容错一点，有的话就+1，没有的话就放那置为1
                     self.missile_truck_attacked[target_ID] =  1
+            
+            if self.num>1500:
+                # 前面要是没打到导弹车，也别憋着了，直接给它拉满。
+                self.missile_truck_attacked[target_ID]=114514
+
         pass
+    
+    def check_attack_all(self, weapon_selected, target_ID):
+        # 干脆所有的都记录了算了
+        if "num_attacked" in self.detected_state2[target_ID]:
+            self.detected_state2[target_ID]["num_attacked"] = self.detected_state2[target_ID]["num_attacked"] + 1
+        else:
+            self.detected_state2[target_ID]["num_attacked"] = 1   
 
     def check_CruiseMissile_ganrao(self, attacker_ID, target_ID):
         # 这个用来check一下，巡飞弹攻击目标是不是在敌方干扰的范围之内。如果是在敌方干扰范围之内就不打了先，如果不是再打。
@@ -1916,28 +2006,32 @@ class BaseAgent(object):
 
 
     def check_zhimiao(self, attacker_ID, target_ID, weapon_selected):
-        # 这个用来判断是不是直瞄。
+        # 这个用来判断是不是直瞄。然而2024年无所谓直瞄不直瞄了。
         # 确切地说，这个用来封装武器类型和直瞄间瞄是否匹配。匹配就输出true，不匹配就输出false
         # 返回true就可以开火了。
         flag_jieguo = False
-        if (weapon_selected == "HighExplosiveShot") or \
-                (weapon_selected == "ArmorPiercingShot") or \
-                (weapon_selected == "ShortRangeMissile") or \
-                (weapon_selected == "RPG"):
-            # 这些属于是直瞄间瞄都可以的东西，所以直接返回通过check。
+        if "Infantry" in target_ID:
             flag_jieguo = True
-        elif (weapon_selected == "HighExplosiveShot_ZT") or \
-                (weapon_selected == "ArmorPiercingShot_ZT") or \
-                (weapon_selected == "Bullet_ZT") or \
-                (weapon_selected == "AGM"):
-            # 这些是策略上只能允许直瞄的。如果选出来的目标构不成直瞄条件那还不如不瞄，因为站住了开间瞄会容易被打，还不一定能够命中
-            # 在这个装备的探测池子里面的就是直瞄，不在的就认为是间瞄
-            flag_detect = self.check_detect(attacker_ID, target_ID)
-            if flag_detect:
-                flag_jieguo = True
+            return flag_jieguo
         else:
-            # 子弹随便打，反正多的是。RPG要打引导射击。or (weapon_selected == "RPG")
-            flag_jieguo = True
+            if (weapon_selected == "HighExplosiveShot") or \
+                    (weapon_selected == "ArmorPiercingShot") or \
+                    (weapon_selected == "ShortRangeMissile") or \
+                    (weapon_selected == "RPG"):
+                # 这些属于是直瞄间瞄都可以的东西，所以直接返回通过check。
+                flag_jieguo = True
+            elif (weapon_selected == "HighExplosiveShot_ZT") or \
+                    (weapon_selected == "ArmorPiercingShot_ZT") or \
+                    (weapon_selected == "Bullet_ZT") or \
+                    (weapon_selected == "AGM"):
+                # 这些是策略上只能允许直瞄的。如果选出来的目标构不成直瞄条件那还不如不瞄，因为站住了开间瞄会容易被打，还不一定能够命中
+                # 在这个装备的探测池子里面的就是直瞄，不在的就认为是间瞄
+                flag_detect = self.check_detect(attacker_ID, target_ID)
+                if flag_detect:
+                    flag_jieguo = True
+            else:
+                # 子弹随便打，反正多的是。RPG要打引导射击。or (weapon_selected == "RPG")
+                flag_jieguo = True
 
         return flag_jieguo
 
@@ -2025,6 +2119,37 @@ class BaseAgent(object):
                 self.abstract_state[attacker_ID]["turn_cd"] = 0 
         return flag_near
     
+    def check_distance(self,attacker_ID, d_l = 3000):
+        # 输出一个是否远离大部队。
+        turn_cd = 70
+        attacker_LLA = self.get_LLA(attacker_ID)
+        flag_far = False
+        if self.abstract_state[attacker_ID]["turn_cd"] == 0:
+            # 那就是转向的CD好了，可以转向了.那就要check一下距离了。
+            tank_status = self.select_by_type("MainBattleTank")
+            xiaoche_status = self.select_by_type("ArmoredTruck")
+            che_status = self.select_by_type("WheeledCmobatTruck")
+            pao_status = self.select_by_type("Howitzer")
+            ganraoche_status = self.select_by_type("JammingTruck") 
+            status_ground = tank_status |  xiaoche_status | che_status |  pao_status | ganraoche_status
+            # 然后算个平均坐标。
+            LLA_average = self.get_LLA_ave(status=status_ground)
+            # 然后算个距离。
+            jvli = self.distance2(attacker_LLA,LLA_average)
+            # 然后检测如果距离超了就转弯，且刷CD
+            if jvli > d_l:
+                flag_far = True
+                self.abstract_state[attacker_ID]["turn_cd"] = turn_cd
+
+            pass
+        else:
+            # 那就是不符合转的条件，CD减1,最小减少到0
+            self.abstract_state[attacker_ID]["turn_cd"] = self.abstract_state[attacker_ID]["turn_cd"]-1
+            if self.abstract_state[attacker_ID]["turn_cd"]<0:
+                self.abstract_state[attacker_ID]["turn_cd"] = 0 
+        
+        return flag_far
+    
     def __status_filter(self, status):
         # 这个用于滤除奇怪的东西.为了保持兼容，稍微改一下
         status_new = self._status_filter(status,model="me")
@@ -2086,6 +2211,8 @@ class BaseAgent(object):
             p_config = [3,3,1,1]
         elif geshu<=15:
             p_config = [3,5,2,1] 
+        else:
+            p_config = [3,7,3,1] 
         
         for j in range(p_config[0]):
             for i in range(p_config[1]):
@@ -2104,7 +2231,7 @@ class BaseAgent(object):
             # 2024:这里得根据装备类型改一下，不再所有都是默认的move_and_attack了。
             if "JammingTruck" in attacker_ID:
                 # 干扰的就用干扰的。
-                self.set_move_and_jammer(attacker_ID, target_LLA, model=2)
+                self.set_move_and_jammer(attacker_ID, target_LLA, model=1)
                 # self.set_move_and_jammer(attacker_ID, target_LLA, model=0)
             else:
                 self.set_move_and_attack(attacker_ID, target_LLA)
@@ -2445,6 +2572,21 @@ class BaseAgent(object):
         # 然后看返回值
         return flag_detected, enemy_direction
     
+    def check_enemy_direction_dummy(self,detected_state2,base_LLA,**kargs):
+        # 这个是调试用的简单版的，用于调试和简化战术。
+        # 后期可以发展成针对性的说法。
+
+        # 先来个最简单版本的“到特定步数就输出”
+        if self.num == 200:
+            flag_detected = True
+            enemy_direction = "right" 
+        else:
+            flag_detected = False
+            enemy_direction = "right"
+        
+        return flag_detected, enemy_direction
+
+
     # 后面是服务于大模型的
     def set_commands(self, command_list:list):
         # print("set_commands: unfinished yet")

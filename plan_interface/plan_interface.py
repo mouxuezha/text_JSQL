@@ -24,6 +24,7 @@ class plan_interface(BaseAgent):
         # 这得琢磨一下咋弄。
 
         self.num = 0 
+        self.unit_type = ["坦克和自行迫榴炮", "装甲车等其他地面力量", "无人机和巡飞弹"]
         pass
 
     def load_plans(self,plan_location_list:list):
@@ -59,6 +60,9 @@ class plan_interface(BaseAgent):
         # 先遍历每一个子任务，选出开始于当前步数的，然后根据子任务和status来生成action
         submissions_this_step = self.check_submission()
 
+        # 需要搞一个默认值，如果已经很多帧没有动静了，就向北进攻一段，或者说向中间进攻一段。
+        submissions_this_step=self.get_defualt_submission()
+
         # 然后开始生成了。
         commands_all = []
         for submission in submissions_this_step:
@@ -93,6 +97,54 @@ class plan_interface(BaseAgent):
                 submissions_this_step.append(selected_submissions[i])
         return submissions_this_step
     
+    def check_last_submission(self, force_arrange:str):
+        # 找出分给特定兵力的上一个子任务，看看隔了多久。
+        selected_plan = self.plan_list[self.index]
+        selected_submissions = selected_plan.submission_list
+        last_submission = None
+        flag_done = False # 这个标志位用来推测，上一个子任务是不是已经完成了。
+        for i in range(len(selected_submissions)):
+            # 检查每一个子任务，看是不是分给当前兵力的。
+            if selected_submissions[i].force_arrange == force_arrange:
+                # 那就看看这个子任务是不是上一个子任务。
+                if selected_submissions[i].time_arrange[0] < self.num:
+                    # 这样替换完了之后应该能找到“不超过当前时间的最后一个子任务”，那就是上一个子任务。
+                    last_submission = selected_submissions[i]
+                    # 这里就是强行认为500帧就够执行完之前的子任务了。
+                    if selected_submissions[i].time_arrange[0] < self.num - 500: 
+                        flag_done = True
+                else:
+                    # 那就是不是上一个子任务。
+                    pass
+
+        # submission_list = selected_plan.submission_list # 这个是返回去给后面用于算默认值用的。
+        submission_list = [] 
+        # 原则上应该返回一个“刚好到前面一个”的list，算力还是别偷懒，好好弄一下可也。
+        for i in range(len(selected_submissions)):
+            if selected_submissions[i].time_arrange[0] < self.num:
+                submission_list.append(selected_submissions[i])
+
+        # TODO:啊其实最理想的是把它们的位置都取出来，然后逐帧记录，来判断是不是已经没有动静了。
+        print("check_last_submission: unfinishd yet")
+
+        return last_submission, flag_done, submission_list
+    
+    def get_defualt_submission(self):
+        # 这个是如果很长时间没有动静了，就生成一个默认的子任务。
+        print("unfinishd yet")
+        submission_list = [] 
+        for unit_type_single in self.unit_type:
+            last_submission, flag_done,submission_list = self.check_last_submission(force_arrange=unit_type_single)
+            if flag_done:
+                # 那就是还没有完成，那就不用管了。
+                pass
+            else:
+                # 那就是已经完成了，那就需要搞一点默认的进来了
+                selected_plan = self.plan_list[self.index]
+                defualt_submission = selected_plan.decide_default_submission(unit_type_single,self.num,submission_list)
+                submission_list.append(defualt_submission)
+        return submission_list
+
     def check_action_list(self,num:int):
         # 从现有的action list里面检索出符合当前步数的，然后输出成一个commands_all。
         # 现在姑且先不管检索效率的事情，现在就突出一个能用就行。

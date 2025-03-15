@@ -456,6 +456,7 @@ class GlobalAgent(BaseAgent):
         else:
             # 还没定出来，那就check一下。
             flag_detected, enemy_direction = self.check_enemy_direction2(self.detected_state2,[100.138,13.644,0])
+            # flag_detected, enemy_direction = self.check_enemy_direction_dummy(self.detected_state2,[100.138,13.644,0])
         
         if (flag_detected == True or (self.num > 400 and not("direction_enemy" in self.red_step_config))) and (not "flag_initialized" in self.red_step_config):
             # 那就是开始行动,存一下全局变量。
@@ -465,30 +466,43 @@ class GlobalAgent(BaseAgent):
             if enemy_direction == "right":
                 # 敌方在右边，那么我方就从左边去。
                 LLA_list = [] 
-                LLA_list.append([100.096, 13.6109, 0])
-                LLA_list.append([100.092, 13.6463, 0])
-                LLA_list.append([100.114, 13.6308, 0]) # 榴弹炮卡射程炸房子的点
-                LLA_list.append([100.12472961, 13.66152304, 0])# 蓝方老家
-                
+                LLA_list.append([100.103, 13.6200, 0])
+                LLA_list.append([100.095, 13.6258, 0])
+                LLA_list.append([100.101, 13.6208, 0]) # 榴弹炮卡射程炸房子的点
+                # LLA_list.append([100.12472961, 13.66152304, 0])# 蓝方老家 
+                LLA_list.append([100.102, 13.6450, 0])# 蓝方老家的替代品，隔着河岸输出。
+                LLA_list.append([100.112, 13.6315, 0]) # 这个是第二个榴弹炮位置。本来应该用dict，但是无所谓了就先这样吧。
+
                 num_list = [] 
                 num_list.append(2)
+                num_list.append(600)
                 num_list.append(800)
-                num_list.append(1200)
-                num_list.append(1800)
+                num_list.append(1000)
             elif enemy_direction == "left":
                 # 敌方在左边，那么我方就从右边去
                 LLA_list = [] 
-                LLA_list.append([100.182, 13.6347, 0])
-                LLA_list.append([100.175, 13.6446, 0])
-                LLA_list.append([100.167, 13.6472, 0]) # 榴弹炮卡射程炸房子的点
+                # LLA_list.append([100.182, 13.6347, 0])
+                # LLA_list.append([100.175, 13.6446, 0])
+
+                LLA_list.append([100.166, 13.6324, 0])
+                LLA_list.append([100.151, 13.6377, 0])
+
+                # LLA_list.append([100.167, 13.6472, 0]) # 榴弹炮卡射程炸房子的点
+                LLA_list.append([100.151, 13.645, 0]) # 榴弹炮卡射程炸房子的点
+                
                 # LLA_list.append([100.162, 13.6529, 0]) # 接近敌方房子的点。
-                # LLA_list.append([100.12472961, 13.66152304, 0])# 蓝方老家
-                LLA_list.append([100.138, 13.6605, 0]) # 最后的目标点，蓝方老家。但是蓝方老家过不去，所以是接近的地方。
+                # LLA_list.append([100.138, 13.6605, 0]) # 最后的目标点，蓝方老家。但是蓝方老家过不去，所以是接近的地方。
+                LLA_list.append([100.141, 13.6507, 0]) # 不要冲那么靠北，过去被乱打。
+                
+                # LLA_list.append([100.152, 13.6499, 0]) # 这个是第二个榴弹炮位置。本来应该用dict，但是无所谓了就先这样吧。
+                LLA_list.append([100.149, 13.6504, 0]) # 这个是第二个榴弹炮位置。本来应该用dict，但是无所谓了就先这样吧。
+
+
 
                 num_list = []                
                 num_list.append(2)
-                num_list.append(800)
-                num_list.append(1200)
+                num_list.append(600)
+                num_list.append(1000)
                 num_list.append(1800)
             self.red_step_config["LLA_list"] = LLA_list
             self.red_step_config["num_list"] = num_list
@@ -527,19 +541,17 @@ class GlobalAgent(BaseAgent):
         if self.num ==1:
             # 巡飞弹分开，一个一个用。
             xunfeidan_status1, xunfeidan_status2 = self.select_by_devide(xunfeidan_status)
-            self.set_UAV_scout(feiji_status,blue_deploy_LLA,R=4500)
-            self.set_UAV_scout(xunfeidan_status1,[100.116, 13.6432, 0],R=2000)
+            self.set_UAV_scout(feiji_status,blue_deploy_LLA,R=3500)
+            self.set_UAV_scout(xunfeidan_status1,[100.116, 13.6322, 0],R=2000)
             self.set_UAV_scout(xunfeidan_status2,[100.153, 13.6499, 0],R=2000)
             # self.set_none(daodan_status) # 这个是导弹先不慌开火
             self.set_open_fire(daodan_status) # 新版的这个里面也自带了导弹不慌开火。
 
         if self.num ==2: 
-            self.group_A2([100.141,13.6084,0], che_status, bin_status) # 步兵也开出去，放在房子旁边。
-            self.group_A([100.149,13.6183,0],status=(tank_status | xiaoche_status | pao_status | ganraoche_status)) # 先过河，不要卡在这边。
-            # self.group_A([100.104,13.6389,0],status=(xiaoche_status))            
-        
-
-        # print("unfinished yet")
+            # self.group_A2([100.141,13.6084,0], che_status, bin_status) # 步兵也开出去，放在房子旁边。
+            self.group_A2([100.138,13.6151,0], che_status, bin_status) # 试着再往前开一些。
+            # self.group_A([100.149,13.6183,0],status=(pao_status | tank_status | xiaoche_status |  ganraoche_status)) # 先过河，不要卡在这边。# 这个是会分开两边走的。
+            self.group_A([100.138,13.6143,0], status=(pao_status | tank_status | xiaoche_status |  ganraoche_status)) # 换一个集结点，这个是有利于往左边进攻的。
 
     def step_red_shishi2_moven(self, status:dict):
         # 读取对应的点列和时间点，恐怕是比较好的。就不用写两个了。
@@ -570,20 +582,28 @@ class GlobalAgent(BaseAgent):
             # 其实被干扰了也没啥，反正只要通信恢复就会自动同步过去的哇。
             self.group_A(LLA_list[1],status=pao_status)
         if num_relative in [num_list[1] + 80]:
-            self.set_open_fire(pao_status)
+            # self.set_open_fire(pao_status) # 前面先别慌open fire
+            pass
 
         if num_relative in [num_list[2],num_list[2]+10,num_list[2]+20]:
             self.group_A2(LLA_list[2], che_status, bin_status)
-            self.group_A(LLA_list[2], status=( tank_status |pao_status | ganraoche_status| xiaoche_status))
+            self.group_A(LLA_list[2], status=( tank_status  | ganraoche_status| xiaoche_status))
+            self.group_A(LLA_list[4], status=pao_status)
+            self.set_UAV_scout(xunfeidan_status,blue_deploy_LLA,R=3000)
 
         if (num_relative in [num_list[3],num_list[3]+10,num_list[3]+20]):
-            self.group_A(LLA_list[3],status=( tank_status | xiaoche_status | che_status | bin_status  | ganraoche_status))
+            # self.group_A(LLA_list[3],status=( tank_status | xiaoche_status | che_status | bin_status  | ganraoche_status))
+            self.group_A(LLA_list[3],status=( tank_status | xiaoche_status | ganraoche_status))
             self.set_open_fire(pao_status)
+
+        # 最后也得加一个冲点的机制。红方是主动的一方，三千步就认为有说法了吧，后面留出足够的时间去冲点。
+        if (num_relative > num_list[-1]) and (self.num > 3000) and (self.num % 444 == 5):
+            # 那就冲点吧。
+            blue_deploy_LLA = [100.12472961, 13.66152304, 0]
+            self.group_A(blue_deploy_LLA, status=status)
 
         num_relative = num_relative + 1
         self.red_step_config["num_relative"] = num_relative
-
-        # print("unfinished yet")
 
     def step_red_shangxiache(self,status:dict):
         self.act= [] 
@@ -819,8 +839,8 @@ class GlobalAgent(BaseAgent):
                 num_list.append(1500) # 开始机动反击的时间点。
             elif enemy_direction == "center":
                 LLA_list = [] 
-                LLA_list.append([100.137, 13.6479, 0])  # 集结防御的点
-                LLA_list.append([100.137, 13.6424, 0])  # 步兵下车前出的点
+                LLA_list.append([100.133, 13.6500, 0])  # 集结防御的点
+                LLA_list.append([100.136, 13.6460, 0])  # 步兵下车前出的点
                 num_list = [] 
                 num_list.append(2)
                 num_list.append(600)
@@ -922,11 +942,14 @@ class GlobalAgent(BaseAgent):
 
         if num_relative == num_list[0]:
             # 把坦克啊步兵啊什么的A到相关方向的房子后面。
-            self.group_A(LLA_list[0], status=(tank_status))
+            
+            LLA_list_hou = [LLA_list[0][0]-0.001, LLA_list[0][1] + 0.005, LLA_list[0][2]] # 装甲车和坦克那些不要放在一起。
+            
+            self.group_A(LLA_list_hou, status=(tank_status))
             self.group_A2(LLA_list[0], che_status, bin1_status)
             self.set_partrol_and_monitor(ganraoche_status, LLA_list[0])
             # 把无人机和巡飞弹叫回来，在周围绕一下。
-            self.set_UAV_scout(feiji_status, LLA_list[0],R=3000)
+            self.set_UAV_scout(feiji_status, LLA_list[0], R=3000)
             self.set_UAV_scout(xunfeidan_status, LLA_list[0], R=2000)
 
         if num_relative == num_list[1]:
@@ -934,7 +957,7 @@ class GlobalAgent(BaseAgent):
             # 这个能形成一个相对好一些的阵形。
             self.group_A(LLA_list[1],status = (bin1_status | che_status))
 
-        if num_relative >= num_list[2]:
+        if (num_relative >= num_list[2]) and (num_relative < num_list[2] + 1500 ):
             # 这里面就是“分点儿移动兵力出去进行反击”的说法了。1025：这逻辑有点问题，是A上去还是收缩防御效果更好，是一个需要聊一下的事情。
             tank_status1, tank_status2 = self.select_by_devide(tank_status)
             # 小车在步兵就位之后就完全可以派出去操作了
@@ -942,9 +965,20 @@ class GlobalAgent(BaseAgent):
 
             # 找到目标。
             n_fangxiang, LLA_ave = self.check_enemy_direction(self.detected_state2, blue_deploy_LLA )
-            self.group_A(LLA_ave,status=jidong_status,vector_LLA=n_fangxiang)
-            # self.group_A(LLA_ave,status=jidong_status)
-            
+            # 加一个判断，对面足够靠北边，才触发机动反击，否则不慌。
+            if LLA_ave[1]>13.644:
+                # 这就意味着足够靠北边了，那就要触发反击了。             
+                self.group_A(LLA_ave,status=jidong_status,vector_LLA=n_fangxiang)
+                # self.group_A(LLA_ave,status=jidong_status)
+            else:
+                # 如果没事儿，那就无事发生。
+                pass 
+        
+        # 最后再来一个“完事儿了都往点里回去”的说法
+        if (num_relative >= num_list[2] + 1500) and (self.num>4000):
+            # 判定是来到大后期了
+            self.group_A(blue_deploy_LLA,status=(tank_status | che_status | ganraoche_status | bin1_status))
+
         self.blue_step_config["num_relative"] = num_relative+1 
 
         pass
@@ -995,14 +1029,12 @@ class GlobalAgent(BaseAgent):
         return self.act 
 
     def step_LLM(self,status:dict):
-        # 用于配合大模型的。说白了就是啥也不干，只走一波抽象状态。
-        
+        # 用于配合大模型的。说白了就是啥也不干，只走一波抽象状态。      
         # 为了配合演示，这里强行加一个开干扰的
         ganraoche_status = self.select_by_type("JammingTruck")
         jamming_LLA = [100.167, 13.6472, 0]
         if (self.num > 5) :
             self.set_move_and_jammer(ganraoche_status,jamming_LLA,-1) # 直接开干扰
 
-        
         self.Gostep_abstract_state()
         return self.act         

@@ -37,6 +37,13 @@ class command_processor(QtCore.QThread):
         self.log_file = r'overall_result.txt'
         self.dialog_box = dialog_box
 
+        if "flag_auto_CraftGame" in kargs:
+            self.flag_auto_CraftGame = kargs["flag_auto_CraftGame"]
+        else:
+            self.flag_auto_CraftGame = False
+        
+        if self.flag_auto_CraftGame:
+            self.turn_on_CraftGame()
 
 
         if role == "offline":
@@ -837,7 +844,50 @@ class command_processor(QtCore.QThread):
             print(response_str)
             if self.flag_finished == True:
                 break # 那边要是跑完了，这边就直接退了
+    
+    def turn_on_CraftGame(self,**kargs):
+        # 这个是直接启动推演平台。每次手开开始比较傻逼的。
+        # cmd_order1 = r"D: & cd D:/ruanjian_M/2024LDJS_1219/2025LDJS_0224_LLM/exe/exe & CraftGameV1.exe"
+        self.exe_thread_list = [] 
+        if "cmd_order" in kargs:
+            cmd_order1 = kargs["cmd_order"]
+        else:
+            cmd_order1 = r"D: & cd D:/ruanjian_M/2024LDJS_1219/2025LDJS_0224_LLM/exe/exe & CraftGameV1.exe"
 
+        if "thread_num" in kargs:
+            self.thread_num = kargs["thread_num"]
+        else:
+            self.thread_num = 1 # 这个是线程数量，默认是1
+
+        for i in range(self.thread_num):
+            # 先初始化一堆线程，然后在里面给它润起来，然后再说别的。
+            thread_single = threading.Thread(target=self.turn_on_CraftGame_single,args=(cmd_order1,))
+            self.exe_thread_list.append(thread_single)
+        # 然后全部启动一遍然后就摆了
+        for i in range(self.thread_num):
+            thread_single = self.exe_thread_list[i]
+            thread_single.start()    
+
+        # 来点儿延时，不然开不起来万一
+        time.sleep(1.14*5.14)
+
+
+        print("这会儿应该启动了一堆平台了")
+        pass
+    
+    def turn_on_CraftGame_single(self,order:str):
+        # 这个是用来开多线程的，防止给我主线程阻塞了。
+        cmd_order1 = order
+        os.system(cmd_order1) # 还是这个靠谱，subprocess.Popen会报权限问题                
+    
+    def exit_all_exe(self):
+        # 按说这个应该写在析构函数里面，别在外面调用才是比较好的。但是开着多线程好像析构不了，算了不管了。
+        # for i in range(self.thread_num):
+        #     thread_single = self.exe_thread_list[i]
+        cmd_kill = "taskkill /IM CraftGameV1.exe -F"
+        os.system(cmd_kill) # 还是这个靠谱，subprocess.Popen会报权限问题        
+        print("这会儿平台应该关完了")  
+        return True
 if __name__ == "__main__":
     # # 这个是总的测试的了
     flag = 6
@@ -875,14 +925,22 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/temp/jieguo0.pkl")
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/temp/jieguo1.pkl")
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/temp/jieguo2.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo0.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 
         shishi_interface.set_plan(0) # 设定一下准备用哪个。       
 
-        # 这个是单跑这个不跑dialog box，拟似人混，启动！ # 20241012里面还加持了大模型解说。
-        shishi = command_processor(shishi_debug)
+        # 这个是单跑这个不跑dialog box，拟似人混，启动！
+        shishi = command_processor(shishi_debug,flag_auto_CraftGame=True)
         shishi.main_loop(role ="model3", plan_interface = shishi_interface)
+    elif flag == 7:
+        # 测试直接在python里起动平台，就不用每次手点了。
+        shishi = command_processor(shishi_debug,flag_auto_CraftGame=True)
+        # shishi.turn_on_CraftGame()
+        print("测试直接在python里起动平台，就不用每次手点了。")
+        time.sleep(1.14*5.14)
+        shishi.exit_all_exe()
+
     else:
         print("undefined running model yet. ")
