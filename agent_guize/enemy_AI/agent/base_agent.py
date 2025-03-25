@@ -910,7 +910,8 @@ class BaseAgent(object):
             # 来个平滑化机制，来让它分散在不同的范围内
             mod_num = random.randint(1,20)
 
-            if (self.num % 300 == mod_num) and (self.abstract_state[attacker_ID]["flag_moving"] == False) :
+            # if (self.num % 300 == mod_num) and (self.abstract_state[attacker_ID]["flag_moving"] == False) :
+            if self.abstract_state[attacker_ID]["flag_moving"] == False :
                 # 那就是没动起来，那就得让它动起来。
                 rand_dl_1 = random.randint(-5,5) * 0.0001
                 rand_dl_2 = random.randint(-5,5) * 0.0001

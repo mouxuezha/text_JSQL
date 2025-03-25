@@ -926,8 +926,8 @@ if __name__ == "__main__":
         shishi_interface = plan_interface()
         plan_location_list = [] 
         plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo0.pkl")
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
+        # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
+        # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 
         shishi_interface.set_plan(0) # 设定一下准备用哪个。       
 

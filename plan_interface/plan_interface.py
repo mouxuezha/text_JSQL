@@ -61,7 +61,8 @@ class plan_interface(BaseAgent):
         submissions_this_step = self.check_submission()
 
         # 需要搞一个默认值，如果已经很多帧没有动静了，就向北进攻一段，或者说向中间进攻一段。
-        submissions_this_step=self.get_defualt_submission()
+        if len(submissions_this_step) == 0:
+            submissions_this_step=self.get_defualt_submission() # 别直接写，不然就清空了，直接就没了。
 
         # 然后开始生成了。
         commands_all = []
@@ -134,14 +135,18 @@ class plan_interface(BaseAgent):
         print("unfinishd yet")
         submission_list = [] 
         for unit_type_single in self.unit_type:
-            last_submission, flag_done,submission_list = self.check_last_submission(force_arrange=unit_type_single)
-            if flag_done:
+            last_submission, flag_done,submission_list_last = self.check_last_submission(force_arrange=unit_type_single)
+            if flag_done==False:
                 # 那就是还没有完成，那就不用管了。
                 pass
             else:
                 # 那就是已经完成了，那就需要搞一点默认的进来了
                 selected_plan = self.plan_list[self.index]
-                defualt_submission = selected_plan.decide_default_submission(unit_type_single,self.num,submission_list)
+                defualt_submission = selected_plan.decide_default_submission(unit_type_single,self.num,submission_list_last)
+                # 这里还得手动改一下time arrange，不然不对
+                defualt_submission.time_arrange[0] = self.num
+                defualt_submission.time_arrange[1] = self.num + 500
+                
                 submission_list.append(defualt_submission)
         return submission_list
 
@@ -163,44 +168,47 @@ class plan_interface(BaseAgent):
         unit_selected = self.type_filter(submission.force_arrange,status)
         
         LLA_ave = self.get_LLA_ave(status=unit_selected)
+
+        flag_time_check=self.time_check(submission)
         
         commands = []
         index_local = 0 
-        for unit_id in unit_selected:
-            index_local = index_local + 1 
-            obj_id = unit_id
-            LLA_target = copy.deepcopy(LLA_ave)
+        if flag_time_check:
+            for unit_id in unit_selected:
+                index_local = index_local + 1 
+                obj_id = unit_id
+                LLA_target = copy.deepcopy(LLA_ave)
 
-            # 然后定制一系列的目标点。原则上这一步应该是之前就做好的，但是这里做一下也罢。
-            direction = submission.config_json["出击方向"]
-            if direction == "偏东":
-                # 那就根据平均值往东边去一些。一样的，搞点随机数显得比较阳间
-                LLA_target[0] = LLA_target[0] + 0.02 + random.randint(0,10) * 0.0005
-                LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001
-                pass
-            elif direction == "偏西":
-                # 那就根据平均值往西边去一些。
-                LLA_target[0] = LLA_target[0] - 0.02 - random.randint(0,10) * 0.0005
-                LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001            
-                pass
-            elif direction == "中间":
-                # 那就根据平均值往中间多去一些。
-                LLA_target[0] = LLA_target[0] - 0.00005 + random.randint(0,10) * 0.0001  
-                LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001     
-                pass
+                # 然后定制一系列的目标点。原则上这一步应该是之前就做好的，但是这里做一下也罢。
+                direction = submission.config_json["出击方向"]
+                if direction == "偏东":
+                    # 那就根据平均值往东边去一些。一样的，搞点随机数显得比较阳间
+                    LLA_target[0] = LLA_target[0] + 0.02 + random.randint(0,10) * 0.0005
+                    LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001
+                    pass
+                elif direction == "偏西":
+                    # 那就根据平均值往西边去一些。
+                    LLA_target[0] = LLA_target[0] - 0.02 - random.randint(0,10) * 0.0005
+                    LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001            
+                    pass
+                elif direction == "中间":
+                    # 那就根据平均值往中间多去一些。
+                    LLA_target[0] = LLA_target[0] - 0.00005 + random.randint(0,10) * 0.0001  
+                    LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001     
+                    pass
 
-            if submission.type_str == "陆地进攻":
-                command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0], "y": LLA_target[1]}
-            elif submission.type_str == "空中侦察":
-                # 加一些check
-                LLA_target[1] = LLA_target[1] + 0.005
-                if LLA_target[1]>13.65:
-                    LLA_target[1] = 13.65
-                command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0] + 0.06*(-2+index_local), "y": LLA_target[1]}
-            else:
-                raise Exception("invalid submission type in generate_actions, G. ")
+                if submission.type_str == "陆地进攻":
+                    command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0], "y": LLA_target[1]}
+                elif submission.type_str == "空中侦察":
+                    # 加一些check
+                    LLA_target[1] = LLA_target[1] + 0.005
+                    if LLA_target[1]>13.65:
+                        LLA_target[1] = 13.65
+                    command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0] + 0.01*(-2+index_local), "y": LLA_target[1]}
+                else:
+                    raise Exception("invalid submission type in generate_actions, G. ")
 
-            commands.append(command_single)
+                commands.append(command_single)
         return commands
             
     
@@ -228,6 +236,23 @@ class plan_interface(BaseAgent):
 
         return unit_selected
     
+    def time_check(self,submission):
+        # 检查这个是不是执行过了，执行过了的就别重复了，现在是有很多重复的在里面。
+        time_arrange = submission.time_arrange
+        flag_time_check = False
+        if self.num == time_arrange[0]:
+            flag_time_check= True # 为true是通过check，往下执行。
+        else:
+            if (self.num < time_arrange[0]+10) and (self.num > time_arrange[0]):
+                flag_time_check= True # 留个活口,多发几下以防万一。
+            else:
+                # 那就是时间还没到，那就等一等
+                flag_time_check= False
+        return flag_time_check
+   
+    # def get_time_from_status(self,status):
+    #     # 同步一个时间，不然全烂了，全都不对了。
+    #     self.num = status["num"]
 if __name__ == "__main__":
     shishi_interface = plan_interface()
     plan_location_list = [] 
