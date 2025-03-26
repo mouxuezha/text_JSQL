@@ -364,6 +364,20 @@ class BaseAgent(object):
                 status_new[attacker_ID] = status[attacker_ID]
         return status_new
     
+    def _detect_filter(self, detectinfo,model="ground"):
+        # 这个用于滤除奇怪的东西。主要是滤除无人机和巡飞弹.
+        detectinfo_new = {}
+        for attacker_ID in detectinfo:
+            # 初步过滤一下，弹药什么的不吃相关指令了
+            flag = ("bmc" in attacker_ID) or ("satallite" in attacker_ID) or ("DespoilControlPos" in attacker_ID)  or ("Shot" in attacker_ID) or ("buildings" in attacker_ID)
+            if model == "ground":
+                flag = flag or ("ShipboardCombat_plane" in attacker_ID) or ("CruiseMissile" in attacker_ID)
+            # or ("missile_truck" in attacker_ID)
+            if not flag:
+                detectinfo_new[attacker_ID] = detectinfo[attacker_ID]   
+        return detectinfo_new
+
+    
     def get_detect_info(self, status):
         # LJD不会探测
         filtered_status = self._status_filter(self.status, model="me")
@@ -900,6 +914,22 @@ class BaseAgent(object):
             flag_done = self.__handle_one_shot_attack(attacker_ID)
         else:
             print("XXHtest: attack disabled in __handle_move_and_attack")
+        
+        # 新增加一个逻辑：如果是炮，在周围范围内有敌方的话就先不move，先站那儿打炮。
+        if "Howitzer" in attacker_ID:
+            filtered_detected_state = self._detect_filter(self.detected_state)
+            target_ID_local, target_LLA_local, target_distance_local \
+                    = self.range_estimate2(attacker_ID, filtered_detected_state)
+            if target_distance_local < 2500:
+                # 那就站好准备打炮。
+                print("__handle_move_and_attack2: Howitzer stay and attack, target=" + target_ID_local )
+                # 这个得是原地停下才对。
+                self._Change_State(attacker_ID, "stay")
+                return
+            else:
+                # 那就该走走，无事发生相当于。
+                pass
+
 
         # 然后该打的打完了，就继续move呗
         attacker_LLA = self.__get_LLA(attacker_ID)

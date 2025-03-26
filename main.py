@@ -767,15 +767,18 @@ class command_processor(QtCore.QThread):
             if self.timestep > self.max_episode_len:
                 # 获取当前分数
                 cur_result = json.loads(self.env.GetCurrentResult())
-                blueScore_str = "blueScore: " + str(cur_result["blueScore"])
-                redScore_str = "redScore: " + str(cur_result["redScore"])
-                print(redScore_str)
-                print(blueScore_str)
-                tips = '\n get result: timestep =' + str(self.timestep) + '\n'
-                # auto_save(log_file, tips, cur_result)
-                auto_save(self.log_file, tips, redScore_str, blueScore_str)
-                # result = env.Terminal()
-                auto_save_overall(blueScore_str + '\n' + redScore_str, log_file=self.log_file)
+                try:
+                    blueScore_str = "blueScore: " + str(cur_result["blueScore"])
+                    redScore_str = "redScore: " + str(cur_result["redScore"])
+                    print(redScore_str)
+                    print(blueScore_str)
+                    tips = '\n get result: timestep =' + str(self.timestep) + '\n'
+                    # auto_save(log_file, tips, cur_result)
+                    auto_save(self.log_file, tips, redScore_str, blueScore_str)
+                    # result = env.Terminal()
+                    auto_save_overall(blueScore_str + '\n' + redScore_str, log_file=self.log_file)
+                except:
+                    print("G!,返回值里面并不包含分数，该不会还要自己从态势去算吧，下次一定。")
                 self.flag_finished = True # 这个是用来给其他线程看的。
                 break        
         

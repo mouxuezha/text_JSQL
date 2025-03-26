@@ -713,6 +713,9 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
                     # 执行
                     comand_single = self.commands_queue.get()
                     self.set_commands_single(comand_single)
+                elif comand_single["step_num"] <= self.num-100:
+                    # 这个指令已经延迟太多了，直接删了
+                    self.commands_queue.get()
 
         pass
 

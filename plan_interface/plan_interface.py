@@ -6,6 +6,7 @@ import dill
 
 from agent_guize.enemy_AI.agent.base_agent import BaseAgent
 import random,copy 
+import numpy as np
 
 class plan_interface(BaseAgent):
     def __init__(self):
@@ -168,6 +169,21 @@ class plan_interface(BaseAgent):
         unit_selected = self.type_filter(submission.force_arrange,status)
         
         LLA_ave = self.get_LLA_ave(status=unit_selected)
+        blue_deploy_LLA = np.array([100.12472961, 13.66152304, 0])
+
+        # 做一个机制，让各路装备能往目标点靠过去。
+        # 2000秒已经早就完事了,得早一点开始这么干。
+        num_start = 1500
+        num_end = 3000
+        if self.num<num_start:
+            pass 
+        elif self.num > num_start and self.num < num_end:
+            # 这期间插值，让任务目标逐渐向着点去靠。
+            bili = (self.num-num_start)/(num_end-num_start)
+            LLA_ave = (1-bili)*LLA_ave + bili*blue_deploy_LLA
+        elif self.num > num_end:
+            LLA_ave = blue_deploy_LLA
+
 
         flag_time_check=self.time_check(submission)
         
@@ -201,10 +217,10 @@ class plan_interface(BaseAgent):
                     command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0], "y": LLA_target[1]}
                 elif submission.type_str == "空中侦察":
                     # 加一些check
-                    LLA_target[1] = LLA_target[1] + 0.005
+                    LLA_target[1] = LLA_target[1] - 0.005
                     if LLA_target[1]>13.65:
                         LLA_target[1] = 13.65
-                    command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0] + 0.01*(-2+index_local), "y": LLA_target[1]}
+                    command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0] + 0.01*(2-index_local), "y": LLA_target[1]}
                 else:
                     raise Exception("invalid submission type in generate_actions, G. ")
 
