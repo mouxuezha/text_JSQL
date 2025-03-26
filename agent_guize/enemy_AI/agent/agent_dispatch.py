@@ -174,7 +174,8 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         try:
             unit_single = status[unit_id]
         except:
-            raise Exception("check_connect: stauts and unit_id seems not match, G!")
+            print("check_connect: stauts and unit_id seems not match, G!")
+            # raise Exception("check_connect: stauts and unit_id seems not match, G!")
         # flag_jam = unit_single["isElectronicOn"] # 不是这个关键词，但是想要的关键词找不到，回头得问问阳哥。
         try:
             flag_jam=unit_single["DetectorState"][0]["be_disturbed"]

@@ -928,14 +928,14 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo0.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/新的/jieguo0.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 
         shishi_interface.set_plan(0) # 设定一下准备用哪个。       
 
         # 这个是单跑这个不跑dialog box，拟似人混，启动！
-        shishi = command_processor(shishi_debug,flag_auto_CraftGame=True)
+        shishi = command_processor(shishi_debug,flag_auto_CraftGame=False)
         shishi.main_loop(role ="model3", plan_interface = shishi_interface)
     elif flag == 7:
         # 测试直接在python里起动平台，就不用每次手点了。

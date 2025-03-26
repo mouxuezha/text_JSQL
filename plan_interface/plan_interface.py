@@ -214,13 +214,18 @@ class plan_interface(BaseAgent):
                     pass
 
                 if submission.type_str == "陆地进攻":
+                    if LLA_target[1]>13.67:
+                        LLA_target[1] = 13.67                    
                     command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0], "y": LLA_target[1]}
                 elif submission.type_str == "空中侦察":
                     # 加一些check
-                    LLA_target[1] = LLA_target[1] - 0.005
-                    if LLA_target[1]>13.65:
-                        LLA_target[1] = 13.65
-                    command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0] + 0.01*(2-index_local), "y": LLA_target[1]}
+                    LLA_target[1] = LLA_target[1] + 0.001
+                    if LLA_target[1]>13.67:
+                        LLA_target[1] = 13.67
+                    LLA_target0_temp = LLA_target[0] + 0.01*(2-index_local)
+                    if LLA_target0_temp>100.175:
+                        LLA_target0_temp = 100.175
+                    command_single = {"type": "move", "obj_id": obj_id, "x":LLA_target0_temp , "y": LLA_target[1]}
                 else:
                     raise Exception("invalid submission type in generate_actions, G. ")
 

@@ -941,7 +941,7 @@ class BaseAgent(object):
             mod_num = random.randint(1,20)
 
             # if (self.num % 300 == mod_num) and (self.abstract_state[attacker_ID]["flag_moving"] == False) :
-            if self.abstract_state[attacker_ID]["flag_moving"] == False :
+            if (self.abstract_state[attacker_ID]["flag_moving"] == False) and (self.num %5==1):
                 # 那就是没动起来，那就得让它动起来。
                 rand_dl_1 = random.randint(-5,5) * 0.0001
                 rand_dl_2 = random.randint(-5,5) * 0.0001
@@ -1001,7 +1001,8 @@ class BaseAgent(object):
                                                                  , attacker_ID, weapon_selected)
                         # 然后到这里终于可以发出攻击指令了。
                         # 有些武器直瞄好，有些武器间瞄好。# 有些武器只允许直瞄
-                        flag_done = self.check_zhimiao(attacker_ID, target_ID_local, weapon_selected)
+                        # flag_done = self.check_zhimiao(attacker_ID, target_ID_local, weapon_selected)
+                        flag_done = True # 直瞄那个关了干脆，不然抽象了。
                         # 巡飞弹的话还得check一下目标是不是在敌方干扰的覆盖范围内。
                         flag_ganrao = self.check_CruiseMissile_ganrao(attacker_ID, target_ID_local)
                         flag_done = flag_done and flag_ganrao
@@ -1902,7 +1903,7 @@ class BaseAgent(object):
                         prior_list = ["Howitzer", "MainBattleTank", "ArmoredTruck"]
             elif "ShipboardCombat_plane0" in type:
                 # 红方反而可以有啥打啥，不用特别去针对。
-                if self.num % 20 == 0:  # 这个没有CD，手动给它加个CD
+                if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
                     if self.num < 480:
                         prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
                         # pass
@@ -1910,7 +1911,7 @@ class BaseAgent(object):
                         prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
             else:
                 # 容错的，以防万一。
-                if self.num % 20 == 0:  # 这个没有CD，手动给它加个CD
+                if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
                     prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
 
 
