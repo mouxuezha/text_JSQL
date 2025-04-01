@@ -174,7 +174,7 @@ class plan_interface(BaseAgent):
         # 做一个机制，让各路装备能往目标点靠过去。
         # 2000秒已经早就完事了,得早一点开始这么干。
         num_start = 1500
-        num_end = 3000
+        num_end = 2500
         if self.num<num_start:
             pass 
         elif self.num > num_start and self.num < num_end:
@@ -215,7 +215,9 @@ class plan_interface(BaseAgent):
 
                 if submission.type_str == "陆地进攻":
                     if LLA_target[1]>13.67:
-                        LLA_target[1] = 13.67                    
+                        LLA_target[1] = 13.67        
+                    if self.num>3500:
+                        LLA_target=copy.deepcopy(blue_deploy_LLA)          
                     command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0], "y": LLA_target[1]}
                 elif submission.type_str == "空中侦察":
                     # 加一些check

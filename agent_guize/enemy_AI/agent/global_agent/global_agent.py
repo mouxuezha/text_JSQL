@@ -1033,8 +1033,13 @@ class GlobalAgent(BaseAgent):
         # 为了配合演示，这里强行加一个开干扰的
         ganraoche_status = self.select_by_type("JammingTruck")
         jamming_LLA = [100.167, 13.6472, 0]
+        blue_deploy_LLA = [100.12472961, 13.66152304, 0]
+        # self.act = [] # 没必要在这里写，因为Gostep_abstract_state里面有了。
         if (self.num > 5) :
             self.set_move_and_jammer(ganraoche_status,jamming_LLA,-1) # 直接开干扰
+        if self.num > 3000:
+            # 完事儿了就直接开到点里去。# 原则上方案那层起效的话是不需要这层的。
+            self.group_A(blue_deploy_LLA,status=status)
 
         self.Gostep_abstract_state()
         return self.act         

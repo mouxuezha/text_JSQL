@@ -702,6 +702,9 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         # 2024，还得检测一下是不是通联的。有点重复计算也不管了，就这样了。
         status_global, status_local_list, unit_ids_global, unit_ids_local = self.status_filter(self.status)
 
+        # 怀疑平台有问题，在奇怪的敌方吃了干扰了。所以先别区分了，先写回去。
+        unit_ids_global = unit_ids_global + unit_ids_local
+
         for i in range(114514): # 原则上这里应该是个while，但是保险起见防止死循环。
             if len(self.commands_queue.queue)==0:
                 return # 没有什么命令，直接溜了溜了。

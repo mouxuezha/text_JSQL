@@ -356,7 +356,9 @@ class BaseAgent(object):
         status_new = {}
         for attacker_ID in status:
             # 初步过滤一下，弹药什么的不吃相关指令了
-            flag = ("bmc" in attacker_ID) or ("satallite" in attacker_ID) or ("DespoilControlPos" in attacker_ID)  or ("Shot" in attacker_ID) or ("buildings" in attacker_ID)
+            flag = ("bmc" in attacker_ID) or ("satallite" in attacker_ID) or ("DespoilControlPos" in attacker_ID)  or ("Shot" in attacker_ID) or ("buildings" in attacker_ID) 
+            if model == "F2A":
+                flag = flag or ("missile_truck" in attacker_ID) 
             if model == "enemy":
                 flag = flag or ("ShipboardCombat_plane" in attacker_ID) or ("CruiseMissile" in attacker_ID)
             # or ("missile_truck" in attacker_ID)
@@ -645,8 +647,11 @@ class BaseAgent(object):
             if self.abstract_state[attacker_ID]["abstract_state"] == "charge_and_xiache":
                 return
             elif self.abstract_state[attacker_ID]["abstract_state"] == "move_and_attack":
-                if self.abstract_state[attacker_ID]["next"]["abstract_state"]=="charge_and_xiache":
-                    return # 这个也得加，不然状态反复横跳造成上车了但是不走。
+                if "next" in self.abstract_state[attacker_ID]:
+                    if self.abstract_state[attacker_ID]["next"]["abstract_state"] == "charge_and_xiache":
+                        return # 这个也得加，不然状态反复横跳造成上车了但是不走。
+                # if self.abstract_state[attacker_ID]["next"]["abstract_state"]=="charge_and_xiache":
+                #     return # 这个也得加，不然状态反复横跳造成上车了但是不走。
         
         if (type(attacker_ID) == dict) or (type(attacker_ID) == list):
             # 说明是直接把status输入进来了。那就得循环。
@@ -2182,9 +2187,9 @@ class BaseAgent(object):
         
         return flag_far
     
-    def __status_filter(self, status):
+    def __status_filter(self, status,model="me"):
         # 这个用于滤除奇怪的东西.为了保持兼容，稍微改一下
-        status_new = self._status_filter(status,model="me")
+        status_new = self._status_filter(status,model=model)
         return status_new
 
     # xxh 1009 ,这里往后的部分,要是需要的话弄到其他的层次里面去,需要稍加注意.原则上后面都只操作status及其子集
@@ -2206,7 +2211,7 @@ class BaseAgent(object):
             status = kargs["status"]  # 这个是用来取一个装备的子集,试试行不行
         else:
             status = self.status
-        status = self.__status_filter(status)
+        status = self.__status_filter(status,model="F2A")
 
         # 先求出一个方向
         # 整个自己的平均位置,后面这部分等子航他们聚类要是整好了就换个高级的
