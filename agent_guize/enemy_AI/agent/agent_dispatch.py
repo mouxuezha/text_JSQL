@@ -753,8 +753,11 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
                     else:
                         # 说明对应的不是这个车，那就无事发生。
                         pass 
+            elif ("ShipboardCombat_plane" in obj_id) or ("CruiseMissile" in obj_id):
+                # 飞的东西单独设定一个盘旋的，直接用move显得差点意思了
+                self.global_agent.set_UAV_scout(obj_id,target_LLA,R=3000)
             else:
-                # 除了车和步兵以外的情况，那就走呗，move。            
+                # 除了车和步兵以外的情况，以及除了飞行的东西之类的情况，那就走呗，move。            
                 self.global_agent.set_move_and_attack(obj_id, target_LLA)             
         elif comand_single["type"] == "stop":
             self.global_agent.set_open_fire(comand_single["obj_id"])
