@@ -76,5 +76,6 @@ class auto_run_comunicator():
         pass
 
 if __name__ == "__main__":
+    # 这个是用于配合演示的，另一个是用于配合开发的。
     shishi = auto_run_comunicator()
     shishi.run_mul()

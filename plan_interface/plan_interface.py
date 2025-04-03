@@ -143,12 +143,15 @@ class plan_interface(BaseAgent):
             else:
                 # 那就是已经完成了，那就需要搞一点默认的进来了
                 selected_plan = self.plan_list[self.index]
-                defualt_submission = selected_plan.decide_default_submission(unit_type_single,self.num,submission_list_last)
-                # 这里还得手动改一下time arrange，不然不对
-                defualt_submission.time_arrange[0] = self.num
-                defualt_submission.time_arrange[1] = self.num + 500
-                
-                submission_list.append(defualt_submission)
+                try:
+                    defualt_submission = selected_plan.decide_default_submission(unit_type_single,self.num,submission_list_last)
+                    # 这里还得手动改一下time arrange，不然不对
+                    defualt_submission.time_arrange[0] = self.num
+                    defualt_submission.time_arrange[1] = self.num + 500
+                    
+                    submission_list.append(defualt_submission)
+                except:
+                    pass
         return submission_list
 
     def check_action_list(self,num:int):
