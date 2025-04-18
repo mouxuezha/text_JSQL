@@ -27,7 +27,11 @@ CHAT_MODELS = {
     'qwen': ChatTongyi,
     'baichuan': ChatBaichuan,
     'ollama': ChatOpenAI,
-    'deepseek': ChatOpenAI
+    'deepseek': ChatOpenAI,
+    'deepseek2': ChatOpenAI,
+    'qianwen': ChatOpenAI,
+    'qianwen2': ChatOpenAI,
+    'local': ChatOpenAI
 }
 
 MODEL_KWARGS = {
@@ -36,7 +40,7 @@ MODEL_KWARGS = {
         'temperature': 0.1
     },
     'qianfan': {
-        'model': 'ERNIE-3.5-8K', # 'ERNIE-Bot-turbo', # Qianfan-Chinese-Llama-2-7B
+        'model': 'ERNIE-3.5-128K', # 'ERNIE-Bot-turbo', # Qianfan-Chinese-Llama-2-7B，'ERNIE-3.5-8K'
         'temperature': 0.1
     },
     'moon': {
@@ -60,9 +64,33 @@ MODEL_KWARGS = {
     },    
     "deepseek": {
         'model': 'deepseek-chat',
+        # 'model': 'deepseek-reasoner',
         'base_url': 'https://api.deepseek.com',
         'api_key': os.getenv('DEEPSEEK_API_KEY')      
-    }
+    },
+    "deepseek2": {
+        # 'model': 'deepseek-ai/DeepSeek-V3',
+        # 'model': 'Pro/deepseek-ai/DeepSeek-R1',
+        'model': 'deepseek-ai/DeepSeek-R1',
+        'base_url': 'https://api.siliconflow.cn/v1',
+        'api_key': os.getenv('SILLICON_API_KEY')      
+    },
+    "qianwen": {
+        'model': 'qwq-32b',
+        'base_url': 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+        'api_key': os.getenv('QIANWEN_API_KEY'),
+        'stream': True      
+    },
+    "qianwen2": {
+        'model': 'Qwen/QwQ-32B',
+        'base_url': 'https://api.siliconflow.cn/v1',
+        'api_key': os.getenv('SILLICON_API_KEY')  
+    },  
+    "local": {
+        'model': "deepseek-r1:7b",
+        'base_url': "http://localhost:11434/v1",
+        'api_key': 'ollama'
+    }  
 }
 
 class TokenHandler(BaseCallbackHandler):
