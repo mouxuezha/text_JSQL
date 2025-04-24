@@ -89,10 +89,68 @@ class Env():
         result = self._send(command)
         return result
 
+# class Env_server():
+#     def __init__(self,IP, port) -> None:
+#         self.set_IP_and_port(IP, port)
+#         self.received_str = "None"
+#         pass
+#     def set_IP_and_port(self,IP,port):
+#         # 这个还是跑不了的，设定一下自己到底是什么IP什么端口号。
+#         # TODO：讲道理后期应该整成扫描的，把局域网里面的所有端口号都扫一遍那种。
+#         self.IP = IP
+#         self.port = port
+#         self.flag_local_host = False
+#         pass 
+
+#     def init_socket(self):
+#         # 初始化socket。这个放在init里面就会一直卡着，感觉不是太理想。
+#         self.real_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        
+#         # 服务端
+#         self.real_socket.bind((self.IP, self.port))
+#         self.real_socket.listen(1)   
+            
+#         print("等待连接...")
+#         # 这里是阻塞的，比较抽象
+#         self.client_socket, self.client_address = self.real_socket.accept()
+#         print("连接地址:", self.client_address)
+        
+#         print("socket init ready")    
+
+#     def send_str(self,status_str:str):
+#         # 这个就是发字符串的。现阶段怎么快怎么来，什么延迟啊那些一概先不管。
+#         # print('连接地址：', self.client_socket)
+
+#         self.client_socket.send(status_str.encode('utf-8'))
+#         pass 
+    
+#     def receive_str(self):
+#         # 这个是用来接收字符串的。任何时候调这个，总能读取出东西来。至于说是不是新的，得从标志位来看。
+#         # 按照目前这个写法，标志位只保持一帧。
+#         new_received_str = self.client_socket.recv(4096).decode('utf-8')
+#         # print("new_received_str in receive_str:"+new_received_str)
+#         # 经过测试，这个就是堵塞的，不发一次收一次这个线程就不会接着往下走。
+        
+#         # 判断一下是不是收重了，都是好事儿
+#         if new_received_str != self.received_str:
+#             self.received_str = new_received_str
+#             # print(self.received_str)
+#             self.flag_new = True
+#         else:
+#             self.flag_new = False
+
+#         return self.received_str
+    
+#     def reset_str(self):
+#         # 主要是清一清标志位和收到的字符串啥的。
+#         self.flag_new = False
+#         # self.received_str =""# 这个不能清了，不然比较就失效了。
+
 class Env_server():
-    def __init__(self,IP, port) -> None:
+    def __init__(self,IP, port, seat = "commandor") -> None:
         self.set_IP_and_port(IP, port)
         self.received_str = "None"
+        self.seat = seat
         pass
     def set_IP_and_port(self,IP,port):
         # 这个还是跑不了的，设定一下自己到底是什么IP什么端口号。
@@ -119,7 +177,7 @@ class Env_server():
 
     def send_str(self,status_str:str):
         # 这个就是发字符串的。现阶段怎么快怎么来，什么延迟啊那些一概先不管。
-        # print('连接地址：', self.client_socket)
+        print('连接地址：', self.client_socket)
 
         self.client_socket.send(status_str.encode('utf-8'))
         pass 
@@ -127,7 +185,7 @@ class Env_server():
     def receive_str(self):
         # 这个是用来接收字符串的。任何时候调这个，总能读取出东西来。至于说是不是新的，得从标志位来看。
         # 按照目前这个写法，标志位只保持一帧。
-        new_received_str = self.client_socket.recv(4096).decode('utf-8')
+        new_received_str = self.client_socket.recv(32768).decode('utf-8')
         # print("new_received_str in receive_str:"+new_received_str)
         # 经过测试，这个就是堵塞的，不发一次收一次这个线程就不会接着往下走。
         
@@ -140,8 +198,3 @@ class Env_server():
             self.flag_new = False
 
         return self.received_str
-    
-    def reset_str(self):
-        # 主要是清一清标志位和收到的字符串啥的。
-        self.flag_new = False
-        # self.received_str =""# 这个不能清了，不然比较就失效了。

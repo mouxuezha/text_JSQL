@@ -4,6 +4,8 @@ from dialog_box.dialog_box_server import MyWidget as MyWidget_server
 from dialog_box.dialog_box_client2 import MyWidget as MyWidget_client
 from PySide6 import QtCore, QtWidgets, QtGui
 from PySide6.QtWidgets import QDialog 
+from main import * 
+from socket_communication.communicator import yanshi_comunicator
 
 import threading,time 
 
@@ -75,7 +77,32 @@ class auto_run_comunicator():
 
         pass
 
+class liancan_runner(yanshi_comunicator):
+    # 重新串一下流程可也。
+    def __init__(self):
+        # 先把需要初始化的东西初始化一下。
+        shishi_debug = MyWidget_debug() # 无人干预
+        self.plan_interface = plan_interface()
+
+        self.plan_location_list = [] 
+        # 这个就不能直接硬编码了，得从前面发东西过来看到底搞成什么样。还是收JSON就好了。
+        # # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/新的/jieguo0.pkl")
+        # # # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
+        # # # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
+        # shishi_interface.load_plans(plan_location_list) 
+        # shishi_interface.set_plan(0) # 设定一下准备用哪个。         
+
+        # 这个是单跑这个不跑dialog box，拟似人混，启动！
+        self.command_processor = command_processor(shishi_debug,flag_auto_CraftGame=False)
+        # shishi.main_loop(role ="model3", plan_interface = shishi_interface)        
+        pass
+    
+    def handle_command_liancan(self,seat="none",command="none"):
+        # 这里要实现的功能还不少，选择方案、返回相应的文字、点一下开始推、返回子任务序列啥的。
+        pass
+
 if __name__ == "__main__":
     # 这个是用于配合演示的，另一个是用于配合开发的。
+    # 确切地说，这个是用于配合红蓝方开了的那种实时人机融合决策的演示的。然后莲餐演示还得重新来过
     shishi = auto_run_comunicator()
     shishi.run_mul()
