@@ -11,9 +11,9 @@ from text_transfer.stage_prompt import StagePrompt
 import argparse, queue, time,threading
 from concurrent.futures import ThreadPoolExecutor
 import time
-from abc import ABC, classmethod ,abstractmethod
+# from abc import ABC, classmethod ,abstractmethod # 弄巧成拙，反而报错，兹志此败，以警后人。python的对抽象类的支持貌似并不好。算了不用了。
 
-class yanshi_comunicator(ABC):
+class yanshi_comunicator():
     # 还是那个路数，开个进程一直转着，看GUI那头有什么东西发过来。发过来的先缓存着，然后每隔一段时间处理一次。
     # 意图识别、调用不同函数的，在这里面先做一个比较拉但是能用的。后面如果要好的，再说。
     def __init__(self) -> None:
@@ -36,6 +36,7 @@ class yanshi_comunicator(ABC):
         self.receive_queue = queue.Queue(114514) # 接收过来的先不解析，先存着一下。
         # 直接快进一波，直接快进到线程池处理各种handle。
         self.handle_threadpool = ThreadPoolExecutor(max_workers=10)
+        
         
         self.running_result = {} # 这个用来存那些个运行出来的中间结果，都是“有就用现成的，没有就现算一个或者没有就现读取一个”的逻辑
         self.running_result["Planning"] = []
@@ -102,6 +103,7 @@ class yanshi_comunicator(ABC):
             # self.send_response("{\"SchemesDataList\":[],\"msgCommid\":\"text str from auto_run_communicator\"}")
             # self.send_response(self.text_transfer.response_wrap("text str from auto_run_communicator")) # 鉴定为好使。
             if self.config_dict["flag_exit"] == False:
+                # 讲道理，这个退出功能设计的不好，这里退出了就再也进不来了。去handle里面退出是比较好的。
                 # 那就是无事发生。
                 pass
             else:
@@ -162,8 +164,8 @@ class yanshi_comunicator(ABC):
         # 这里搞个线程池。看起来就很丝滑了。任务调起来是一回事，执行成什么样子嘛再说可也
         pass
     # 其实可以考虑把整个handle都搞成虚函数，这样逻辑上更合理一点，
-    @classmethod
-    @abstractmethod
+    # @classmethod
+    # @abstractmethod
     def handle_command_liancan(self,seat="none",command="none"):
         pass
 
@@ -192,3 +194,27 @@ class yanshi_comunicator(ABC):
         # 后面如果要有别的办法来传结构化数据，那就都是在这个函数里面拓展。
 
         pass
+
+
+    def check_seat_expedient(self, seat, command:str ):
+        # 权宜之计。鉴权的说法。
+        try:
+            search_key_list  = self.seat_access[seat]
+            for search_key in search_key_list:
+                if search_key == "root":
+                    flag_pass = True
+                    break
+                else:
+                    if command.find(search_key)>0:
+                        # 那就认为是合法的。
+                        flag_pass = True
+                        break
+                    else:
+                        flag_pass = False
+            command_type = search_key
+        except:
+            # 那就是没有找到，没有合适的鉴权的说法
+            command_type = "未定义"
+            # 这里不要硬性报错了，不然跑着跑着卡一下还是比较尴尬的。
+        return flag_pass, command_type
+ 

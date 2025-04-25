@@ -397,10 +397,6 @@ class text_transfer(object):
         initial_prompt = initial_prompt + "地图大部分为陆地，具有河流、桥梁和路网，在经纬度坐标(100.137,13.644),(100.116,13.643),(100.164,13.658)有可供步兵占领和建立防线的建筑物。"
         return initial_prompt
     
-    
-    
-
-
     def get_order_guize(self):
         # 这里面是给大模型设定的规则的格式。
         order_guize = '请按照以下格式给出作战指令。进攻指令：[move, obj_id , x=int, y=int], 如坦克mbt_1进攻坐标(100.1247, 13.6615)，则指令为[move, obj_id=mbt_1, x=100.1247, y=13.6615] \n停止指令：[stop, obj_id], 如坦克mbt_1停止当前行动，则指令为[stop, obj_id=mbt_1] \n步兵下车指令: [off_board, obj_id],如步战车ifv_1内步兵立刻下车,则指令为[off_board, obj_id=ifv_1]'
@@ -525,6 +521,19 @@ class text_transfer(object):
         input_str = input_str.replace("]","）")
 
         return input_str
+
+    def get_json_str_debug(self, prompt:str):
+        print("get_json_str_debug: 这个是用于调试的，正式版本中不应该出现")
+        
+        if "开始推演" in prompt:
+            # 模拟接收前端操作：点击开始按钮。
+            message_json = {"command":"开始推演"} # 这里面就是回头应该跟雪楠哥他们的对的消息格式了。
+        elif "停止推演" in prompt:
+            # 模拟接收前端操作：点击停止按钮
+            message_json = {"command":"结束推演"}
+        
+        return message_json
+
 class type_transfer(object):
     # 这个是用来把抽象的装备类型化简一下的，搞成中文的。
     def __init__(self):

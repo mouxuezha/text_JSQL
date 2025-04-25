@@ -65,6 +65,12 @@ class command_processor(QtCore.QThread):
         else:
             # 没有的话补充默认值。
             self.config["flag_server_waiting"]=False
+        
+        if "communicator" in kargs:
+            # 这个不是和大模型通信，这个是和前端交互的。
+            self.communicator = kargs["communicator"]
+        else:
+            self.communicator = None
 
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage，开了可以用于调试。
@@ -215,6 +221,10 @@ class command_processor(QtCore.QThread):
         del sys.path[-1]
 
         return shishi
+    
+    def set_communicator(self,communicator):
+        # 这个是用来在尽量不动原来的东西的基础上把通信类传进来。
+        self.communicator = communicator
 
     def add_fupan_info(self, time_step, command, all_str, response_str):
         fupan_step_single = {"command":command, "all_str":all_str, "response_str":response_str}
@@ -501,7 +511,20 @@ class command_processor(QtCore.QThread):
         all_str = "no all_str, this is " + self.role
         response_str = "no response_str, this is " + self.role
 
-        self.add_fupan_info(self.timestep, commands, all_str, response_str)        
+        self.add_fupan_info(self.timestep, commands, all_str, response_str)    
+
+        # 还得来，加一系列给前端拿过去显示的东西。
+        if self.communicator != None:
+            # 那就是初始化过了往展示用可视化前端传东西的了
+            # str_dict = {}
+            # str_dict["当前帧数"] = self.timestep
+            # str_dict["当前指令"] = str(commands)
+            # 这都是随便传一点儿过去，等到真搞的时候得定制接口
+            keys_str = "" 
+            for keys in commands:
+                keys_str = keys_str + ", "+str(keys)
+            str_all = "测试中，当前帧数：" + str(self.timestep) + "，当前指令："+keys_str
+            self.communicator.send_response(str(str_all))
 
     def get_status_dixing(self,status):
         # 这个想要实现的是把每一个装备的当前地形都拿出来，然后再塞回去status里面。反正多点儿没有坏处就是了。
@@ -893,7 +916,7 @@ class command_processor(QtCore.QThread):
         return True
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 6
+    flag = 7
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
