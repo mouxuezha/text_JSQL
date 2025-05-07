@@ -44,7 +44,7 @@ class yanshi_comunicator():
 
     def __init_envs(self):
         self.env_dict = {} 
-        self.net_args = self.__init_net(ip = "127.0.0.1", port = 30001)
+        self.net_args = self.__init_net(ip = "127.0.0.1", port = 30002)
         self.max_episode_len = self.net_args.max_episode_len
         print("auto_run_comunicator: 绑定席位和IP地址...")
         env_single = Env_server(self.net_args.ip, self.net_args.port,seat="commandor") # 开这个，就是和图形用户界面交互
@@ -176,7 +176,14 @@ class yanshi_comunicator():
             response_str = self.text_transfer.response_wrap(response_str)
             print("send_response: warning, invalide json, auto-fixed.")
         self.send_queue.put(response_str)
-        pass 
+        return response_str
+    
+    def send_dict(self, response_dict):
+        # 这里的思路是先组成dict，然后再传过去。
+        response_str = self.text_transfer.response_wrap_dict(response_dict)
+        self.send_queue.put(response_str)
+        return response_str
+
 
     def send_plan(self,new_plans:list):
         # 把多方案解析解析，给GUI发过去。

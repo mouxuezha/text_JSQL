@@ -433,6 +433,17 @@ class text_transfer(object):
     def response_wrap(self, response_str:str):
         # 这个是包装一下
         wrapped_str = "{\"SchemesDataList\":[],\"msgCommid\":\""+response_str+"\"}"        
+        wrapped_str = wrapped_str.replace("'", "\"")
+        return wrapped_str
+    
+    def response_wrap_dict(self, response_dict):
+        communication_dict = {}
+        communication_dict["SchemesDataList"] = []
+        communication_dict["msgCommid"] = response_dict
+
+        # 然后转成str给它冲了
+        wrapped_str = str(communication_dict)
+        wrapped_str = wrapped_str.replace("'", "\"")
         return wrapped_str
     
     def str_squeeze(self,str_input,len_max=300):

@@ -516,15 +516,35 @@ class command_processor(QtCore.QThread):
         # 还得来，加一系列给前端拿过去显示的东西。
         if self.communicator != None:
             # 那就是初始化过了往展示用可视化前端传东西的了
-            # str_dict = {}
-            # str_dict["当前帧数"] = self.timestep
-            # str_dict["当前指令"] = str(commands)
-            # 这都是随便传一点儿过去，等到真搞的时候得定制接口
-            keys_str = "" 
-            for keys in commands:
-                keys_str = keys_str + ", "+str(keys)
-            str_all = "测试中，当前帧数：" + str(self.timestep) + "，当前指令："+keys_str
-            self.communicator.send_response(str(str_all))
+            if self.timestep == 0:
+                # 那就是第一帧，得把态势传过去。
+                for i in range(10):
+                    # 分包，分10次传过去。
+                    commands_dict = plan_input.get_action_for_liancan(self.timestep,self.status,index=i)
+                    # response_str = self.communicator.send_response(str(commands_dict))
+                    response_str = self.communicator.send_dict(commands_dict)
+                    # 储存到文件里面，看看成色。这个是debug的时候用。
+                    with open("auto_test/response_str.txt", "a") as f:
+                        f.write(response_str)
+            else:
+                # str_dict = {}
+                # str_dict["当前帧数"] = self.timestep
+                # str_dict["当前指令"] = str(commands)
+                # 这都是随便传一点儿过去，等到真搞的时候得定制接口
+                keys_str = "" 
+                for keys in commands:
+                    keys_str = keys_str + ", "+str(keys)
+                str_all = "测试中，当前帧数：" + str(self.timestep) + "，当前指令："+keys_str
+                print(str_all)
+
+                # commands_dict = {}
+                # commands_dict[str(self.timestep)] = [] 
+                # response_str = self.communicator.send_dict(commands_dict)
+                # self.communicator.send_response(str(str_all))
+                # self.communicator.send_response(str(self.timestep))
+                response_str = self.communicator.send_dict(self.timestep)
+
+                pass
 
     def get_status_dixing(self,status):
         # 这个想要实现的是把每一个装备的当前地形都拿出来，然后再塞回去status里面。反正多点儿没有坏处就是了。
@@ -966,7 +986,6 @@ if __name__ == "__main__":
         # shishi.turn_on_CraftGame()
         print("测试直接在python里起动平台，就不用每次手点了。")
         time.sleep(1.14*5.14)
-        shishi.exit_all_exe()
-
+        shishi.exit_all_exe()  
     else:
         print("undefined running model yet. ")

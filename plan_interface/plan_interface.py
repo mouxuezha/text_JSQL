@@ -88,6 +88,17 @@ class plan_interface(BaseAgent):
         commands_this_step = self.check_action_list(self.num)
 
         return commands_this_step
+    
+    def get_action_for_liancan(self, num:int, status:dict,index:int):
+        # 先生成一个用于拿去展示的。
+        # 这个index是用于分包的，不然数据包太大了玩不了
+        commands_liancan = {} 
+        for num_here in range(500*index, 500*(index+1)): # TODO:调试的改回去
+            commands_this_step = self.get_action_one_step(num_here,status)
+            # commands_liancan[num_here] = commands_this_step
+            commands_liancan[str(num_here)] = commands_this_step
+
+        return commands_liancan
 
     def check_submission(self):
         selected_plan = self.plan_list[self.index]
@@ -221,7 +232,7 @@ class plan_interface(BaseAgent):
                         LLA_target[1] = 13.67        
                     if self.num>3500:
                         LLA_target=copy.deepcopy(blue_deploy_LLA)          
-                    command_single = {"type": "move", "obj_id": obj_id, "x": LLA_target[0], "y": LLA_target[1]}
+                    command_single = {"type": "move", "obj_id": obj_id, "x": float(LLA_target[0]), "y": float(LLA_target[1])}
                 elif submission.type_str == "空中侦察":
                     # 加一些check
                     LLA_target[1] = LLA_target[1] + 0.001
@@ -230,7 +241,7 @@ class plan_interface(BaseAgent):
                     LLA_target0_temp = LLA_target[0] + 0.01*(2-index_local)
                     if LLA_target0_temp>100.175:
                         LLA_target0_temp = 100.175
-                    command_single = {"type": "move", "obj_id": obj_id, "x":LLA_target0_temp , "y": LLA_target[1]}
+                    command_single = {"type": "move", "obj_id": obj_id, "x":float(LLA_target0_temp) , "y": float(LLA_target[1])}
                 else:
                     raise Exception("invalid submission type in generate_actions, G. ")
 
