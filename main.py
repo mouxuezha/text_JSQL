@@ -524,8 +524,8 @@ class command_processor(QtCore.QThread):
                     # response_str = self.communicator.send_response(str(commands_dict))
                     response_str = self.communicator.send_dict(commands_dict)
                     # 储存到文件里面，看看成色。这个是debug的时候用。
-                    with open("auto_test/response_str.txt", "a") as f:
-                        f.write(response_str)
+                    # with open("auto_test/response_str"+str(i)+".txt", "a") as f:
+                    #     f.write(response_str)
             else:
                 # str_dict = {}
                 # str_dict["当前帧数"] = self.timestep

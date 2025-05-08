@@ -62,7 +62,7 @@ class plan_interface(BaseAgent):
         submissions_this_step = self.check_submission()
 
         # 需要搞一个默认值，如果已经很多帧没有动静了，就向北进攻一段，或者说向中间进攻一段。
-        if len(submissions_this_step) == 0:
+        if (len(submissions_this_step) == 0)  and (num%500 == 0): # 别一直加，不然后面太多了。
             submissions_this_step=self.get_defualt_submission() # 别直接写，不然就清空了，直接就没了。
 
         # 然后开始生成了。
