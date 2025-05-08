@@ -169,11 +169,16 @@ class yanshi_comunicator():
     def handle_command_liancan(self,seat="none",command="none"):
         pass
 
-    def send_response(self,response_str:str):
+    def send_response(self,response_str:str,model=1):
         # 这次在后端就分开，显示的命令是显示的命令，增加点儿掌控力.这个是通用的入队列的说法。
         # 这里所谓发送，其实就是放进队列里面去的意思嘛。发回去的就不用分什么席位了。
         if not("SchemesDataList" in response_str):
-            response_str = self.text_transfer.response_wrap(response_str)
+            if model ==1:
+                # 那就是用msgCommid这个字段来发
+                response_str = self.text_transfer.response_wrap(response_str)
+            elif model ==2:
+                # 那就是用SchemesDataList这个字段来发，这种抽象的事情以后还是少干为妙。
+                response_str = self.text_transfer.response_wrap2(response_str)
             print("send_response: warning, invalide json, auto-fixed.")
         self.send_queue.put(response_str)
         return response_str

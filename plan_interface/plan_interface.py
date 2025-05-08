@@ -287,6 +287,10 @@ class plan_interface(BaseAgent):
                 flag_time_check= False
         return flag_time_check
    
+    def get_plan_description(self,index=0):
+        description_str = self.plan_list[index]["description"].target_str
+        return description_str
+
     # def get_time_from_status(self,status):
     #     # 同步一个时间，不然全烂了，全都不对了。
     #     self.num = status["num"]
