@@ -436,6 +436,11 @@ class text_transfer(object):
         wrapped_str = wrapped_str.replace("'", "\"")
         return wrapped_str
     
+    def response_wrap2(self, response_str:str):
+        # 这搞法不理想，通信部分随便改个啥都要改，远没有直接序列化反序列化丝滑。
+        wrapped_str = "{\"SchemesDataList\":\""+response_str+"\",\"msgCommid\":[]}"        
+        wrapped_str = wrapped_str.replace("'", "\"")        
+    
     def response_wrap_dict(self, response_dict):
         communication_dict = {}
         communication_dict["SchemesDataList"] = []
