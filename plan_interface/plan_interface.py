@@ -288,7 +288,7 @@ class plan_interface(BaseAgent):
         return flag_time_check
    
     def get_plan_description(self,index=0):
-        description_str = self.plan_list[index]["description"].target_str
+        description_str = self.plan_list[index].target_str
         return description_str
 
     # def get_time_from_status(self,status):

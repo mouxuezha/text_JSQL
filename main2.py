@@ -156,7 +156,7 @@ class liancan_runner(yanshi_comunicator):
         self.config_dict["selected_plan_location"] = 0 
 
         location = r"D:/EnglishMulu/test_decision/auto_test/新的/jieguo0.pkl" # 这个是默认的
-        i = 0 
+        selected_index = 0 
         for i in range(4):
             name_str = "方案"+str(i+1)
             if name_str in command:
@@ -164,17 +164,17 @@ class liancan_runner(yanshi_comunicator):
                 if os.path.exists(location):
                     # 那就是正常
                     self.send_response("已选定方案，可以开始推演。")
+                    selected_index = i
                 else:
                     self.send_response("方案选择有误，已采用以前生成的方案。")
+
         self.plan_location_list.append(location)
         self.plan_interface.load_plans(self.plan_location_list)
         # print("handle_plan_select: unfinished yet. ")
         # self.send_response("已选定方案，可以开始推演。")
-        
         # 这里再得搞一个给雪楠哥那边发个方案描述的的东西，用来填充描述。
-        description_str = self.plan_interface.get_plan_description(i)
+        description_str = self.plan_interface.get_plan_description(selected_index)
         self.send_response(description_str,model=2)
-
         pass
 
     def handle_start(self, seat="none",command="none"):
