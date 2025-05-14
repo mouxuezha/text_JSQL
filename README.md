@@ -98,3 +98,17 @@ TODO：
 但是开着平台推着出，那也扯淡。
 
 我有一寄：用第一帧的态势把全部的commands算出来，反正细节又不体现。
+
+尝试一些用cmd来启动python的说法。这个应该来得快。
+
+D: & cd D:\EnglishMulu\text_JSQL & D:\software\anaconda3\envs\shishi_MQ_with_LLM\python.exe main2.py
+
+    std::ofstream bat("task.bat");
+    bat << "@echo off\n"
+        << "start /B python train_model.py\n";  // Windows的/B参数后台执行
+    bat.close();
+    system("task.bat");
+
+D: & cd D:\EnglishMulu\text_JSQL & start /B D:\software\anaconda3\envs\shishi_MQ_with_LLM\python.exe main2.py
+
+是时候了，把整个工程往演示电脑上去挪。
