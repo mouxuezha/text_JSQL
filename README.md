@@ -112,3 +112,11 @@ D: & cd D:\EnglishMulu\text_JSQL & D:\software\anaconda3\envs\shishi_MQ_with_LLM
 D: & cd D:\EnglishMulu\text_JSQL & start /B D:\software\anaconda3\envs\shishi_MQ_with_LLM\python.exe main2.py
 
 是时候了，把整个工程往演示电脑上去挪。
+
+=====================================================================
+
+行吧，这版是服务于2025年劳动竞赛的，一个是场景换了，一个是简化一下以前的代码。以前的比较乱。
+
+说法：
+1，这版用不到Qt开界面、用不到解说，但是用得到临机决策。然后通信得改。
+2，在之前的抽象状态的基础上，重新搞一版，加一个“任务”的机制，就是用类似之前抽象状态的手段维护一些任务，然后每一个step，任务也能跟着动，这样就好一些。

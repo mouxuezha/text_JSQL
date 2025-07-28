@@ -15,41 +15,50 @@ import random
 from enum import Enum
 from support.tools import load_bridge_json
 
+from examples.text_loader import text_loader
+import inspect
+
 class BaseAgent(object):
     def __init__(self):
-        self.infantry_tank_map = {}
+        self.text_loader = text_loader()
+        # self.infantry_tank_map = {}
         self.groupmap = {}
         self.act = []
         self.time_ = time.time()
         self.num = 0 
 
-        # 以下xxh定制，不保熟
+        method_name = self.__class__.__name__ + "." + inspect.stack()[0][3]
+        # 以下xxh定制，不保熟 # 已经过了很多年，总体上是保熟的了
         self.abstract_state = {}  # key 是装备ID，value是抽象状态
         # 抽象状态目前设想这几种，移动攻击、隐藏警戒、跟踪追击、巡逻侦察、自由开火、跟随己方单位。再加一个“不用”。
         # 再加一个，步兵车加一个冲锋下车好了。
         # ["move_and_attack", "hidden_and_alert", "track_and_attack",
         # "partrol_and_monitor", "follow_and_defend", "open_fire", "none", "charge_and_xiache"]
         self.deploy_folder = ""
-        self.weapon_list = ["HighExplosiveShot_ZT", "HighExplosiveShot", "ShortRangeMissile", "RPG", "AGM",
-                            "ArmorPiercingShot_ZT", "ArmorPiercingShot", "Bullet_ZT", "bullet"]
+        # self.weapon_list = ["HighExplosiveShot_ZT", "HighExplosiveShot", "ShortRangeMissile", "RPG", "AGM",
+        #                     "ArmorPiercingShot_ZT", "ArmorPiercingShot", "Bullet_ZT", "bullet"]
+        self.weapon_list = self.text_loader.get_certain_text(method_name,"weapon_list")  
         # 这个是有优先级顺序的。zt的放在不zt的前面，否则不对。因为后面是从前往后遍历。
         # self.landform_list = landform_type()
-        self.landform_list = ["construction", "forest", "river", "covered_road", "open_area",
-                              "default"]  # 这个也是有优先顺序的，看哪些比较好
+        # self.landform_list = ["construction", "forest", "river", "covered_road", "open_area",
+        #                       "default"]  # 这个也是有优先顺序的，看哪些比较好
+        self.landform_list = self.text_loader.get_certain_text(method_name,"landform_list")  
         
-        self.unit_type_list = ["WheeledCmobatTruck_ZB100", "WheeledCmobatTruck_ZB200", "ArmoredTruck_ZTL100", "missile_truck", "Infantry", "MainBattleTank_ZTZ100", "MainBattleTank_ZTZ200", "Howitzer_C100", "ShipboardCombat_plane", "JammingTruck","CruiseMissile"] 
+        # self.unit_type_list = ["WheeledCmobatTruck_ZB100", "WheeledCmobatTruck_ZB200", "ArmoredTruck_ZTL100", "missile_truck", "Infantry", "MainBattleTank_ZTZ100", "MainBattleTank_ZTZ200", "Howitzer_C100", "ShipboardCombat_plane", "JammingTruck","CruiseMissile"] 
+        self.unit_type_list = self.text_loader.get_certain_text(method_name,"unit_type_list")  
 
         self.detected_state = {}
         self.detected_state2 = {}  # 这个预计用于折腾什么路径规划啊那些。就key是ID，value是观测到的不同帧数的路径好了。
         # 就只存两帧，多的不要。
-        self.group_A_gai_config = dict()
-        self.group_A_gai_reset(name="red")
-        self.group_A_gai_reset(name="blue")
+        # self.group_A_gai_config = dict()
+        # self.group_A_gai_reset(name="red")
+        # self.group_A_gai_reset(name="blue")
 
-        self.weapon_V = {"HighExplosiveShot_ZT": 1200, "HighExplosiveShot": 1000,
-                         "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
-                         "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
-                         "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
+        # self.weapon_V = {"HighExplosiveShot_ZT": 1200, "HighExplosiveShot": 1000,
+        #                  "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
+        #                  "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
+        #                  "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
+        self.weapon_V = self.text_loader.get_certain_text(method_name,"weapon_V")
         self.flag_zhandian = False
 
         self.commands_queue = queue.Queue(maxsize=114514) # 这个是新加的，用来处理和大模型的交互。
@@ -57,20 +66,20 @@ class BaseAgent(object):
         self.role = "undefined" # global or local
         self.missile_truck_attacked = dict() # 这个用于红方记录打了多少个车，从而决定能不能开始发射导弹了。
         # 2024 our_duizhan
-        self.building_loaction_list = [] 
-        self.building_loaction_list.append([100.137777,13.6442,0])
-        self.building_loaction_list.append([100.1644399,13.65847,0])
-        self.building_loaction_list.append([100.103974397,13.63564213,0])
-        self.building_loaction_list.append([100.1167513,13.6432282,0])
-        self.building_loaction_list.append([100.140676439,13.607695814,0])
+        # self.building_loaction_list = [] 
+        # self.building_loaction_list.append([100.137777,13.6442,0])
+        # self.building_loaction_list.append([100.1644399,13.65847,0])
+        # self.building_loaction_list.append([100.103974397,13.63564213,0])
+        # self.building_loaction_list.append([100.1167513,13.6432282,0])
+        # self.building_loaction_list.append([100.140676439,13.607695814,0])
 
-        self.bridge_location_list = load_bridge_json("beifen\\Bridge.json")
+        # self.bridge_location_list = load_bridge_json("beifen\\Bridge.json")
         # 算了这个直接读取JSON好了，不然一个一个复制粘贴不理想。
 
 
  
     def reset(self):
-        self.infantry_tank_map = {}
+        # self.infantry_tank_map = {}
         self.groupmap = {}
         self.act = []
         self.time_ = time.time()
@@ -79,14 +88,14 @@ class BaseAgent(object):
         self.abstract_state = {}  # key 是装备ID，value是抽象状态        
         self.flag_zhandian = False
         # 就只存两帧，多的不要。
-        self.group_A_gai_config = dict()
-        self.group_A_gai_reset(name="red")
-        self.group_A_gai_reset(name="blue")
+        # self.group_A_gai_config = dict()
+        # self.group_A_gai_reset(name="red")
+        # self.group_A_gai_reset(name="blue")
 
-        self.weapon_V = {"HighExplosiveShot_ZT": 1200, "HighExplosiveShot": 1000,
-                         "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
-                         "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
-                         "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
+        # self.weapon_V = {"HighExplosiveShot_ZT": 1200, "HighExplosiveShot": 1000,
+        #                  "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
+        #                  "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
+        #                  "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
         self.detected_state = {}
         self.detected_state2 = {}  # 这个预计用于折腾什么路径规划啊那些。就key是ID，value是观测到的不同帧数的路径好了。
 
@@ -296,33 +305,33 @@ class BaseAgent(object):
         return _PassInto_Action    
 
     # szh
-    def _insert_to_groupmap(self, unitid, groupid):
-        if groupid not in self.groupmap.keys():
-            self.groupmap[groupid] = []
-        self.groupmap[groupid].append(unitid)
-        return
+    # def _insert_to_groupmap(self, unitid, groupid):
+    #     if groupid not in self.groupmap.keys():
+    #         self.groupmap[groupid] = []
+    #     self.groupmap[groupid].append(unitid)
+    #     return
 
-    def _remove_from_groupmap(self, groupid):
-        print("in remove from group ", groupid)
-        if groupid not in self.groupmap.keys():
-            return
-        self.groupmap.pop(groupid)
-        return
+    # def _remove_from_groupmap(self, groupid):
+    #     print("in remove from group ", groupid)
+    #     if groupid not in self.groupmap.keys():
+    #         return
+    #     self.groupmap.pop(groupid)
+    #     return
 
-    def _insert_to_infantankmap(self, tankid, infantryid):
-        if tankid not in self.infantry_tank_map.keys():
-            self.infantry_tank_map[tankid] = []  ##  目前限制步战车上步兵班数量为1
-        if tankid in self.infantry_tank_map.keys() and len(self.infantry_tank_map[tankid]) > 0:
-            return
-        self.infantry_tank_map[tankid].append(infantryid)
-        return
+    # def _insert_to_infantankmap(self, tankid, infantryid):
+    #     if tankid not in self.infantry_tank_map.keys():
+    #         self.infantry_tank_map[tankid] = []  ##  目前限制步战车上步兵班数量为1
+    #     if tankid in self.infantry_tank_map.keys() and len(self.infantry_tank_map[tankid]) > 0:
+    #         return
+    #     self.infantry_tank_map[tankid].append(infantryid)
+    #     return
 
-    def _remove_from_infantrytankmap(self, tankid, infantryid=-1):
-        if tankid not in self.infantry_tank_map.keys():
-            return
-        else:
-            self.infantry_tank_map.pop(tankid)
-        return
+    # def _remove_from_infantrytankmap(self, tankid, infantryid=-1):
+    #     if tankid not in self.infantry_tank_map.keys():
+    #         return
+    #     else:
+    #         self.infantry_tank_map.pop(tankid)
+    #     return
 
     # szh
     def _exec_group_cmd(self, unitid, func_type, **kwargs):
@@ -1421,6 +1430,17 @@ class BaseAgent(object):
 
         return flag
 
+    # 这里后面是2025年新加的协同任务层。
+    def Gostep_mission_set(self, **kargs):
+        # 这个是对位前面的Gostep_abstract_state
+        self.mission_set = [] # 这里得是List了,是dict类型没有什么区别。
+
+        # {"ID":str, "force_arrange":list[str], "time_arrange":[int,int], "space_arrange":[float,float,float,float], "flag_active": bool}
+
+        # 清理一遍任务，如果一个任务，分配给它的所有单位
+
+
+
     def range_estimate(self, attacker_ID, detectinfo):
         # 这个是寻找范围内是否有它打得到的。
         # 可以整点儿活儿，比如不要极限射程开火。
@@ -2297,120 +2317,154 @@ class BaseAgent(object):
             for i in range(geshu):
                 self.set_charge_and_xiache(che_ID_list[i], bing_ID_list[i], LLA_list[i])
 
-
-    def group_A_gai(self, target_LLA, status,**kargs):
-        # 这个是改进的group A，每次只A一小段那种，用于长途跋涉。
+    # 后面这段全部都用新机制来实现了，如果需要的话。那个叫抽象状态的话，这个就叫任务设定吧。逻辑应该是任务设定这层去操作抽象状态那层，原则上不直接操作发指令的那层。然后采用类似抽象状态的那种模式，每一步处理一下交互关系。
+    # def group_A_gai(self, target_LLA, status,**kargs):
+    #     # 这个是改进的group A，每次只A一小段那种，用于长途跋涉。
         
-        # 首先读出当前这个group_A_gai实例对应的名字。
-        if "name" in kargs:
-            name = kargs["name"]
-        else:
-            name = self.player
+    #     # 首先读出当前这个group_A_gai实例对应的名字。
+    #     if "name" in kargs:
+    #         name = kargs["name"]
+    #     else:
+    #         name = self.player
 
-        if not(name in self.group_A_gai_config):
-            self.group_A_gai_reset(name=name)
+    #     if not(name in self.group_A_gai_config):
+    #         self.group_A_gai_reset(name=name)
         
 
-        if self.group_A_gai_config[name]["flag_end"] == True:
-            self.group_A_gai_reset(name=name)
-            return  # 跑完了就返回去。
+    #     if self.group_A_gai_config[name]["flag_end"] == True:
+    #         self.group_A_gai_reset(name=name)
+    #         return  # 跑完了就返回去。
 
-        ave_LLA = self.get_LLA_ave(status)
-        dL = self.group_A_gai_config[name]["dL"]
-        if self.group_A_gai_config[name]["flag_start"] == False:
-            # 那就是这个是第一步，初始化一下这些个状态。
-            self.group_A_gai_config[name]["flag_start"] = True
-            self.group_A_gai_config[name]["flag_end"] = False
-            self.group_A_gai_config[name]["target_LLA"] = np.array(target_LLA)
+    #     ave_LLA = self.get_LLA_ave(status)
+    #     dL = self.group_A_gai_config[name]["dL"]
+    #     if self.group_A_gai_config[name]["flag_start"] == False:
+    #         # 那就是这个是第一步，初始化一下这些个状态。
+    #         self.group_A_gai_config[name]["flag_start"] = True
+    #         self.group_A_gai_config[name]["flag_end"] = False
+    #         self.group_A_gai_config[name]["target_LLA"] = np.array(target_LLA)
 
-            dl_vector = target_LLA - ave_LLA
-            dl_vector[2] = 0
-            dl_vector = dl_vector / np.linalg.norm(dl_vector)
-            # 求出方向然后归一化以备后用
-            self.group_A_gai_config[name]["dl_vector"] = dl_vector
-            # 然后生成一个
-            target_LLA_next = ave_LLA + dl_vector * dL
-            self.group_A_gai_config[name]["target_LLA_next"] = target_LLA_next
-        else:
-            target_LLA = self.group_A_gai_config[name]["target_LLA"]
-            target_LLA_next = self.group_A_gai_config[name]["target_LLA_next"]
-            dl_vector = self.group_A_gai_config[name]["dl_vector"]
-            jvli2 = self.distance2(target_LLA_next, ave_LLA)
+    #         dl_vector = target_LLA - ave_LLA
+    #         dl_vector[2] = 0
+    #         dl_vector = dl_vector / np.linalg.norm(dl_vector)
+    #         # 求出方向然后归一化以备后用
+    #         self.group_A_gai_config[name]["dl_vector"] = dl_vector
+    #         # 然后生成一个
+    #         target_LLA_next = ave_LLA + dl_vector * dL
+    #         self.group_A_gai_config[name]["target_LLA_next"] = target_LLA_next
+    #     else:
+    #         target_LLA = self.group_A_gai_config[name]["target_LLA"]
+    #         target_LLA_next = self.group_A_gai_config[name]["target_LLA_next"]
+    #         dl_vector = self.group_A_gai_config[name]["dl_vector"]
+    #         jvli2 = self.distance2(target_LLA_next, ave_LLA)
 
-            if jvli2 < (self.degree_to_m(dL)*5):
-            # if jvli2 < 114.514: # 这里的判据取得不好的话会中间停了不动了。
-                jvli = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
-                                     ave_LLA[0], ave_LLA[1], ave_LLA[2])
+    #         if jvli2 < (self.degree_to_m(dL)*5):
+    #         # if jvli2 < 114.514: # 这里的判据取得不好的话会中间停了不动了。
+    #             jvli = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
+    #                                  ave_LLA[0], ave_LLA[1], ave_LLA[2])
 
-                if abs(jvli - jvli2) < dL * 0.5:
-                    # 那就是到了，就得停了完事了
-                    self.group_A_gai_config[name]["flag_end"] = True
-                else:
-                    # 那就是到了一个点了，那就下一个点
-                    target_LLA_next = ave_LLA + dl_vector * dL
-                    self.group_A_gai_config[name]["target_LLA_next"] = target_LLA_next
-                    self.group_A(target_LLA_next, status=status,**kargs)
-            else:
-                # 那就是没到，那就继续跑呗。
-                if self.num % 14 == 0:
-                    self.group_A(target_LLA_next, status=status,**kargs)
-                pass
+    #             if abs(jvli - jvli2) < dL * 0.5:
+    #                 # 那就是到了，就得停了完事了
+    #                 self.group_A_gai_config[name]["flag_end"] = True
+    #             else:
+    #                 # 那就是到了一个点了，那就下一个点
+    #                 target_LLA_next = ave_LLA + dl_vector * dL
+    #                 self.group_A_gai_config[name]["target_LLA_next"] = target_LLA_next
+    #                 self.group_A(target_LLA_next, status=status,**kargs)
+    #         else:
+    #             # 那就是没到，那就继续跑呗。
+    #             if self.num % 14 == 0:
+    #                 self.group_A(target_LLA_next, status=status,**kargs)
+    #             pass
 
-        return
+    #     return
 
-    def group_A_gai_reset(self, name="red"):
-        # name用来区分不同个数的指令
-        # 行吧，还是得整理一下架构。现在这么玩儿，变成红方用了蓝方就不能用了，不是扯淡吗。搞个dict来存好了，加一层。
-        group_A_gai_config_defualt = {"target_LLA": [],
-                                   "start_LLA": [],
-                                   "target_LLA_next": [],
-                                   "flag_start": False,
-                                   "flag_end": False,
-                                   "dL": 0.008,
-                                   "dl_vector": []}
+    # def group_A_gai_reset(self, name="red"):
+    #     # name用来区分不同个数的指令
+    #     # 行吧，还是得整理一下架构。现在这么玩儿，变成红方用了蓝方就不能用了，不是扯淡吗。搞个dict来存好了，加一层。
+    #     group_A_gai_config_defualt = {"target_LLA": [],
+    #                                "start_LLA": [],
+    #                                "target_LLA_next": [],
+    #                                "flag_start": False,
+    #                                "flag_end": False,
+    #                                "dL": 0.008,
+    #                                "dl_vector": []}
         
-        self.group_A_gai_config[name] = group_A_gai_config_defualt
+    #     self.group_A_gai_config[name] = group_A_gai_config_defualt
 
-    def F2S(self):
-        # 这个就是所有装备停止运动，而且是连hidden都停止，直接退出abstract state模式。
-        # 这个就是星际争霸语义下的F2S
-        for attacker_ID in self.status:
-            self.set_none(attacker_ID)
+    # def F2S(self):
+    #     # 这个就是所有装备停止运动，而且是连hidden都停止，直接退出abstract state模式。
+    #     # 这个就是星际争霸语义下的F2S
+    #     for attacker_ID in self.status:
+    #         self.set_none(attacker_ID)
 
-    def group_S(self, **kargs):
-        if "status" in kargs:
-            status = kargs["status"]  # 这个是用来取一个装备的子集,试试行不行
-        else:
-            status = self.status
-        for attacker_ID in status:
-            self.set_none(attacker_ID)
+    # def group_S(self, **kargs):
+    #     if "status" in kargs:
+    #         status = kargs["status"]  # 这个是用来取一个装备的子集,试试行不行
+    #     else:
+    #         status = self.status
+    #     for attacker_ID in status:
+    #         self.set_none(attacker_ID)
 
-    def group_D(self, **kargs):
+    # def group_D(self, **kargs):
 
-        # 这个也是功能单一，就是收拢部队，成防御状态了。
+    #     # 这个也是功能单一，就是收拢部队，成防御状态了。
 
-        # 获取一些基础数据
-        if "status" in kargs:
-            status = kargs["status"]  # 这个是用来取一个装备的子集,试试行不行
-        else:
-            status = self.status
-        geshu = len(status)
+    #     # 获取一些基础数据
+    #     if "status" in kargs:
+    #         status = kargs["status"]  # 这个是用来取一个装备的子集,试试行不行
+    #     else:
+    #         status = self.status
+    #     geshu = len(status)
 
-        # 求一下中心点什么的。
-        # 整个自己的平均位置,不搞等靠要之类的玄学操作。
-        LLA_average = self.get_LLA_ave(status)
+    #     # 求一下中心点什么的。
+    #     # 整个自己的平均位置,不搞等靠要之类的玄学操作。
+    #     LLA_average = self.get_LLA_ave(status)
 
-        # 首先生成一个圆形的阵形
-        LLA_list = self.__get_LLA_around(LLA_average, n_R=3, n_theta=5, dR=0.0005)
+    #     # 首先生成一个圆形的阵形
+    #     LLA_list = self.__get_LLA_around(LLA_average, n_R=3, n_theta=5, dR=0.0005)
 
-        # 然后把各种东西都A过来  # 开始往这一堆的点里面填充装备
-        ID_list = list(status.keys())
+    #     # 然后把各种东西都A过来  # 开始往这一堆的点里面填充装备
+    #     ID_list = list(status.keys())
 
-        for i in range(min(len(status), len(LLA_list))):
-            # 写成有序的形式是为了能够保证输入的序列顺序一样,输出的阵型形状就一样.
-            attacker_ID = ID_list[i]  # 这里按说得有一个排序机制,体现出排阵型的策略.不过这个可以不用放在这里实现
-            target_LLA = LLA_list[i]
-            self.set_move_and_attack(attacker_ID, target_LLA)
+    #     for i in range(min(len(status), len(LLA_list))):
+    #         # 写成有序的形式是为了能够保证输入的序列顺序一样,输出的阵型形状就一样.
+    #         attacker_ID = ID_list[i]  # 这里按说得有一个排序机制,体现出排阵型的策略.不过这个可以不用放在这里实现
+    #         target_LLA = LLA_list[i]
+    #         self.set_move_and_attack(attacker_ID, target_LLA)
+
+    # def group_zhandian(self, status, target_LLA = [2.71, 39.76, 90]):
+    #     # 这里整一个占点的东西，每一把都调用一次
+
+    #     # 取出离点内最近的
+    #     min_ID = ""
+    #     min2_ID = ""
+    #     min2_distance = 114514
+    #     min_distance = 114514
+    #     # target_LLA = [2.71, 39.76, 90]
+    #     status = self.__status_filter(status)
+    #     for attacker_ID in status:
+    #         if "Ship" in attacker_ID:
+    #             continue
+    #         this_LLA = self.__get_LLA(attacker_ID)
+    #         this_distance = self.distance(this_LLA[0], this_LLA[1], this_LLA[2]
+    #                                       , target_LLA[0], target_LLA[1], target_LLA[2])
+    #         if this_distance < min_distance:
+    #             min2_distance = min_distance
+    #             min_distance = this_distance
+    #             min2_ID = min_ID
+    #             min_ID = attacker_ID
+
+    #     if min_distance > 100:
+    #         self.set_move_and_attack(min_ID, target_LLA)
+    #         # self.set_circle(min_ID, target_LLA)
+    #         self.flag_zhandian = False
+    #     else:
+    #         self.flag_zhandian = True
+
+    #     if min2_distance > 300:
+    #         # target_LLA = [2.685, 39.70, 90]
+    #         # self.set_move_and_attack(min2_ID, target_LLA)
+    #         self.set_circle(min2_ID, target_LLA, R=0.01)
 
     def get_LLA_ave(self, status={}):
         # 就是整一下平均数。
@@ -2433,40 +2487,7 @@ class BaseAgent(object):
 
         return LLA_average
 
-    def group_zhandian(self, status, target_LLA = [2.71, 39.76, 90]):
-        # 这里整一个占点的东西，每一把都调用一次
 
-        # 取出离点内最近的
-        min_ID = ""
-        min2_ID = ""
-        min2_distance = 114514
-        min_distance = 114514
-        # target_LLA = [2.71, 39.76, 90]
-        status = self.__status_filter(status)
-        for attacker_ID in status:
-            if "Ship" in attacker_ID:
-                continue
-            this_LLA = self.__get_LLA(attacker_ID)
-            this_distance = self.distance(this_LLA[0], this_LLA[1], this_LLA[2]
-                                          , target_LLA[0], target_LLA[1], target_LLA[2])
-            if this_distance < min_distance:
-                min2_distance = min_distance
-                min_distance = this_distance
-                min2_ID = min_ID
-                min_ID = attacker_ID
-
-        if min_distance > 100:
-            self.set_move_and_attack(min_ID, target_LLA)
-            # self.set_circle(min_ID, target_LLA)
-            self.flag_zhandian = False
-        else:
-            self.flag_zhandian = True
-
-        if min2_distance > 300:
-            # target_LLA = [2.685, 39.70, 90]
-            # self.set_move_and_attack(min2_ID, target_LLA)
-            self.set_circle(min2_ID, target_LLA, R=0.01)
-    
     def check_enemy_direction(self, detected_state2, base_LLA):
         # 这个是“根据输入的态势。判断敌方来的方向”，先不管什么分兵诱敌之类的。
         # 显然，这个需要平滑，不然一跳变都傻逼了。刚好用一下detected_state2里面的两帧数据
@@ -2506,51 +2527,51 @@ class BaseAgent(object):
 
         return n_fangxiang, LLA_all 
 
-    def check_enemy_group(self, detected_state2, R_threshold=1500):
-        # 这个做个聚类，求出detected_state2的子集，返回一个列表，以及一个“聚合度指标”，来衡量是不是一起来的。
-        # 但是如果上什么kmeans那些的话开销会比较大，还需要思想更滑坡然后更可控的解决方案。
-        # 直接用3个城市的坐标作为聚类中心，判断各个单位周围敌方坐标的数量，再来个方差。但是似乎也就比kmeans好点有限。
+    # def check_enemy_group(self, detected_state2, R_threshold=1500):
+    #     # 这个做个聚类，求出detected_state2的子集，返回一个列表，以及一个“聚合度指标”，来衡量是不是一起来的。
+    #     # 但是如果上什么kmeans那些的话开销会比较大，还需要思想更滑坡然后更可控的解决方案。
+    #     # 直接用3个城市的坐标作为聚类中心，判断各个单位周围敌方坐标的数量，再来个方差。但是似乎也就比kmeans好点有限。
 
-        # if R_threshold>0.2:
-        #     # 那就说明给进来的是米的量纲，那就化成经纬度。
-        #     R_threshold = self.m_to_degree(R_threshold)
-        # else:
-        #     # 那就认为输入进来的是经纬度的那个量纲，那就直接来
-        #     pass
+    #     # if R_threshold>0.2:
+    #     #     # 那就说明给进来的是米的量纲，那就化成经纬度。
+    #     #     R_threshold = self.m_to_degree(R_threshold)
+    #     # else:
+    #     #     # 那就认为输入进来的是经纬度的那个量纲，那就直接来
+    #     #     pass
 
-        # 对前三个房子周围的敌人来做聚类。
+    #     # 对前三个房子周围的敌人来做聚类。
 
-        n_type = 3 
+    #     n_type = 3 
 
-        result_state_list = [] 
-        for i in range(n_type):
-            result_state_list.append({})
-        number_list = np.zeros((n_type,))
+    #     result_state_list = [] 
+    #     for i in range(n_type):
+    #         result_state_list.append({})
+    #     number_list = np.zeros((n_type,))
 
-        detected_state2 = self._status_filter(detected_state2,model="me")
+    #     detected_state2 = self._status_filter(detected_state2,model="me")
 
-        for enemy_single in detected_state2:
-            enemy_single_LLA = detected_state2[enemy_single]["this"]["LLA"]
-            for i in range(n_type):
-                building_LLA = self.building_loaction_list[i]
-                # enemy_single_LLA[2]=0 # 是不是要来这个，恐怕有待商榷。加了这个可能会被飞机影响节奏
-                jvli = self.distance2(enemy_single_LLA, building_LLA)
-                if jvli < R_threshold*114514:
-                    # 那就说明是要归在这一类里面 
-                    result_state_list[i][enemy_single] = detected_state2[enemy_single]
-                    number_list[i] = number_list[i] + 1
-                    break
+    #     for enemy_single in detected_state2:
+    #         enemy_single_LLA = detected_state2[enemy_single]["this"]["LLA"]
+    #         for i in range(n_type):
+    #             building_LLA = self.building_loaction_list[i]
+    #             # enemy_single_LLA[2]=0 # 是不是要来这个，恐怕有待商榷。加了这个可能会被飞机影响节奏
+    #             jvli = self.distance2(enemy_single_LLA, building_LLA)
+    #             if jvli < R_threshold*114514:
+    #                 # 那就说明是要归在这一类里面 
+    #                 result_state_list[i][enemy_single] = detected_state2[enemy_single]
+    #                 number_list[i] = number_list[i] + 1
+    #                 break
         
-        # 循环完了就意思是分类好了，那就计数咯
-        # 计数完了感觉得归一化一下再来。
-        number_list = number_list / np.sum(number_list)
-        variance = np.var(number_list) / 0.22222222222222222222 # 这个也是给它归一化到[0,1]之间了大致
+    #     # 循环完了就意思是分类好了，那就计数咯
+    #     # 计数完了感觉得归一化一下再来。
+    #     number_list = number_list / np.sum(number_list)
+    #     variance = np.var(number_list) / 0.22222222222222222222 # 这个也是给它归一化到[0,1]之间了大致
 
-        # 还得再返回一个“第几个房子附近的兵最多”的index。方便后面使用。
-        index = np.where(number_list == max(number_list))
-        index = int(index[0][0]) #numpy就是事儿多
+    #     # 还得再返回一个“第几个房子附近的兵最多”的index。方便后面使用。
+    #     index = np.where(number_list == max(number_list))
+    #     index = int(index[0][0]) #numpy就是事儿多
 
-        return  result_state_list, variance, index
+    #     return  result_state_list, variance, index
 
     def check_enemy_direction2(self,detected_state2,base_LLA,**kargs):
         # 这个是一开始准备用于红方的，返回的是“是否探到了足够的数量的敌方地面单位”，以及“敌方主力往什么方向去了”
@@ -2723,7 +2744,7 @@ class BaseAgent(object):
         
         return id_nearest,jvli_nearest
     
-    def get_nearest_bridge(self, target_LLA):
+    # def get_nearest_bridge(self, target_LLA):
         # 这个是输出离指定位置最近的一个桥的位置，预备是用来守桥的
 
         jvli_list = [] 
