@@ -34,6 +34,9 @@ class BaseAgent(object):
         # 再加一个，步兵车加一个冲锋下车好了。
         # ["move_and_attack", "hidden_and_alert", "track_and_attack",
         # "partrol_and_monitor", "follow_and_defend", "open_fire", "none", "charge_and_xiache"]
+        
+        self.mission_set = {} 
+
         self.deploy_folder = ""
         # self.weapon_list = ["HighExplosiveShot_ZT", "HighExplosiveShot", "ShortRangeMissile", "RPG", "AGM",
         #                     "ArmorPiercingShot_ZT", "ArmorPiercingShot", "Bullet_ZT", "bullet"]
@@ -85,7 +88,8 @@ class BaseAgent(object):
         self.time_ = time.time()
 
         # 以下xxh定制，不保熟
-        self.abstract_state = {}  # key 是装备ID，value是抽象状态        
+        self.abstract_state = {}  # key 是装备ID，value是抽象状态    
+        self.mission_set = {}     
         self.flag_zhandian = False
         # 就只存两帧，多的不要。
         # self.group_A_gai_config = dict()
@@ -1433,13 +1437,141 @@ class BaseAgent(object):
     # 这里后面是2025年新加的协同任务层。
     def Gostep_mission_set(self, **kargs):
         # 这个是对位前面的Gostep_abstract_state
-        self.mission_set = [] # 这里得是List了,是dict类型没有什么区别。
+        self.mission_set = {} # 不对，还得是dict，因为得是直接改那个变量。里面应该是{"mission_ID":{下面这个}}
+        # {"type":str, "force_arrange":list[str], "time_arrange":[int,int], "space_arrange":[float,float,float,float], "flag_active": bool, "priority":int, """其他字段"""} 
 
-        # {"ID":str, "force_arrange":list[str], "time_arrange":[int,int], "space_arrange":[float,float,float,float], "flag_active": bool}
+        # 然后真正的问题就来了，分哪些协同任务？原则上只有协同的才定义任务，可以允许有单位没有被分配到任务里面，只要有抽象状态，就也不影响它正常运行。
+        # 空中侦察、空中巡逻（无人机有人机都可用这个，侦察是扫一片，巡逻是转圈圈保持存在的那种。原则上船也可以巡逻），集火打击、区域压制打击、（导弹车、舰船、飞机对陆攻击都能用这些个），力量保全（隐蔽、关机、随机机动啥的），
+        # 优先级那个数字高的就认为是优先级高，那就先执行。
 
-        # 清理一遍任务，如果一个任务，分配给它的所有单位
+        # 清理一遍任务。
+        for mission_ID in self.mission_set:
+            self.check_mission_single(mission_ID)
+        
+        # 然后每个执行一遍。原则上由于清理过，所以不会重得太多。执行这步只改handle。
+        for mission_ID in self.mission_set:
+            # 只看开着的任务
+            my_mission_single = self.mission_set[mission_ID]
+            if my_mission_single["flag_active"] == True:
+                # 那就是这个任务开着呢，那就进handle那些。
+                if my_mission_single["type"] == "scout":
+                    self.__handle_mission_scout(mission_ID) # 把该传的参数都在这里传一遍尽量，别搞太乱。
+                elif my_mission_single["type"] == "patrol":
+                    self.__handle_mission_patrol(mission_ID)
+                elif my_mission_single["type"] == "focus_fire":
+                    self.__handle_mission_focus_fire(mission_ID)
+                elif my_mission_single["type"] == "supresse_fire":
+                    self.__handle_mission_supresse_fire(mission_ID)
+                elif my_mission_single["type"] == "preserve":
+                    self.__handle_mission_preserve(mission_ID)
+                elif my_mission_single["type"] == "navigate":
+                    self.__handle_mission_navigate(mission_ID)
+                else:
+                    pass
 
+            else:
+                # 非活动状态的倒也不慌删了，反正没啥坏处。总共应该也没几个任务就是了，影响不了多少速度。
+                pass 
 
+    def __handle_mission_scout(self, mission_ID):
+        # 还得是大模型好使，这种直接就补全出来了。
+        pass
+
+    def __handle_mission_patrol(self, mission_ID):
+        pass 
+
+    def __handle_mission_focus_fire(self, mission_ID):
+        pass 
+
+    def __handle_mission_supresse_fire(self,mission_ID):
+        pass 
+
+    def __handle_mission_preserve(self, mission_ID):
+        pass
+
+    def __handle_mission_navigate(self, mission_ID):
+        pass
+
+    def set_mission_scout(self, ID_list, space_arrange):
+        # 这个是协同侦察，飞机的话就是空中扫圈圈。车如果在这里面就准备打高成本的，来补盲。
+        # TODO 这里得搞一点优化算法，最大化覆盖面积、最小化重叠面积，之类的。但是再说吧，现在这版就先来个扫的，区域也只允许方形。
+        # 相应地，做一个沿着海岸线开的东西，可能有用。
+        pass
+
+    def set_mission_patrol(self, ID_list, space_arrange):
+        # 这个是协同巡逻，主要用于空优。感觉也可以用到舰载机的对地压制上来。# TODO 同上，可上优化算法，但是先来个简单的
+        pass 
+
+    def set_mission_focus_fire(self, ID_list, target_ID):
+        # 这个是集火，要协同所有单位完成准备、协同所有单位先起竖好，然后算个齐达时间，然后把指令发出去。
+        # 得想想，是只打一波还是打到死，恐怕只打一波是比较合理的。以及目标是ID还是LLA。恐怕是ID比较合适，从维护的态势池子里还得打个提前量
+        pass
+
+    def set_mission_supresse_fire(self, ID_list, space_arrange):
+        # 这个是设想中的对特定区域压制射击模式，持续一段时间，好了就发射好了就发射。
+        # 意图是以大量的火力压垮对方防御，或者是实现对敌方目标的露头就打。
+        pass
+
+    def set_mission_preserve(self, ID_list, time_arrange = [0,1000], enemy_direction = [0,1]):
+        # 这个是力量保全，防御性质的。在任务持续期间，红方就东躲西藏开隐蔽，蓝方就协同轮流开电磁干扰，总之减少损失。
+        # 这个其实可以作为红方的默认状态。
+        # 意图是比较好地减少损失。# 蓝方的话还得来点变换阵型掩护，以及贴到商船上。所以可以输入个方向。红方也能用，散开机动嘛。
+        # 有商船就靠到商船旁边去。不过这个逻辑应该在abstract_state层去实现
+        pass
+
+    def set_mission_navigate(self, ID_list,):
+        # 这个作为蓝方舰队的默认说法，沿着开。
+        pass
+    
+    def check_mission_single(self, mission_ID_single:str):
+        # 清理一遍任务，如果一个任务，分配给它的所有单位，都被时间更靠后、优先级大于等于任务占据了，那么就把这个任务标记为已经结束，就是flag_activet改成false。
+        # 如果时间还没到开始时间，那么也把这个任务标记为不活跃.
+
+        # 逻辑应该是：开着的任务中，如果单位都被占用了，就关闭。关了的任务中，如果时间到了，就开起来。
+        # 后面要是想加事件触发任务的话，也是加在这里面。如果是临机决策给出的任务，就直接把标志位安排成true，实现某种意义上的事件触发
+        # 没办法边调试边写，只好采取了目前这种相对傻逼的、隐患比较多的，写一大堆等具备条件再测的。智者所不取。
+        flag_active = self.mission_set[mission_ID_single]["force_arrange"]
+        if flag_active:
+            # 这个其实可以过几步检测一次，不用每一步都检测。
+
+            # 先是处理ID
+            ID_list_single = self.mission_set[mission_ID_single]["force_arrange"]
+
+            # 蠢一点儿就蠢一点儿吧，遍历每一个Active的任务。
+            flag_occupy = True # 所有单位都占用完了，才认为是占用完了。有一个没占用都没占用完，任务都可以继续生效。
+            
+            for ID_single in ID_list_single:
+                # 然后遍历任务，先比较优先级，看每个开始时间比当前的晚的、Active的任务里面里面，是不是用到这个单位了。
+                for mission_ID in self.mission_set:
+                    flag_panju = (self.mission_set[mission_ID]["flag_active"] == True) # 这个任务是活跃的
+                    flag_panju = flag_panju and (self.mission_set[mission_ID]["priority"] >= self.mission_set[mission_ID_single]["priority"]) # 这个任务的优先级大于等于当前任务，所以需要检查时间起止关系。
+                    flag_panju = flag_panju and (self.mission_set[mission_ID]["time_arrange"][0] > self.mission_set[mission_ID_single]["time_arrange"][0]) # 这个任务的开始时间晚于当前任务，所以需要检查这个任务是不是用到了这个单位。
+                    flag_panju = flag_panju and (ID_single in self.mission_set[mission_ID]["force_arrange"]) # 用到了。到这里说明这个单位是被占用了的。那就得改标志位。
+
+                    if flag_panju:
+                        flag_occupy = flag_occupy and True
+                        # 按理说这个单位被占用了之后，应该从force arrange那个list里面给它删了。但是这样的话就丢失信息了。
+
+                    else:
+                        flag_occupy = flag_occupy and False # 有一个没占用完，都算是没占用完，都可以继续往下。
+                
+                # 然后check一下当前时间。过了就认为是结束了
+                if (self.num > self.mission_set[mission_ID_single]["time_arrange"][1]):
+                    # 那就是已经过了时间的上限了，这个任务就可以结束了。
+                    flag_time = False
+                else:
+                    flag_time = True
+                
+                # 然后把时间分配和兵力分配检验的结果重新记录回去。
+                flag_active_new = not(flag_occupy) and flag_time # 没占完，且时间没超过上限，就认为是可以继续活跃。
+                self.mission_set[mission_ID_single]["flag_active"] = flag_active_new
+        else:
+            # 当前任务不活跃，检测一下时间，如果能启动那就启动。# 这个不可以过几步检测一次，不然就跳了可能。
+            if (self.num == self.mission_set[mission_ID_single]["time_arrange"][0]):
+                self.mission_set[mission_ID_single]["flag_active"] = True
+            else:
+                # 当前不活跃，且不符合时间点的触发条件，那就无事发生。# TODO 要定义其他类型的触发条件的话就往这里后面加就完事了。
+                pass
 
     def range_estimate(self, attacker_ID, detectinfo):
         # 这个是寻找范围内是否有它打得到的。
