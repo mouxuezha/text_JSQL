@@ -448,14 +448,25 @@ class BaseAgent(object):
         return LLA
 
 
-    def select_by_type(self, type):
+    def select_by_type(self, type,**kargs):
         # 就根据type过滤一个兵种集合出来。严格来说也不全是兵种，输入个数字1之类的也行。
         # 这个搭配group_A，兵力火力梯次配置就变得非常方便了。
+        # 增加一个参数，可以输入ID list 然后从里面筛选。顺便也加上从特定态势子集里面筛选。
         jieguo_status = {}
-        for attacker_ID in self.status:
+        if "status" in kargs:
+            status = kargs["status"]
+        else:
+            status = self.status
+            
+        if "ID_list" in kargs:
+            ID_list = kargs["ID_list"]
+        else:
+            ID_list = list(status.keys())
+
+        for attacker_ID in ID_list:
             if type in attacker_ID:
                 # 说明是这个种类的不假
-                jieguo_status[attacker_ID] = self.status[attacker_ID]
+                jieguo_status[attacker_ID] = status[attacker_ID]
 
         return jieguo_status
     
@@ -548,15 +559,17 @@ class BaseAgent(object):
                                                     my_abstract_state["flag_stand_by"])
                 elif my_abstract_state["abstract_state"] == "none":
                     self.__handle_none(my_ID)  # 这个就是纯纯的停止。
-                elif my_abstract_state["abstract_state"] == "charge_and_xiache":
-                    self.__handle_charge_and_xiache(my_ID, my_abstract_state["infantry_ID"],
-                                                    my_abstract_state["target_LLA"], my_abstract_state["flag_state"])
-                elif my_abstract_state["abstract_state"] == "circle":
-                    self.__handle_circle(my_ID, my_abstract_state["target_LLA"], my_abstract_state["R"])
+                # elif my_abstract_state["abstract_state"] == "charge_and_xiache":
+                #     self.__handle_charge_and_xiache(my_ID, my_abstract_state["infantry_ID"],
+                #                                     my_abstract_state["target_LLA"], my_abstract_state["flag_state"])
+                # elif my_abstract_state["abstract_state"] == "circle":
+                #     self.__handle_circle(my_ID, my_abstract_state["target_LLA"], my_abstract_state["R"])
                 elif my_abstract_state["abstract_state"] == "UAV_scout":
                     self.__handle_UAV_scout(my_ID, my_abstract_state["center_LLA"],my_abstract_state["R"],my_abstract_state["flag_circle"])
                 elif my_abstract_state["abstract_state"] == "move_and_jammer":
                     self.__handle_move_and_jammer(my_ID, my_abstract_state["target_LLA"],my_abstract_state["model"],my_abstract_state["flag_on"])
+                elif my_abstract_state["abstract_state"] == "UAV_scout2":
+                    self.__handle_UAV_scout2(my_ID, my_abstract_state["LLA_list"])                    
         return self.act
 
     def Inint_abstract_state(self, status):
@@ -732,6 +745,17 @@ class BaseAgent(object):
                                                            }
         # 逻辑就是，顺着圆的走切线，有威胁就往外，到地图边上就反向。多搞点向量运算。
         pass
+    
+    def set_UAV_scout2(self, attacker_ID, LLA_list, mission_ID):
+        # 这个是服务于扫描一片区域的，上面那个是盘旋的。
+        # 这个的逻辑是，顺次序飞过LLA_list里面的点，每飞过一个就把它弄到后面去
+        # 按说得搞个循环队列。但是其实用列表也是一样的。
+        self.abstract_state[attacker_ID] = {"abstract_state": "UAV_scout2",
+            "LLA_list": LLA_list,
+            "finished_num": 0,
+            "flag_finished": False, # 这个用来记录是不是完成了一轮。完成了其实就可以切到别的任务了，但是别在abstract_state里面切，去任务层切好了，
+            "mission_ID":mission_ID
+            }
 
     def set_move_and_jammer(self, attacker_ID, target_LLA, model):
         # 有需求的情况下，给它开开关关闪死对面，鉴定为电磁压制。
@@ -808,6 +832,7 @@ class BaseAgent(object):
     
     def __handle_UAV_scout(self, attacker_ID, center_LLA, R, flag_circle):
         # 这里具体来实现无人机绕飞侦察。# 增加一点泛用性，center_LLA也可以用己方ID，来实现跟着绕飞。
+        # 2025：这个完全可以复用的。
         attacker_LLA = self.__get_LLA(attacker_ID)
 
         if type(center_LLA) is str:
@@ -924,6 +949,30 @@ class BaseAgent(object):
             target_LLA = attacker_LLA + n_vector * 0.01
             self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
 
+    def __handle_UAV_scout2(self, attacker_ID,LLA_list:list):
+        # 飞向第一个点，如果飞到了，就改改LLA_list的顺序。
+        attacker_LLA = self.__get_LLA(attacker_ID)
+        target_LLA = LLA_list[0]
+        jvli = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
+                             attacker_LLA[0], attacker_LLA[1], target_LLA[2])  # 这里alt两个用成一样的，防止最后结束不了。
+        jvli_threshold = 20
+        if jvli > jvli_threshold:
+            # 那就是还没飞过去。那就继续飞。
+            
+            # 为了保证响应及时，还是先用这种最土的每一帧都发指令的办法好了
+            self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
+        else:
+            # 那算是飞到这个点了，于是就可以转到下一个点了。本质上不用处理什么，甚至move指令都可以下一步再发
+            # self._Move_Action(attacker_ID, target_LLA[0], target_LLA[1], target_LLA[2])
+            arrived_LLA = LLA_list.pop(0) # 删掉第一个点，然后把它放到列表最后
+            LLA_list.append(arrived_LLA) # 把第一个点放到最后面去
+
+            self.abstract_state[attacker_ID]["LLA_list"] = LLA_list
+            self.abstract_state[attacker_ID]["finished_num"] = self.abstract_state[attacker_ID]["finished_num"] + 1 
+        
+        if self.abstract_state[attacker_ID]["finished_num"] >= len(LLA_list):
+            # 那就说明已经飞完了一圈了，先改个标志位，不慌切东西。
+            self.abstract_state[attacker_ID]["flag_finished"] = True
     def __handle_move_and_attack2(self, attacker_ID, target_LLA):
         # 这个是改进开火的。
         flag_attack = True  # 调试，开始打炮了。
@@ -1242,140 +1291,140 @@ class BaseAgent(object):
                     self.abstract_state[attacker_ID]["flag_stand_by"] = True
         # 这个抽象状态也是可以长期保持的，因此不需要额外设定完成退出的检测。
 
-    def __handle_charge_and_xiache(self, attacker_ID, infantry_ID, target_LLA, flag_state):
-        # 没在车上就过去接，在车上就A过去，到地方就下车隐蔽，有敌人就下车A它
-        # 记录一些状态，没上车且不能上1。没上车且正在上2。在车上且没敌人就3。在车上且有敌人就4。下去打完理论上就1了。
-        # 不行，还得再简化，取消中间下车打的说法，就是A过去才下车所以在车上不判断是不是遇到敌人了，就突出一个头铁。一条就是一条。别太嵌套。
-        attacker_LLA = self.__get_LLA(attacker_ID)
-        try:
-            infantry_LLA = self.__get_LLA(infantry_ID)
-        except:
-            # 这个就是步兵不在态势里了。
-            infantry_LLA = [0, 0, 0]
+    # def __handle_charge_and_xiache(self, attacker_ID, infantry_ID, target_LLA, flag_state):
+    #     # 没在车上就过去接，在车上就A过去，到地方就下车隐蔽，有敌人就下车A它
+    #     # 记录一些状态，没上车且不能上1。没上车且正在上2。在车上且没敌人就3。在车上且有敌人就4。下去打完理论上就1了。
+    #     # 不行，还得再简化，取消中间下车打的说法，就是A过去才下车所以在车上不判断是不是遇到敌人了，就突出一个头铁。一条就是一条。别太嵌套。
+    #     attacker_LLA = self.__get_LLA(attacker_ID)
+    #     try:
+    #         infantry_LLA = self.__get_LLA(infantry_ID)
+    #     except:
+    #         # 这个就是步兵不在态势里了。
+    #         infantry_LLA = [0, 0, 0]
 
-        jvli = self.distance(attacker_LLA[0], attacker_LLA[1], attacker_LLA[2],
-                             infantry_LLA[0], infantry_LLA[1], attacker_LLA[2])
-        jvli2 = self.distance(attacker_LLA[0], attacker_LLA[1], attacker_LLA[2],
-                                      target_LLA[0], target_LLA[1], attacker_LLA[2])
-        if(jvli+jvli2<114.514):
-            # 那就是已经到了，还搞个毛直接退了.顺手打一炮。
-            self.__handle_one_shot_attack(infantry_ID)
-            self.__finish_abstract_state(attacker_ID)
-            return
+    #     jvli = self.distance(attacker_LLA[0], attacker_LLA[1], attacker_LLA[2],
+    #                          infantry_LLA[0], infantry_LLA[1], attacker_LLA[2])
+    #     jvli2 = self.distance(attacker_LLA[0], attacker_LLA[1], attacker_LLA[2],
+    #                                   target_LLA[0], target_LLA[1], attacker_LLA[2])
+    #     if(jvli+jvli2<114.514):
+    #         # 那就是已经到了，还搞个毛直接退了.顺手打一炮。
+    #         self.__handle_one_shot_attack(infantry_ID)
+    #         self.__finish_abstract_state(attacker_ID)
+    #         return
         
-        if flag_state == 1:
-            # 没上车且距离远，那就得过去。
-            if (jvli < 100) and (self.status[infantry_ID]["FatherID"] == ""):
-                # 那就是到了，且没有上车，转变为可以上车的状态。
-                flag_state = 2
-                self.abstract_state[attacker_ID]["flag_state"] = flag_state
-            elif jvli < 30000:
-                # 距离不够，那就过去接。简化逻辑，只写一个过去接，不假设过程中会动或者什么的。
-                abstract_state_next = copy.deepcopy(self.abstract_state[attacker_ID])
-                self.set_move_and_attack(attacker_ID, infantry_LLA)
-                self.abstract_state[attacker_ID]["next"] = abstract_state_next  # 然后把它放回去，准备跑完了之后再复原。
-            else:
-                # 那就是步兵已经寄了，那就直接退化成move and attack就完事儿了。
-                self.set_move_and_attack(attacker_ID, target_LLA)
-                # 不写next堆栈了，所以在set_move_and_attack里面直接finish就完事了。
-        if flag_state == 2:
-            # 没上车且正在上,或者说条件姑且具备了。
-            if self.abstract_state[attacker_ID]["num_wait"] > 0:
-                # 那就是等着呢，那就等会儿好了。
-                self.abstract_state[attacker_ID]["num_wait"] = self.abstract_state[attacker_ID]["num_wait"] - 1
-                pass
-            else:
-                if self.status[infantry_ID]["FatherID"] != "":
-                    # 那就是对应的步兵已经没了，上车完成或者是真的没了。转换一下。
-                    # 2024 ：今年设定变了，上车之后的步兵还是在态势里，所以要check一下fatherID了
-                    flag_state = 3
-                    self.abstract_state[attacker_ID]["flag_state"] = flag_state
-                elif jvli < 100:
-                    # 那就是到了，那就上车。
-                    # self._Change_State(attacker_ID, "stay")
-                    # self._Change_State(infantry_ID, "stay")
-                    self._On_Board_Action(attacker_ID, infantry_ID)
-                    self.abstract_state[attacker_ID]["num_wait"] = 5                    
-                elif jvli <= 30000:
-                    # 那就是没到且可以去。
-                    flag_state = 1
-                    self.abstract_state[attacker_ID]["flag_state"] = flag_state                    
-            pass
-        if flag_state == 3:
-            # 开冲。 如果到了就放下来分散隐蔽，兵力分散火力集中。
-            # 不要再闭环到1了，这样防止这东西死循环。
-            if self.abstract_state[attacker_ID]["num_wait"] > 0:
-                # 那就是等着呢，那就等会儿好了。
-                self.abstract_state[attacker_ID]["num_wait"] = self.abstract_state[attacker_ID]["num_wait"] - 1
-                if self.abstract_state[attacker_ID]["num_wait"]==0:
-                    # 这一步减完了之后等于0，那就说明是应该退出这个状态了。
-                    self.__finish_abstract_state(attacker_ID)
-                    return
-            else:
+    #     if flag_state == 1:
+    #         # 没上车且距离远，那就得过去。
+    #         if (jvli < 100) and (self.status[infantry_ID]["FatherID"] == ""):
+    #             # 那就是到了，且没有上车，转变为可以上车的状态。
+    #             flag_state = 2
+    #             self.abstract_state[attacker_ID]["flag_state"] = flag_state
+    #         elif jvli < 30000:
+    #             # 距离不够，那就过去接。简化逻辑，只写一个过去接，不假设过程中会动或者什么的。
+    #             abstract_state_next = copy.deepcopy(self.abstract_state[attacker_ID])
+    #             self.set_move_and_attack(attacker_ID, infantry_LLA)
+    #             self.abstract_state[attacker_ID]["next"] = abstract_state_next  # 然后把它放回去，准备跑完了之后再复原。
+    #         else:
+    #             # 那就是步兵已经寄了，那就直接退化成move and attack就完事儿了。
+    #             self.set_move_and_attack(attacker_ID, target_LLA)
+    #             # 不写next堆栈了，所以在set_move_and_attack里面直接finish就完事了。
+    #     if flag_state == 2:
+    #         # 没上车且正在上,或者说条件姑且具备了。
+    #         if self.abstract_state[attacker_ID]["num_wait"] > 0:
+    #             # 那就是等着呢，那就等会儿好了。
+    #             self.abstract_state[attacker_ID]["num_wait"] = self.abstract_state[attacker_ID]["num_wait"] - 1
+    #             pass
+    #         else:
+    #             if self.status[infantry_ID]["FatherID"] != "":
+    #                 # 那就是对应的步兵已经没了，上车完成或者是真的没了。转换一下。
+    #                 # 2024 ：今年设定变了，上车之后的步兵还是在态势里，所以要check一下fatherID了
+    #                 flag_state = 3
+    #                 self.abstract_state[attacker_ID]["flag_state"] = flag_state
+    #             elif jvli < 100:
+    #                 # 那就是到了，那就上车。
+    #                 # self._Change_State(attacker_ID, "stay")
+    #                 # self._Change_State(infantry_ID, "stay")
+    #                 self._On_Board_Action(attacker_ID, infantry_ID)
+    #                 self.abstract_state[attacker_ID]["num_wait"] = 5                    
+    #             elif jvli <= 30000:
+    #                 # 那就是没到且可以去。
+    #                 flag_state = 1
+    #                 self.abstract_state[attacker_ID]["flag_state"] = flag_state                    
+    #         pass
+    #     if flag_state == 3:
+    #         # 开冲。 如果到了就放下来分散隐蔽，兵力分散火力集中。
+    #         # 不要再闭环到1了，这样防止这东西死循环。
+    #         if self.abstract_state[attacker_ID]["num_wait"] > 0:
+    #             # 那就是等着呢，那就等会儿好了。
+    #             self.abstract_state[attacker_ID]["num_wait"] = self.abstract_state[attacker_ID]["num_wait"] - 1
+    #             if self.abstract_state[attacker_ID]["num_wait"]==0:
+    #                 # 这一步减完了之后等于0，那就说明是应该退出这个状态了。
+    #                 self.__finish_abstract_state(attacker_ID)
+    #                 return
+    #         else:
                 
-                if jvli2 < 100:
-                    # 那就算是到了，没必要搞出奇怪的东西
-                    # 到了就下车隐蔽
-                    self._Change_State(attacker_ID, "stay")
-                    # self._Change_State(infantry_ID, "stay")
-                    self._Off_Board_Action(attacker_ID, infantry_ID)
-                    self.abstract_state[attacker_ID]["num_wait"] = 5
-                    # 得重新设计退出机制。2024.
+    #             if jvli2 < 100:
+    #                 # 那就算是到了，没必要搞出奇怪的东西
+    #                 # 到了就下车隐蔽
+    #                 self._Change_State(attacker_ID, "stay")
+    #                 # self._Change_State(infantry_ID, "stay")
+    #                 self._Off_Board_Action(attacker_ID, infantry_ID)
+    #                 self.abstract_state[attacker_ID]["num_wait"] = 5
+    #                 # 得重新设计退出机制。2024.
 
-                    # if jvli < 20000:
-                    #     # 说明步兵ID已经有了，那就是下车成功了或者无论如何，反正步兵在地上。
-                    #     # 而且没有敌人，先结束，原地藏起来。原地藏起来隐含了有敌人就A过去，所以不用单独写有敌人就A过去了。
-                    #     # 这么写的话就可以中途搞几次下车警戒之类的，也没啥不好的。
-                    #     self.__finish_abstract_state(attacker_ID)
-                    #     self.__finish_abstract_state(attacker_ID)
-                    #     # 这里存在一个问题，下车完成之后车本身是move_and_attack,而charge_and_xiache在抽象状态里面，所以要结束两次
+    #                 # if jvli < 20000:
+    #                 #     # 说明步兵ID已经有了，那就是下车成功了或者无论如何，反正步兵在地上。
+    #                 #     # 而且没有敌人，先结束，原地藏起来。原地藏起来隐含了有敌人就A过去，所以不用单独写有敌人就A过去了。
+    #                 #     # 这么写的话就可以中途搞几次下车警戒之类的，也没啥不好的。
+    #                 #     self.__finish_abstract_state(attacker_ID)
+    #                 #     self.__finish_abstract_state(attacker_ID)
+    #                 #     # 这里存在一个问题，下车完成之后车本身是move_and_attack,而charge_and_xiache在抽象状态里面，所以要结束两次
 
-                    #     # self.__finish_abstract_state(infantry_ID) # Python不让我直接这么玩。彳亍口巴
-                    # else:
-                    #     # 那就是没步兵了反正。
-                    #     # self.__finish_abstract_state(attacker_ID)
-                    #     # self.__finish_abstract_state(attacker_ID)
-                    #     pass
-                else:
-                    # 进堆栈，A过去。   
-                    abstract_state_next = copy.deepcopy(self.abstract_state[attacker_ID])
-                    self.set_move_and_attack(attacker_ID, target_LLA)
-                    self.abstract_state[attacker_ID]["next"] = abstract_state_next  # 然后把它放回去，准备跑完了之后再复原。
-            pass
-        return
+    #                 #     # self.__finish_abstract_state(infantry_ID) # Python不让我直接这么玩。彳亍口巴
+    #                 # else:
+    #                 #     # 那就是没步兵了反正。
+    #                 #     # self.__finish_abstract_state(attacker_ID)
+    #                 #     # self.__finish_abstract_state(attacker_ID)
+    #                 #     pass
+    #             else:
+    #                 # 进堆栈，A过去。   
+    #                 abstract_state_next = copy.deepcopy(self.abstract_state[attacker_ID])
+    #                 self.set_move_and_attack(attacker_ID, target_LLA)
+    #                 self.abstract_state[attacker_ID]["next"] = abstract_state_next  # 然后把它放回去，准备跑完了之后再复原。
+    #         pass
+    #     return
     
-    def __handle_circle(self, attacker_ID, target_LLA, R):
-        # 处理一下。
-        point_list = self.abstract_state[attacker_ID]["point_list"]
-        R = self.abstract_state[attacker_ID]["R"]
-        index = self.abstract_state[attacker_ID]["index"]
+    # def __handle_circle(self, attacker_ID, target_LLA, R):
+    #     # 处理一下。
+    #     point_list = self.abstract_state[attacker_ID]["point_list"]
+    #     R = self.abstract_state[attacker_ID]["R"]
+    #     index = self.abstract_state[attacker_ID]["index"]
 
 
-        geshu = 6
-        if len(point_list) == 0:
-            # 重新生成一个点列
-            point_list = self.__get_LLA_around(target_LLA, n_R=1, n_theta=geshu, dR=R)
-            self.abstract_state[attacker_ID]["point_list"] = point_list
-            index = 0
-        else:
-            attacker_LLA = self.__get_LLA(attacker_ID)
-            point_next = point_list[index]
-            jvli = self.distance(point_next[0], point_next[1], attacker_LLA[2],
-                                 attacker_LLA[0], attacker_LLA[1], attacker_LLA[2])
-            point_next2 = np.array([point_next[0], point_next[1]])
-            attacker_LLA2 = np.array([attacker_LLA[0], attacker_LLA[1]])
-            vector = point_next2-attacker_LLA2
-            jvli = np.linalg.norm(vector)
-            if jvli < 0.08*R:
-                # 到了
-                index = index + 1
-                if index >= geshu:
-                    index = 0
+    #     geshu = 6
+    #     if len(point_list) == 0:
+    #         # 重新生成一个点列
+    #         point_list = self.__get_LLA_around(target_LLA, n_R=1, n_theta=geshu, dR=R)
+    #         self.abstract_state[attacker_ID]["point_list"] = point_list
+    #         index = 0
+    #     else:
+    #         attacker_LLA = self.__get_LLA(attacker_ID)
+    #         point_next = point_list[index]
+    #         jvli = self.distance(point_next[0], point_next[1], attacker_LLA[2],
+    #                              attacker_LLA[0], attacker_LLA[1], attacker_LLA[2])
+    #         point_next2 = np.array([point_next[0], point_next[1]])
+    #         attacker_LLA2 = np.array([attacker_LLA[0], attacker_LLA[1]])
+    #         vector = point_next2-attacker_LLA2
+    #         jvli = np.linalg.norm(vector)
+    #         if jvli < 0.08*R:
+    #             # 到了
+    #             index = index + 1
+    #             if index >= geshu:
+    #                 index = 0
 
-                # 这里如果是move_and_attack，就得把它结束掉。
-        self.abstract_state[attacker_ID]["index"] = index
-        point_next = point_list[index]
-        self._Move_Action(attacker_ID, point_next[0], point_next[1], point_next[2])
+    #             # 这里如果是move_and_attack，就得把它结束掉。
+    #     self.abstract_state[attacker_ID]["index"] = index
+    #     point_next = point_list[index]
+    #     self._Move_Action(attacker_ID, point_next[0], point_next[1], point_next[2])
 
     def __finish_abstract_state(self, attacker_ID):
         # 统一写一个完了之后清空的，因为也不完全是清空，还得操作一些办法。
@@ -1476,9 +1525,137 @@ class BaseAgent(object):
     def __handle_mission_scout(self, mission_ID,ID_list,space_arrange):
         # 还得是大模型好使，这种直接就补全出来了。
         # 直接平着扫好了，
-        pass
+        # time_lasting:任务已经持续了多长时间
+        time_lasting = self.num - self.mission_set[mission_ID]["time_arrange"][0]
+        
+        flag_modified = self.mission_set[mission_ID]["flag_modified"]
+        # 需要区分：真实的力量分配是被占用了还剩多少，然后还有一个是一开始分配的力量。
+        force_arrange_real = self.mission_set[mission_ID]["force_arrange_real"]
 
-    def __handle_mission_patrol(self, mission_ID):
+        print("__handle_mission_scout: 无人机类型名还未指定")
+            
+        UAV_units = self.select_by_type("无人机类型名还未指定",ID_list=force_arrange_real)
+
+        space_arrange = self.mission_set[mission_ID]["space_arrange"]
+        # 生成轨迹，直接分一些条数然后开始扫就完事了，先搞个简单的。正好地图是横着的。
+        geshu = len(UAV_units)    
+
+        if flag_modified:
+            # 那就是需要重新规划。兵力分配发生了变化。            
+            # 先根据探测半径生成一堆点列，然后分配一下大家去扫。东西方向扫好了。
+            range_degree = self.m_to_degree(15*1000) * 2 
+            # list_lon = np.linspace(space_arrange[0],space_arrange[2],geshu) # 好家伙，都给大模型懂完了。# 然而懂的不对
+            list_lon = np.arange(space_arrange[0], space_arrange[2], range_degree) 
+            flag_temp = True
+            LLA_list = [] 
+            for i in range(len(list_lon)*2):
+                # 组装一个LLA
+                if flag_temp:
+                    lat_single = space_arrange[1]
+                else:
+                    lat_single = space_arrange[3]
+                if (i % 2) == 0:
+                    # 左右右左左，两个才变一次
+                    flag_temp = not flag_temp
+
+                lon_single = list_lon[round((i+1)/2-0.1)]
+                LLA_single = [lat_single, lon_single, 1145 ] # 高度这个维度本身没有什么作用，随便给个
+                LLA_list.append(LLA_single)
+            
+            # 然后分配给各个无人机，让它们探去。如果被打了就重新规划之类的。
+            LLA_list_part_list = []
+            n_single = round(len(LLA_list)/geshu)
+            for i in range(geshu):
+                index_qian = i * n_single
+                index_hou = min((i+1)*n_single, len(LLA_list)) 
+                LLA_list_part_single = LLA_list[index_qian, index_hou]
+                LLA_list_part_list.append(LLA_list_part_single)
+            
+            # 然后开始真正的操作了，下达指令给各个参与单位。
+            for i in range(len(force_arrange_real)):
+                # 下达指令到抽象状态那层。 
+                # 如果已经下过指令了，就不再重复下了。
+                
+                abstract_state_single = self.abstract_state[force_arrange_real[i]]
+                flag_ordered = abstract_state_single["abstract_state"] == "UAV_scout2" 
+                flag_ordered = flag_ordered and abstract_state_single["mission_ID"] == mission_ID # 那就进一步检查是不是是同一个任务，是的话就不管了，不是的话就重新下指令。
+                if not(flag_ordered):
+                    self.set_UAV_scout2(force_arrange_real[i], LLA_list_part_list[i], mission_ID=mission_ID)
+        else:
+            # 那就是任务检测那里认为没有修改，不需要重新生成一遍。
+            pass
+
+        # 检测是不是都完成了，都完成了就算是这个任务完成了，并且把侦察单位撤到特定的地方。
+        flag_all_finished = True
+        for i in range(len(force_arrange_real)):
+            # 检查是不是都完成了。
+            abstract_state_single = self.abstract_state[force_arrange_real[i]]
+            if abstract_state_single["abstract_state"] != "UAV_scout2":
+                # 按理说不应该进到这里，进到这里说明出问题了。
+                raise Exception("__handle_mission_scout: 按理说不应该执行到这里，执行到这里说明出问题了")
+            else:
+                flag_all_finished = flag_all_finished and abstract_state_single["flag_finished"]
+        
+        if flag_all_finished:
+            # 这样的话就算是完成了，标志位先改一下。
+            self.mission_set[mission_ID]["flag_finished"] = True
+            # 然后把单位都撤到指定位置。比如说我方单位头上？
+            # 或者也可能是先保持巡逻状态比较好。这个得试了才知道，先来个保持原状的吧
+
+            # for i in range(len(force_arrange_real)):
+
+
+    def __handle_mission_patrol(self, mission_ID, ID_list, space_arrange):
+        # 侦察是扫一片，巡逻是转圈圈保持存在。这两个要做出差异性来。主要在于轨迹怎么生成。
+        flag_modified = self.mission_set[mission_ID]["flag_modified"]
+        
+        if flag_modified:
+            # space_arrange：左上右下
+            point_1 = [space_arrange[0],space_arrange[1],1145] # 左上
+            point_2 = [space_arrange[0],space_arrange[3],1145] # 左下
+            point_3 = [space_arrange[2],space_arrange[3],1145] # 右下
+            point_4 = [space_arrange[2],space_arrange[1],1145] # 右上
+
+            # 然后把每一截的点都离散一下。
+            dL = 0.01
+            point_list1 = self.get_point_list(start_LLA=point_1, end_LLA=point_2, dL=dL)
+            point_list2 = self.get_point_list(start_LLA=point_2, end_LLA=point_3, dL=dL)
+            point_list3 = self.get_point_list(start_LLA=point_3, end_LLA=point_4, dL=dL)
+            point_list4 = self.get_point_list(start_LLA=point_4, end_LLA=point_1, dL=dL)
+
+            point_list = point_list1 + point_list2 + point_list3 + point_list4
+
+            # 按理来说，到这里就已经是循环的点列了，然后就是在这里面分配一些东西，让它循环起来
+
+            force_arrange_real = self.mission_set[mission_ID]["force_arrange_real"]
+
+            geshu = len(force_arrange_real) # 这个是分配了多少单位
+
+            # 然后把那些个点分一分，分别从不同的地方出来。就是说，几个飞机均匀地分布在这一圈点上，然后沿着这一圈点搁那转就完事了。
+            n_depart = round(len(point_list)/geshu)
+            point_list_depart_list = []
+            for i in range(geshu):
+                point_list_depart_single = [] 
+                index_qian = i * n_depart
+                index_hou = min((i+1)*n_depart, len(point_list)) 
+                point_list_depart_single = point_list[index_qian:index_hou]
+                point_list_depart_single = point_list_depart_single + point_list[0:index_qian]
+                point_list_depart_list.append(point_list_depart_single)
+            
+            # 然后开始真正的操作了，下达指令给各个参与单位。
+            for i in range(len(force_arrange_real)):
+                # 下达指令到抽象状态那层。 
+                # 如果已经下过指令了，就不再重复下了。
+                abstract_state_single = self.abstract_state[force_arrange_real[i]]
+                flag_ordered = abstract_state_single["abstract_state"] == "UAV_patrol"
+                flag_ordered = flag_ordered and abstract_state_single["mission_ID"] == mission_ID # 那就进一步检查是不是是同一个任务，是的话就不管了，不是的话就重新下指令。
+                if not(flag_ordered):
+                    self.set_UAV_scout2(force_arrange_real[i], point_list_depart_list[i], mission_ID=mission_ID)
+            
+        # 然后是结束条件：这个没有结束条件，只有任务单位被占完了或者时间到了。
+        if self.num > self.mission_set[mission_ID]["time_arrange"][1]:
+            # 时间到了，任务结束。
+            self.mission_set[mission_ID]["flag_finished"] = True
         pass 
 
     def __handle_mission_focus_fire(self, mission_ID):
@@ -1511,18 +1688,29 @@ class BaseAgent(object):
             flag_active = False
         
         if "priority" in kargs:
+            # 这个也是，得专门设定。
             priority = kargs["priority"]
         else:
             # 看是否需要搞成“随着时间推移，任务优先度提高”目前的写法是不用的，同级下就是后面的优先级高。
-            priority = 1
+            priority = 1 # 约定数字越大优先级越高，而不是硬件编程里那种反着来。
+        
+        if "describe" in kargs:
+            describe = kargs["describe"]
+        else:
+            describe = "协同侦察"
 
         time_arrange = [self.num + 1, self.num + 1 + running_time]
 
-        self.mission_set[mission_ID] = {"type":"scout", "force_arrange":ID_list, "time_arrange":time_arrange, "space_arrange":space_arrange, "flag_active": flag_active, "priority":priority}
+        self.mission_set[mission_ID] = {"type":"scout", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "space_arrange":space_arrange, "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
+        # 后面还需要啥额外的属性再来这里定义。flag_modified初始化为True，让它第一波开始的时候能进去。
         pass
 
     def set_mission_patrol(self, ID_list, space_arrange):
         # 这个是协同巡逻，主要用于空优。感觉也可以用到舰载机的对地压制上来。# TODO 同上，可上优化算法，但是先来个简单的
+        # 侦察是扫一片，巡逻是转圈圈保持存在。这两个要做出差异性来。主要在于轨迹怎么生成。这个应该是生成一些巡逻轨迹然后一直绕。
+        # 先来个最简单的，沿着边框生成一堆点列。
+
+
         pass 
 
     def set_mission_focus_fire(self, ID_list, target_ID):
@@ -1562,6 +1750,8 @@ class BaseAgent(object):
 
             # 蠢一点儿就蠢一点儿吧，遍历每一个Active的任务。
             flag_occupy = True # 所有单位都占用完了，才认为是占用完了。有一个没占用都没占用完，任务都可以继续生效。
+
+            force_arrange_real = [] # 每一步重新刷一遍，看分给这个任务的力量还剩多少。
             
             for ID_single in ID_list_single:
                 # 然后遍历任务，先比较优先级，看每个开始时间比当前的晚的、Active的任务里面里面，是不是用到这个单位了。
@@ -1574,9 +1764,10 @@ class BaseAgent(object):
                     if flag_panju:
                         flag_occupy = flag_occupy and True
                         # 按理说这个单位被占用了之后，应该从force arrange那个list里面给它删了。但是这样的话就丢失信息了。
-
+                        # 所以重新搞一个列表来实现这个事情
                     else:
                         flag_occupy = flag_occupy and False # 有一个没占用完，都算是没占用完，都可以继续往下。
+                        force_arrange_real.append(ID_single) # 没被占用的话，就重新记录一下。
                 
                 # 然后check一下当前时间。过了就认为是结束了
                 if (self.num > self.mission_set[mission_ID_single]["time_arrange"][1]):
@@ -1588,6 +1779,16 @@ class BaseAgent(object):
                 # 然后把时间分配和兵力分配检验的结果重新记录回去。
                 flag_active_new = not(flag_occupy) and flag_time # 没占完，且时间没超过上限，就认为是可以继续活跃。
                 self.mission_set[mission_ID_single]["flag_active"] = flag_active_new
+            
+            # 然后把新刷的force_arrange_real弄回去
+            if len(self.mission_set[mission_ID_single]["force_arrange_real"])!=len(force_arrange_real):
+                # 那就是实际分配的力量发生了变化，那就把它刷回去并且改标志位
+                self.mission_set[mission_ID_single]["force_arrange_real"] = force_arrange_real
+                self.mission_set[mission_ID_single]["flag_modified"] = True
+            else:
+                # 没有变化，那就把标志位刷回来。
+                self.mission_set[mission_ID_single]["flag_modified"] = False
+            
         else:
             # 当前任务不活跃，检测一下时间，如果能启动那就启动。# 这个不可以过几步检测一次，不然就跳了可能。
             if (self.num == self.mission_set[mission_ID_single]["time_arrange"][0]):
@@ -1984,6 +2185,22 @@ class BaseAgent(object):
         n_vector_z = np.array([0, 0, 1]) # 这个是搞一个竖着的向量，用来求切线。
         n_vector_tan = np.cross(n_vector_r, n_vector_z) # 这个就是切线向量了
         return n_vector_tan # 顺时针逆时针的说法外面再说，这里默认逆时针
+    
+    def get_point_list(self,start_LLA, end_LLA, dL = 0.01):
+        # 向量化运算了，根据首尾两点，生成一个点的列表
+        # 用于服务于巡逻，因为巡逻的搞法是生成一系列点列，然后有几个飞机就几个绕着飞。
+        v_start = np.array([start_LLA[0],start_LLA[1]]) # 高度那维不要了吧
+        v_end = np.array([end_LLA[0],end_LLA[1]])
+        v = v_end - v_start
+        v = v / (np.linalg.norm(v)+0.000000001)
+        point_list = []
+        for i in range(int(np.linalg.norm(v)/dL)):
+            point_single = v_start + dL * i * v
+            point_list_single = [point_single[0], point_single[1], start_LLA[2]]
+            point_list.append(point_list_single)
+
+        return point_list
+
     
     def get_state(self, cur_myState, cur_enemyState):
         # 把这些个东西整成能够检索的形式。以及比对是不是有东西被摧毁了
