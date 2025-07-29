@@ -1455,7 +1455,7 @@ class BaseAgent(object):
             if my_mission_single["flag_active"] == True:
                 # 那就是这个任务开着呢，那就进handle那些。
                 if my_mission_single["type"] == "scout":
-                    self.__handle_mission_scout(mission_ID) # 把该传的参数都在这里传一遍尽量，别搞太乱。
+                    self.__handle_mission_scout(mission_ID,my_mission_single["force_arrange"],my_mission_single["space_arrange"]) # 把该传的参数都在这里传一遍尽量，别搞太乱。
                 elif my_mission_single["type"] == "patrol":
                     self.__handle_mission_patrol(mission_ID)
                 elif my_mission_single["type"] == "focus_fire":
@@ -1473,8 +1473,9 @@ class BaseAgent(object):
                 # 非活动状态的倒也不慌删了，反正没啥坏处。总共应该也没几个任务就是了，影响不了多少速度。
                 pass 
 
-    def __handle_mission_scout(self, mission_ID):
+    def __handle_mission_scout(self, mission_ID,ID_list,space_arrange):
         # 还得是大模型好使，这种直接就补全出来了。
+        # 直接平着扫好了，
         pass
 
     def __handle_mission_patrol(self, mission_ID):
@@ -1492,10 +1493,32 @@ class BaseAgent(object):
     def __handle_mission_navigate(self, mission_ID):
         pass
 
-    def set_mission_scout(self, ID_list, space_arrange):
+    def set_mission_scout(self, ID_list, space_arrange, **kargs):
         # 这个是协同侦察，飞机的话就是空中扫圈圈。车如果在这里面就准备打高成本的，来补盲。
         # TODO 这里得搞一点优化算法，最大化覆盖面积、最小化重叠面积，之类的。但是再说吧，现在这版就先来个扫的，区域也只允许方形。
         # 相应地，做一个沿着海岸线开的东西，可能有用。
+        index = len(self.mission_set) # 这个是任务ID，直接用任务数量就行。
+        mission_ID = "scout_" + str(index)
+        if "running_time" in kargs:
+            running_time = kargs["running_time"]
+        else:
+            running_time = 1500
+            
+        if "flag_active" in kargs:
+            flag_active = kargs["flag_active"]
+        else:
+            # 得专门开，否则视为false
+            flag_active = False
+        
+        if "priority" in kargs:
+            priority = kargs["priority"]
+        else:
+            # 看是否需要搞成“随着时间推移，任务优先度提高”目前的写法是不用的，同级下就是后面的优先级高。
+            priority = 1
+
+        time_arrange = [self.num + 1, self.num + 1 + running_time]
+
+        self.mission_set[mission_ID] = {"type":"scout", "force_arrange":ID_list, "time_arrange":time_arrange, "space_arrange":space_arrange, "flag_active": flag_active, "priority":priority}
         pass
 
     def set_mission_patrol(self, ID_list, space_arrange):
