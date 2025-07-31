@@ -1310,6 +1310,7 @@ class BaseAgent(object):
         pass
 
     def __handle_open_fire2(self, attacker_ID,detected_state ):
+        
         WeaponState_list = self.status[attacker_ID]["WeaponState"]
 
         # 2024：这里对导弹车进行一些单独的处理。导弹车只有在对方防空受到一定的削弱之后才会发射。
@@ -1617,9 +1618,9 @@ class BaseAgent(object):
                 elif my_mission_single["type"] == "patrol":
                     self.__handle_mission_patrol(mission_ID,my_mission_single["force_arrange_real"],my_mission_single["space_arrange"])
                 elif my_mission_single["type"] == "focus_fire":
-                    self.__handle_mission_focus_fire(mission_ID)
+                    self.__handle_mission_focus_fire(mission_ID,my_mission_single["force_arrange_real"],my_mission_single["target_LLA"],my_mission_single["weapon_type"])
                 elif my_mission_single["type"] == "supresse_fire":
-                    self.__handle_mission_supresse_fire(mission_ID)
+                    self.__handle_mission_supresse_fire(mission_ID,my_mission_single["force_arrange_real"],my_mission_single["space_arrange"])
                 elif my_mission_single["type"] == "preserve":
                     self.__handle_mission_preserve(mission_ID)
                 elif my_mission_single["type"] == "navigate":
@@ -1845,9 +1846,44 @@ class BaseAgent(object):
                     # 没有开火，那就开火。
                     self.set_open_fire(attacker_ID,target_LLA=enemy_LLA_ave, detected_state=enemy_in)
 
+        # 然后结束条件：持续时间到了，或者分配的单位没了。
+        if self.num>self.mission_set[mission_ID]["time_arrange"][1]:
+            # 时间到了，任务结束。
+            self.mission_set[mission_ID]["flag_finished"] = True
+
         pass 
 
-    def __handle_mission_preserve(self, mission_ID):
+    def __handle_mission_preserve(self, mission_ID, ID_list):
+        # 这个也关键，而且这个的问题在于得分红蓝方实现。任务这层主要是把协同的事情做了。
+        # 红蓝方分开写好了，逻辑差的有点多。
+        if self.role == "red":
+            # 那就是红方。
+            self.__handle_mission_preserve_red(mission_ID, ID_list)
+            pass
+        elif self.role == "blue":
+            # 蓝方
+            self.__handle_mission_preserve_blue(mission_ID, ID_list)
+            pass
+        else:
+            raise Exception("role error")
+        pass
+
+    def __handle_mission_preserve_red(self,mission_ID, ID_list):
+        # 这个是红方用的，走红方的逻辑。
+        pass 
+
+    def __handle_mission_preserve_blue(self, mission_ID, ID_list):
+        # 这个是蓝方用的，走蓝方的逻辑。
+        # 先走一个反导的
+        self.__handle_mission_anti_missile(mission_ID, ID_list)
+
+        # 然后看需不需要开电子干扰，核心是判断谁被集火了。
+
+        # 然后走一个航渡的逻辑，船和坦克哪些不一样，这得是走归走、打归打的逻辑了。
+        pass
+
+    def __handle_mission_anti_missile(self,mission_ID, ID_list):
+        # 应该很多地方都会用到的联合反导逻辑。比如别打重了、火力分配等。底下还得匹配一个抽象状态可能。
         pass
 
     def __handle_mission_navigate(self, mission_ID):
