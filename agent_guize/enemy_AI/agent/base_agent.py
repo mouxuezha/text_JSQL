@@ -571,7 +571,10 @@ class BaseAgent(object):
                 elif my_abstract_state["abstract_state"] == "UAV_scout2":
                     self.__handle_UAV_scout2(my_ID, my_abstract_state["LLA_list"])    
                 elif my_abstract_state["abstract_state"] == "prepare_and_fire":
-                    self.__handle_prepare_and_fire(my_ID, my_abstract_state["target_LLA"], my_abstract_state["weapon_type"])                
+                    self.__handle_prepare_and_fire(my_ID, my_abstract_state["target_LLA"], my_abstract_state["weapon_type"])    
+                elif my_abstract_state["abstract_state"] == "anti_missile":
+                    self.__handle_anti_missile(my_ID,my_abstract_state["target_list"])            
+        
         return self.act
 
     def Inint_abstract_state(self, status):
@@ -762,6 +765,12 @@ class BaseAgent(object):
             "mission_ID":mission_ID
             }
 
+    def set_anti_missile(self, attacker_ID, mission_ID):
+        self.abstract_state[attacker_ID] = {"abstract_state": "anti_missile",
+            "target_list":[],
+            "mission_ID":mission_ID
+            }        
+
     def set_move_and_jammer(self, attacker_ID, target_LLA, model):
         # 有需求的情况下，给它开开关关闪死对面，鉴定为电磁压制。
         if (type(attacker_ID) == dict) or (type(attacker_ID) == list):
@@ -773,6 +782,12 @@ class BaseAgent(object):
         # 逻辑就是，检测到周围值得干扰的目标就进入电磁压制状态，然后开开关开关关开。
         # 参数model就用来处理到底是怎么个开关法。
         # 1：只有看到威胁的时候开几秒，然后赶紧关了。2：保持压制，随机的开开关开关关开
+        pass
+
+    def __handle_anti_missile(self, attacker_ID, target_list):
+        # 能打就打，雷达开机。开不开机可能得后面判断一下。
+        # 成功打一发就把target_list 进行一番更新。
+        raise Exception("__handle_anti_missile unfinished yet")
         pass
 
     def __handle_move_and_jammer(self, attacker_ID, target_LLA, model, flag_on):
@@ -1870,6 +1885,24 @@ class BaseAgent(object):
 
     def __handle_mission_preserve_red(self,mission_ID, ID_list):
         # 这个是红方用的，走红方的逻辑。
+        # 红方的保护是无人机飞回自己家头上盘旋然后回避姿态，就是敌方战斗机来就跑，被打导弹了就做规避。
+        UAV_units = self.select_by_type(type="无人机",ID_list = ID_list)
+        che_units = self.select_by_type(type="导弹车",ID_list = ID_list)
+        che_LLA_ave  = self.get_LLA_ave(status=che_units)
+        if len(UAV_units)>0:
+            for UAV_ID in UAV_units:
+                # 无人机飞回去。在车头上盘旋可以检测来袭导弹。
+                if(self.abstract_state[che_ID]["abstract_state"] != "UAV_scout"):
+                    self.set_UAV_scout(UAV_ID, target_LLA=che_LLA_ave)
+
+        if len(che_units)>0:
+            # 车隐蔽一下。
+            for che_ID in che_units:
+                if(self.abstract_state[che_ID]["abstract_state"] != "hidden_and_alert"):
+                    # 没有隐蔽，那就隐蔽
+                    self.set_hidden_and_alert(che_ID)
+        
+
         pass 
 
     def __handle_mission_preserve_blue(self, mission_ID, ID_list):
@@ -1884,6 +1917,43 @@ class BaseAgent(object):
 
     def __handle_mission_anti_missile(self,mission_ID, ID_list):
         # 应该很多地方都会用到的联合反导逻辑。比如别打重了、火力分配等。底下还得匹配一个抽象状态可能。
+
+        # 应该是这么玩，给每个船都维护一个拦截的堆栈，任务这层维护更新这些堆栈，然后抽象状态那层管的是“好了就开火”
+
+        enemy_missile = self.select_by_type(type="导弹", status=self.detected_state)
+        # 逻辑应该是，给每枚来袭弹找一个它最合适的船（的火力通道）。确保每个导弹都有船去打它尽量，先从一拦一开始分类，每个导弹先分配一个火力通道，然后再说。
+        
+        N_lan_1 = 2
+        channel = [] 
+        for i in range(N_lan_1):
+            channel = channel + ID_list   # 这样通道里就是一些ID。
+        
+        other_channels = channel
+        arrange_dict = {}
+        for missile_single in enemy_missile:
+            # 从列表里找到剩下的里面离他最近的一个船，然后分配进去。然后把channel里面那个给删了。
+            missile_channels = [] 
+            ID = missile_single["ID"]
+            for i in range(N_lan_1):
+                # N拦1所以要找N次
+                arranged_channel, other_channels = self.get_nearest_channel(missile_single,other_channels)
+                missile_channels.append(arranged_channel)
+            arrange_dict[ID] = missile_channels
+            
+        # 至此就算是分配完了。这种搞法本质上是个贪心算法，不保证最优，但是保证能算出来且开销不大。
+        # 然后就开始下达指令了，操作抽象状态那层。
+        for attacker_ID in ID_list:
+            # 对每个单位，先把抽象状态设了，然后再往里面append目标。
+            self.set_anti_missile(attacker_ID)
+        
+        # 这步才是真正的分配目标
+        for attacker_ID in ID_list:
+            for missil_ID in arrange_dict:
+                if attacker_ID in arrange_dict[missil_ID]:
+                    # 在这个通道里，那就append进去。
+                    # 防止重复。
+                    if not(missil_ID) in self.abstract_state[attacker_ID]["target_list"]:
+                        self.abstract_state[attacker_ID]["target_list"].append(missil_ID) 
         pass
 
     def __handle_mission_navigate(self, mission_ID):
