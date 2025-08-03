@@ -253,6 +253,12 @@ class BaseAgent(object):
             AttackAction = {"Type": "Attack", "Id": Id, "Unit_Type": Unit_Type, "Lon": lon, "Lat": lat, "Alt": alt}
         self._exec_group_cmd(Id, "Attack", **AttackAction)
         return AttackAction
+    
+    # 拦截的得专门整一个，因为拦截的指令是发目标ID的，这个的具体实现还得看平台里到底怎么解析。
+    def _Anti_missile_Action(self, Id, Target_ID, weapon_type):
+        AntiMissileAction = {"Type": "Anti_missile", "Id": Id, "Target_ID": Target_ID, "weapon_type": weapon_type}
+        self.act.append(AntiMissileAction)
+        return AntiMissileAction
 
     # 雷达开关机指令函数
     def _Set_Radar_Action(self, Id, On):
@@ -492,6 +498,13 @@ class BaseAgent(object):
                 type = False
         return type    
     # 后面开始了，xxh常用的那套abstract_state的说法
+    
+    def Gostep_all(self):
+        # 统一弄一个，以示并无偏私之意
+
+        self.Gostep_mission_set()
+        self.Gostep_abstract_state()
+        
 
     # xxh尝试整点儿复合命令
     def Gostep_abstract_state(self, **kargs):
@@ -765,10 +778,12 @@ class BaseAgent(object):
             "mission_ID":mission_ID
             }
 
-    def set_anti_missile(self, attacker_ID, mission_ID):
+    def set_anti_missile(self, attacker_ID, mission_ID,N_lan_1=2,N_channel=2):
         self.abstract_state[attacker_ID] = {"abstract_state": "anti_missile",
             "target_list":[],
-            "mission_ID":mission_ID
+            "mission_ID":mission_ID,
+            "N_lan_1" : N_lan_1,
+            "N_channel" : N_channel # 这个应该是场景里写死的了。
             }        
 
     def set_move_and_jammer(self, attacker_ID, target_LLA, model):
@@ -787,7 +802,33 @@ class BaseAgent(object):
     def __handle_anti_missile(self, attacker_ID, target_list):
         # 能打就打，雷达开机。开不开机可能得后面判断一下。
         # 成功打一发就把target_list 进行一番更新。
-        raise Exception("__handle_anti_missile unfinished yet")
+        attacker_unit = self.status[attacker_ID]
+
+        # 雷达都开机吧。后续可以考虑雷达也放在任务那层统一地去调度。
+        radar_state = attacker_unit["雷达状态"]
+        if radar_state == 0:
+            # 如果关了就开起来.
+            self._Set_Radar_Action(attacker_ID, 1)
+
+        # 干扰的去任务那层统一判断去了。
+
+        # 如果还有火力通道，就发射。
+        N_lan_1= self.abstract_state[attacker_ID]["N_lan_1"]
+        N_channel = self.abstract_state[attacker_ID]["N_channel"] # 这个应该是场景里写死的了。
+
+        
+
+        for i in range(N_channel):
+            # 这里欠缺一个怎么从态势里看到各个火力通道的CD的机制，最好把每个火力通道的CD时间弄出来，如果是多个launcher的话就好弄了
+            if attacker_unit["火力通道"+str(i)] == 0: # 一样的，这些中文的都是等着看最后平台给过来的态势到底是什么样的。
+                # 有可用的火力通道，那就具备发射条件，那就狠狠地发射。
+                target_here = target_list.pop(0)
+                # 来个自适应武器类型，就是根据距离判断是要打远程拦截弹还是近程拦截弹
+                weapon_type = self.__weapon_select2(attacker_ID, target_here)
+                self._Anti_missile_Action(attacker_ID, target_here, weapon_type)
+                break
+
+        # raise Exception("__handle_anti_missile unfinished yet")
         pass
 
     def __handle_move_and_jammer(self, attacker_ID, target_LLA, model, flag_on):
@@ -1607,11 +1648,34 @@ class BaseAgent(object):
                     flag = True
 
         return flag
+    
+    def __weapon_select2(self, attacker_ID, target_ID):
+        # 这个是服务于导弹拦截的，鉴定是什么舰种，然后敌我距离。这些都得是等场景有了之后跑着弄才快。
+        if "驱逐舰" in attacker_ID:
+            # 那说明这个里面既有远程的也有近程的，那就来个算距离的，看距离来定到底是用远程的还是近程的。
+            attacker_LLA = self.get_LLA(attacker_ID)
+            target_LLA = self.get_LLA(target_ID, status = self.detetced_state)
+            distance = self.distance(attacker_LLA[0], attacker_LLA[1], attacker_LLA[2],
+                                     target_LLA[0], target_LLA[1], target_LLA[2])
+            if distance > 10000:
+                # 远程
+                selected_weapon_type = "远程"
+            else:
+                # 近程
+                selected_weapon_type = "近程"
+        elif "巡洋舰" in attacker_ID:
+            # 这个就直接来了，因为没有什么好选的:
+            selected_weapon_type = "远程"
+        else:
+            selected_weapon_type = "None"
+        
+        return selected_weapon_type
+
 
     # 这里后面是2025年新加的协同任务层。
     def Gostep_mission_set(self, **kargs):
         # 这个是对位前面的Gostep_abstract_state
-        self.mission_set = {} # 不对，还得是dict，因为得是直接改那个变量。里面应该是{"mission_ID":{下面这个}}
+        # self.mission_set = {} # 不对，还得是dict，因为得是直接改那个变量。里面应该是{"mission_ID":{下面这个}}
         # {"type":str, "force_arrange":list[str], "time_arrange":[int,int], "space_arrange":[float,float,float,float], "flag_active": bool, "priority":int, """其他字段"""} 
 
         # 然后真正的问题就来了，分哪些协同任务？原则上只有协同的才定义任务，可以允许有单位没有被分配到任务里面，只要有抽象状态，就也不影响它正常运行。
@@ -1907,12 +1971,15 @@ class BaseAgent(object):
 
     def __handle_mission_preserve_blue(self, mission_ID, ID_list):
         # 这个是蓝方用的，走蓝方的逻辑。
-        # 先走一个反导的
+        # 先走一个反导的，把目标分配和发射等物都闭环在这里面了。
         self.__handle_mission_anti_missile(mission_ID, ID_list)
 
         # 然后看需不需要开电子干扰，核心是判断谁被集火了。
+        self.__handle_mission_Jammer(mission_ID, ID_list)
 
         # 然后走一个航渡的逻辑，船和坦克哪些不一样，这得是走归走、打归打的逻辑了。
+        # 无耻一点，就找方向比较合适的商船，能靠过去就靠过去。
+        self.__handle_mission_navigate(mission_ID, ID_list)
         pass
 
     def __handle_mission_anti_missile(self,mission_ID, ID_list):
@@ -1944,7 +2011,7 @@ class BaseAgent(object):
         # 然后就开始下达指令了，操作抽象状态那层。
         for attacker_ID in ID_list:
             # 对每个单位，先把抽象状态设了，然后再往里面append目标。
-            self.set_anti_missile(attacker_ID)
+            self.set_anti_missile(attacker_ID, mission_ID=missil_ID,N_lan_1=N_lan_1,N_channel=2)
         
         # 这步才是真正的分配目标
         for attacker_ID in ID_list:
@@ -1955,8 +2022,137 @@ class BaseAgent(object):
                     if not(missil_ID) in self.abstract_state[attacker_ID]["target_list"]:
                         self.abstract_state[attacker_ID]["target_list"].append(missil_ID) 
         pass
+    
+    def __handle_mission_Jammer(self, mission_ID, ID_list):
+        # 对来袭的导弹判断距离，如果有超过N颗离自己到了一定距离内，就认为要被打了，就开干扰。
 
-    def __handle_mission_navigate(self, mission_ID):
+        # 起手先把敌导弹数量弄出来。
+        enemy_missile = self.select_by_type(type="导弹", status=self.detected_state)
+
+        # 更具体的逻辑，应该是，对每个船，标记离自己距离近过阈值的来袭导弹的数量。
+        # TODO  加弹道预测，判断落点是不是在船周围而不是用单纯的距离阈值。
+        thread_num_list = [] 
+
+        for ship_ID in ID_list:
+            thread_num = 0
+            for missile_single in enemy_missile:
+                # 判断距离。
+                ship_LLA = self.get_LLA(ship_ID)
+                missile_LLA = missile_single["LLA"]
+                if self.distance2(ship_LLA, missile_LLA) < 10000:
+                    thread_num = thread_num + 1
+            thread_num_list.append(thread_num)
+
+        # 至此算出了各个舰船的威胁数。然后从里面从大到小开始找，前N个符合要求的把干扰机开了。
+        sorted_indices = [index for index, value in sorted(enumerate(thread_num_list), key=lambda x: x[1], reverse=True)]
+        N_expect_turn_on = 2 # 这个是开几个干扰机。
+        N_real_turn_on = 0 
+        for i in range(len(ID_list)):
+            index = sorted_indices[i]
+            ID = ID_list[index]
+            if "驱逐舰" in ID:
+                # 那就说明这个里面是有干扰机的。
+                # TODO: 换成从self.status[ID]的挂载list里面去找有无干扰机。
+                if self.status[ID]["Jammer的CD"] == 0:
+                    # 那就是CD已经转好了，
+                    self._SetJammer_Action(ID,Pattern=1)
+                    # 成功发了一个干扰指令，那就
+                    N_real_turn_on = N_real_turn_on + 1
+                    if N_real_turn_on == N_expect_turn_on:
+                        # 干扰机开了够多了，那就结束。
+                        # 要是一直开不够也不影响，反正遍历完了列表也会正常结束的
+                        break
+        pass
+
+
+
+    def __handle_mission_navigate(self, mission_ID, ID_list, **kargs):
+        # 这个搞完，是不是就基本上神功小成了。
+        
+        # 船都往特定方向开，但是需要一个阵型，类似之前GroupA的那种逻辑。
+
+        # 阵而后战,兵法之常,运用之妙,存乎一心。这个其实就是以前的GroupA弄过来了
+        # # 阵型是有方向的,这里应该先实现一个阵型框架,然后硬编码的整个数字
+        # if "status" in kargs:
+        #     status = kargs["status"]  # 这个是用来取一个装备的子集,试试行不行
+        # else:
+        #     status = self.status
+        # status = self.__status_filter(status,model="F2A")
+
+        status = [] 
+        for ID_single in ID_list:
+            status[ID_single] = self.status[ID_single]
+
+        # 先找一个目标点，这里找的是开出去了之后的位置
+        if "target_LLA" in kargs:
+            target_LLA = kargs["target_LLA"]
+        else:
+            target_LLA = [13.325485,50.756836,0]
+
+
+        # 先求出一个方向
+        # 整个自己的平均位置,后面这部分等子航他们聚类要是整好了就换个高级的
+        LLA_average = self.get_LLA_ave(status)
+
+        # 然后求一个方向出来.
+
+        # 2024：加一点花样，防御正面的方向，搞成可以选择的
+        if "vector_LLA" in kargs:
+            vector_LLA = kargs["vector_LLA"]
+        else:
+            target_LLA = np.array(target_LLA)
+            vector_LLA = target_LLA - LLA_average
+        
+        vector_LLA[2] = 0  # 投影到二维上
+        vector_LLA = vector_LLA / np.linalg.norm(vector_LLA)  # 虽然未见得必要,但是还是归一化一下.
+
+        # 然后开始布阵了
+        vector_n_LLA = np.array([-1 * vector_LLA[1], vector_LLA[0], 0])  # 生成一个法向量
+        # dL = 0.0003  # 别吃三十米的导弹aoe
+        dL = 0.01  # 得改得稍微大一点，别吃近失弹。但是也不能太大，不然掩护不到了
+
+        # 先来个最基本的方方正正的好了,方阵往里面填就是了
+        # 增加一些设定，就是根据装备的数量来确定要出几个点。
+        # ID_list = list(status.keys())
+        LLA_list = []
+        geshu = len(ID_list)
+
+        if geshu==1:
+            p_config = [1,1,0,0] 
+        elif geshu<=3:
+            p_config = [1,3,1,0] 
+        elif geshu<=9: # 还是不太理想，当前这种
+            p_config = [3,3,1,1]
+        elif geshu<=15:
+            p_config = [3,5,2,1] 
+        else:
+            p_config = [3,7,3,1] 
+        
+        for j in range(p_config[0]):
+            for i in range(p_config[1]):
+                d_vector = (-1*p_config[2] + i) * vector_n_LLA + (-1*p_config[3] + j) * vector_LLA
+                d_LLA = d_vector * dL
+                LLA_single = target_LLA + d_LLA
+                LLA_list.append(LLA_single)
+
+        
+        # 然后开始往这一堆的点里面填充装备
+        for i in range(min(len(status), len(LLA_list))):
+            # 写成有序的形式是为了能够保证输入的序列顺序一样,输出的阵型形状就一样.
+
+            attacker_ID = ID_list[i]  # 这里按说得有一个排序机制,体现出排阵型的策略.不过这个可以不用放在这里实现
+            target_LLA = LLA_list[i]
+            # 2024:这里得根据装备类型改一下，不再所有都是默认的move_and_attack了。
+            # if "JammingTruck" in attacker_ID:
+            #     # 干扰的就用干扰的。
+            #     self.set_move_and_jammer(attacker_ID, target_LLA, model=1)
+            #     # self.set_move_and_jammer(attacker_ID, target_LLA, model=0)
+            # else:
+            #     self.set_move_and_attack(attacker_ID, target_LLA)
+            
+            # 2025：防空拦截状态下，抽象状态被拿去拦截了，先不慌弄抽象状态的一对多，安排一个直接发航渡指令的，这样就能共存了理论上。
+            self._Move_Action(attacker_ID, target_LLA)
+
         pass
     
     def __handle_mission_arrive(self, attacker_ID, target_LLA):
@@ -2088,19 +2284,79 @@ class BaseAgent(object):
 
         self.mission_set[mission_ID] = {"type":"focus_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "target_ID":target_ID,"target_LLA":target_LLA,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
 
-    def set_mission_supresse_fire(self, ID_list, space_arrange):
+    def set_mission_supresse_fire(self, ID_list, space_arrange, **kargs):
         # 这个是设想中的对特定区域压制射击模式，持续一段时间，好了就发射好了就发射。
         # 意图是以大量的火力压垮对方防御，或者是实现对敌方目标的露头就打。
+        index = len(self.mission_set) # 这个是任务ID，直接用任务数量就行。
+        mission_ID = "supresse_fire_" + str(index)
+        if "running_time" in kargs:
+            running_time = kargs["running_time"]
+        else:
+            running_time = 1500
+            
+        if "flag_active" in kargs:
+            flag_active = kargs["flag_active"]
+        else:
+            # 得专门开，否则视为“等时间到了才触发”
+            flag_active = False
+        
+        if "priority" in kargs:
+            # 这个也是，得专门设定。
+            priority = kargs["priority"]
+        else:
+            # 看是否需要搞成“随着时间推移，任务优先度提高”目前的写法是不用的，同级下就是后面的优先级高。
+            priority = 1 # 约定数字越大优先级越高，而不是硬件编程里那种反着来。
+        
+        if "describe" in kargs:
+            describe = kargs["describe"]
+        else:
+            describe = "区域火力压制"
+        
+        time_arrange = [self.num + 1, self.num + 1 + running_time]
+
+        self.mission_set[mission_ID] = {"type":"supresse_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "space_arrange":space_arrange,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
         pass
 
-    def set_mission_preserve(self, ID_list, time_arrange = [0,1000], enemy_direction = [0,1]):
+    def set_mission_preserve(self, ID_list, enemy_direction = [0,1,0],**kargs):
         # 这个是力量保全，防御性质的。在任务持续期间，红方就东躲西藏开隐蔽，蓝方就协同轮流开电磁干扰，总之减少损失。
         # 这个其实可以作为红方的默认状态。
         # 意图是比较好地减少损失。# 蓝方的话还得来点变换阵型掩护，以及贴到商船上。所以可以输入个方向。红方也能用，散开机动嘛。
         # 有商船就靠到商船旁边去。不过这个逻辑应该在abstract_state层去实现
+        index = len(self.mission_set) # 这个是任务ID，直接用任务数量就行。
+        mission_ID = "preserve_" + str(index)
+
+        if "time_arrange" in kargs:
+            time_arrange = kargs["time_arrange"]
+        else:
+            if "running_time" in kargs:
+                running_time = kargs["running_time"]
+            else:
+                running_time = 1500
+            time_arrange = [self.num + 1, self.num + 1 + running_time]
+            
+        if "flag_active" in kargs:
+            flag_active = kargs["flag_active"]
+        else:
+            # 得专门开，否则视为“等时间到了才触发”
+            flag_active = False
+        
+        if "priority" in kargs:
+            # 这个也是，得专门设定。
+            priority = kargs["priority"]
+        else:
+            # 看是否需要搞成“随着时间推移，任务优先度提高”目前的写法是不用的，同级下就是后面的优先级高。
+            priority = 1 # 约定数字越大优先级越高，而不是硬件编程里那种反着来。
+        
+        if "describe" in kargs:
+            describe = kargs["describe"]
+        else:
+            describe = "区域火力压制"
+        
+        
+        self.mission_set[mission_ID] = {"type":"preserve", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "enemy_direction":enemy_direction,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
         pass
 
-    def set_mission_navigate(self, ID_list,):
+    def set_mission_navigate(self, ID_list):
         # 这个作为蓝方舰队的默认说法，沿着开。
         pass
     
