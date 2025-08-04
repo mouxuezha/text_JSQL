@@ -936,7 +936,7 @@ class command_processor(QtCore.QThread):
         return True
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 7
+    flag = 8
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
@@ -987,5 +987,11 @@ if __name__ == "__main__":
         print("测试直接在python里起动平台，就不用每次手点了。")
         time.sleep(1.14*5.14)
         shishi.exit_all_exe()  
+    elif flag == 8:
+        # 这个是在当前这种目录结构下直接跑自己红方和自己蓝方的测试。
+        from agent_guize.enemy_AI.main import auto_run
+        runner = auto_run()
+        # runner.run_auto_test_kaihuo()
+        runner.run()
     else:
         print("undefined running model yet. ")

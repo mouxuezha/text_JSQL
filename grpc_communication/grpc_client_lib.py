@@ -4,11 +4,15 @@ import queue
 import time
 from typing import Callable, Optional
 
+import os.path
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 # 导入生成的protobuf和grpc模块
-import data_pb2
-import data_pb2_grpc
-import data_act_pb2
-import data_act_pb2_grpc
+from grpc_communication import data_pb2
+from grpc_communication import data_pb2_grpc
+from grpc_communication import data_act_pb2
+from grpc_communication import data_act_pb2_grpc
 
 class GRPCClientBase:
     """gRPC客户端基类，封装通用功能"""

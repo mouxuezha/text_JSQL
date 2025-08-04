@@ -1,5 +1,9 @@
 import json
-from grpc_client_lib import GRPCClientManager 
+import os.path
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from grpc_communication.grpc_client_lib import GRPCClientManager 
+
 SIZE = 1024 * 1024 * 4
 import json
 import random
@@ -77,6 +81,9 @@ class PlatformEnv():
         self.client.send_message(message)
         msg = self.client.get_received_message(timeout=10)
 
+    def _send(self,msg):
+        raise Exception("_send: disabled here")
+
     # 设置消息接收回调函数
     def on_message_received(client_name, message):
         print(f"客户端{client_name}收到消息: {message}")
@@ -114,7 +121,9 @@ class PlatformEnv():
         command = json.dumps(command)
         self._control_send(command)
 
-
+    def _act_send(self, message):
+        print("_act_send:",message)
+        self.client.send_message(message)
 
     def GetCurrentStatus(self):
         command = {"CMD": "GetCurrentStatus"}
@@ -193,7 +202,10 @@ class Env():
 
     def _act_send(self, message):
         self.client.send_message()
-
+    
+    def _send(self,msg):
+        raise Exception("_send: disabled here")
+    
     # 设置消息接收回调函数
     def on_message_received(client_name, message):
         print(f"客户端{client_name}收到消息: {message}")

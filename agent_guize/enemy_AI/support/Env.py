@@ -10,8 +10,10 @@ import re
 import os
 import os.path
 import sys
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-from socket_communication.socket_base import socket_base
+waimian_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+waimian_path = os.path.join(waimian_path, '..')
+waimian_path = os.path.join(waimian_path, '..') # 笨是笨一点，但总之退出去了。也就调试的时候用一下。
+sys.path.insert(0, waimian_path)
 from grpc_communication.grpc_client_lib import GRPCClientManager
 from grpc_communication.env import AgentEnv
 from grpc_communication.env import PlatformEnv

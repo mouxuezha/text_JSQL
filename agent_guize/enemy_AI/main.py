@@ -1,4 +1,7 @@
 # 这个里面封装了一些调用的逻辑，区分了test啥的。
+import os.path
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 from support.Env import Env,Env_demo
 from agent.agent_dispatch import agent_dispatch
 from support.tools import *
@@ -12,7 +15,7 @@ import threading
 
 class auto_run(object):
     def __init__(self) -> None:
-        self.__init_net()
+        self.__init_config()
 
         self.__init_env()
         
@@ -23,14 +26,14 @@ class auto_run(object):
         pass
 
     def __init_env(self):
-        self.max_episode_len = self.net_args.max_episode_len
-        self.env = Env(self.net_args.ip, self.net_args.port)
+        # self.max_episode_len = self.net_args.max_episode_len
+        # self.env = Env(self.net_args.ip, self.net_args.port)
+        Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"30002","control_ip":"169.254.64.50","control_port":"50005"}
+        self.env = Env(Env_config=Env_config)
 
-    def __init_net(self):
+
+    def __init_config(self):
         parser = argparse.ArgumentParser(description='Provide arguments for agent.')
-        parser.add_argument("--ip", type=str, default="127.0.0.1", help="Ip to connect")
-        # parser.add_argument("--ip", type=str, default="192.168.43.93", help="Ip to connect")
-        parser.add_argument("--port", type=str, default=20001, help="port to connect")
         parser.add_argument("--epochs", type=int, default=200, help="Number of training epochs to run")  # 设置训练轮次数
         parser.add_argument("--max-episode-len", type=int, default=5000, help="maximum episode length")
         net_args = parser.parse_args()
@@ -120,14 +123,22 @@ class auto_run(object):
         args = self.net_args
         env = self.env
         timestep = 0 # 每个episode的步数
-        print("begin resetting")
-        unit_ids_dict = env.Reset()
-        unit_ids_dict = json.loads(unit_ids_dict) 
+        
+        env.Reset()
+        for i in range(10):
+            action = {"red_action":[],"blue_action":[]}
+            jieguo = env.Step(Action = action)
 
-        # 和去年的不同，这里要初始化global和local
+        # 获取红蓝方态势信息
+        cur_redState, cur_blueState = get_states(env)
+        
+        unit_ids_dict={}
+        unit_ids_dict['RedShipID']=cur_redState.keys()
+        unit_ids_dict['BlueShipID']=cur_blueState.keys()
+        # # 和去年的不同，这里要初始化global和local
         redAgent.init_agent(unit_ids_dict['RedShipID'])
         blueAgent.init_agent(unit_ids_dict['BlueShipID'])     
-
+        # 2025：由于今年不搞通信受限了，所以不再需要提前进行初始化了。为尽量减少改动，姑且保留这段。
 
         # 红蓝方智能体全局变量初始化
         redAgent.reset()
@@ -135,13 +146,14 @@ class auto_run(object):
         print("finish resetting")
 
         # 开局前进行一番部署
-        act = []
-        print("unit_ids_dict ", unit_ids_dict)
-        act += redAgent.deploy(unit_ids_dict['RedShipID'])
-        act += blueAgent.deploy(unit_ids_dict['BlueShipID'])
-        action = {"Action": act}
-        print("action ", action)
-        env.Step(Action = action)
+        # # 2025: 这部分已经跳过了。
+        # act = []
+        # print("unit_ids_dict ", unit_ids_dict)
+        # act += redAgent.deploy(unit_ids_dict['RedShipID'])
+        # act += blueAgent.deploy(unit_ids_dict['BlueShipID'])
+        # action = {"Action": act}
+        # print("action ", action)
+        # env.Step(Action = action)
         
 
         # 获取红蓝方态势信息

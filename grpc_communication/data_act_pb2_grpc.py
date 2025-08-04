@@ -3,7 +3,10 @@
 import grpc
 import warnings
 
-import data_act_pb2 as data__act__pb2
+import os.path
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from grpc_communication import data_act_pb2 as data__act__pb2
 
 GRPC_GENERATED_VERSION = '1.73.1'
 GRPC_VERSION = grpc.__version__
