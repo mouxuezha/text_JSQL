@@ -1,0 +1,12 @@
+syntax = "proto3";
+
+service BidirectionalService{
+        rpc Chat (stream StringMessage) returns (stream StringMessage) {}
+	
+}
+
+message StringMessage{
+        string data = 1;
+}
+
+

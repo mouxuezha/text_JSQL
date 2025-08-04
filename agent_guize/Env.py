@@ -27,13 +27,6 @@ class Env():
         if os.path.exists("message.txt"):
             os.unlink("message.txt")
 
-    # def _recv(self):
-    #     try:
-    #         data = self.client.recv(SIZE)
-    #         data = data.decode(encoding="utf-8")
-    #         return data
-    #     except:
-    #         print("socket error,Nothing received")
 
     def _recv(self):
         result = self.client.recv(SIZE)

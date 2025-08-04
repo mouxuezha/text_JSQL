@@ -8,32 +8,30 @@ import json
 import random
 import re
 import os
-
-
-# EP_MAX = 100000
-# EP_LEN = 4500
-# N_WORKER = 1  # parallel workers
-# frams = 6
+import os.path
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from socket_communication.socket_base import socket_base
+from grpc_communication.grpc_client_lib import GRPCClientManager
+from grpc_communication.env import AgentEnv
+from grpc_communication.env import PlatformEnv
 
 class Env():
-    def __init__(self, IP, port):
-        self._ip = IP
-        self._port = port
-        self.client = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.client.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-        self.client.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, SIZE)
-        self.client.connect((self._ip, self._port))
-        # print("connect success")
-        if os.path.exists("message.txt"):
-            os.unlink("message.txt")
+    def __init__(self, Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"30002","control_ip":"169.254.64.50","control_port":"50005"}):
+        manager = GRPCClientManager()
+        red_str = Env_config["red_ip"] + ":"+Env_config["red_port"]
+        red_client = manager.create_data_act_client(red_str)  # data_act连接1
 
-    # def _recv(self):
-    #     try:
-    #         data = self.client.recv(SIZE)
-    #         data = data.decode(encoding="utf-8")
-    #         return data
-    #     except:
-    #         print("socket error,Nothing received")
+        blue_str = Env_config["blue_ip"] + ":"+Env_config["blue_port"]
+        blue_client = manager.create_data_act_client(blue_str)  # data_act连接2
+
+        control_str = Env_config["control_ip"] + ":"+Env_config["control_port"]
+        control_client = manager.create_data_client(control_str)
+
+        self.redEnv = AgentEnv(red_client)
+        self.blueEnv = AgentEnv(blue_client)
+        self.platformEnv = PlatformEnv(control_client)
+
 
     def _recv(self):
         result = self.client.recv(SIZE)
@@ -78,63 +76,47 @@ class Env():
         except:
             print("socket error,{} not send".format(str(message)))
 
-    def Step(self, Action=None):
-        command = {"CMD": "Step"}
-        if Action != None:
-            command.update(Action)
-        command = json.dumps(command)
-        result = self._send(command)
+    def Step(self, Action={"red_action":[],"blue_action":[]}):  # 尽量保持和之前的接口和含义一致，尽量能兼容之前的东西。
+        action_red = Action["red_action"]
+        self.redEnv.Act(action_red)
+        
+        action_blue = Action["blue_action"]
+        self.blueEnv.Act(action_blue)
+
+        result = self.platformEnv.Step() 
+        
         return result
 
     def Reset(self):
-        command = {"CMD": "Reset"}
-        command = json.dumps(command)
-        result = self._send(command)
+        # command = {"CMD": "Reset"}
+        # command = json.dumps(command)
+        # result = self._send(command)
+        result = self.platformEnv.Reset() # 这个本来有返回值的，但是分析认为没有也不为大害，因此也就罢了。
         return result
 
     def Save(self):
-        command = {"CMD": "Save"}
-        command = json.dumps(command)
-        self._send(command)
+        result = self.platformEnv.Save()
+        return result
 
     def Load(self, filename=None):
-        command = {"CMD": "Load"}
-        if filename != None:
-            command.update({"filename": filename})
-        command = json.dumps(command)
-        self._send(command)
+        self.platformEnv.Load(filename)
 
     def GetCurrentStatus(self):
-        command = {"CMD": "GetCurrentStatus"}
-        command = json.dumps(command)
-        statusinfo = self._send(command)
+        statusinfo = self.platformEnv.GetCurrentStatus()
         return statusinfo
 
     def GetWeaponInfo(self):
-        command = {"CMD": "GetWeaponInfo"}
-        command = json.dumps(command)
-        weaponinfo = self._send(command)
-        print("GetWeaponInfo OK")
+        weaponinfo = self.platformEnv.GetWeaponInfo()
         return weaponinfo
 
     def SetSimInterval(self, timestep):
-        command = {"CMD": "SetSimInterval"}
-        SetSimInterval = {"siminterval": timestep}
-        command.update(SetSimInterval)
-        command = json.dumps(command)
-        self._send(command)
-        # print("SetSimInterval OK")
+        self.platformEnv.SetSimInterval(timestep)
 
     def SetRender(self, render=True):
-        command = {"CMD": "SetRender"}
-        command.update({"render": render})
-        command = json.dumps(command)
-        self._send(command)
+        self.platformEnv.SetRender(render)
 
     def GetCurrentResult(self):
-        command = {"CMD": "GetCurrentResult"}
-        command = json.dumps(command)
-        result = self._send(command)
+        result = self.platformEnv.GetCurrentResult()
         # print("GetCurrentResult OK")
         return result
 
@@ -156,9 +138,6 @@ class Env():
         status = json.loads(json.loads(result)["status"])
         redState = status["redState"]
         blueState = status["blueState"]
-        # whiteState = status["whiteState"]
-        # redScore = whiteState["redScore"]
-        # blueScore = whiteState["blueScore"]
         return redState, blueState
 
     def GetLandForm(self,lon,lat):
@@ -181,9 +160,6 @@ class Env():
         status = json.loads(json.loads(result)["status"])
         redState = status["redState"]
         blueState = status["blueState"]
-        # whiteState = status["whiteState"]
-        # redScore = whiteState["redScore"]
-        # blueScore = whiteState["blueScore"]
         return redState, blueState
 
     def reward(self):
@@ -214,6 +190,10 @@ class Env():
         result = self._send(command)
         # print("GetPisResult OK")
         return result   
+    
+    def get_state(self):
+        raise Exception("Env.get_state: unfinished yet.")
+    
 class Env_demo():
     def __init__(self, ip, port):
         # 这东西存在的意义只是为了调试的时候不报错。
