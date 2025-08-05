@@ -71,7 +71,12 @@ class GRPCClientBase:
     def get_received_message(self, timeout: float = None) -> Optional[str]:
         """从队列获取接收到的消息"""
         try:
-            return self.response_queue.get(timeout=timeout)
+            # n_try = 1145 
+            # while((len(self.request_queue.queue)==0) and n_try>0):
+            #     time.sleep(0.1)
+            #     n_try = n_try-1
+            jieguo = self.request_queue.get(block=True,timeout=timeout)
+            return jieguo
         except queue.Empty:
             return None
 
@@ -107,7 +112,7 @@ class DataActClient(GRPCClientBase):
         """生成请求流"""
         while self.is_running:
             try:
-                message = self.request_queue.get(timeout=0.1)
+                message = self.request_queue.get(block=True,timeout=0.1)
                 request = data_act_pb2.StringMessageACT(data=message)
                 yield request
                 self.request_queue.task_done()
@@ -157,7 +162,7 @@ class DataClient(GRPCClientBase):
         """生成请求流"""
         while self.is_running:
             try:
-                message = self.request_queue.get(timeout=0.1)
+                message = self.request_queue.get(block=True, timeout=0.1)
                 request = data_pb2.StringMessage(data=message)
                 yield request
                 self.request_queue.task_done()

@@ -28,21 +28,19 @@ class Env():
         blue_str = Env_config["blue_ip"] + ":"+Env_config["blue_port"]
         print("bluestr: ", blue_str)
         blue_client = manager.create_data_act_client(blue_str)  # data_act连接2
-
+        
+        # manager = GRPCClientManager()
         control_str = Env_config["control_ip"] + ":"+Env_config["control_port"]
         control_client = manager.create_data_client(control_str)
         print("  ENV INIT  测试客户端是否创建完成  ")
         if not red_client.connect():
-            print("客户端1连接失败")
-            #return
+            raise Exception("红方grpc连接失败")
             
         if not blue_client.connect():
-            print("客户端2连接失败")
-            #return
+            raise Exception("蓝方grpc连接失败")
             
         if not control_client.connect():
-            print("客户端3连接失败")
-            #return
+            raise Exception("控制grpc连接失败")
         
 
 

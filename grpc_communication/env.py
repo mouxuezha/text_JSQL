@@ -37,6 +37,14 @@ class AgentEnv():
         command = {"CMD": "GetCurrentStatus"}
         command = json.dumps(command)
         statusinfo = self._act_send(command)
+        
+        # 调试用的延时程序
+        n_try = 1145 
+        while((len(self.client.request_queue.queue)==0) and n_try>0):
+            time.sleep(0.1)
+            n_try = n_try-1
+        
+        statusinfo = self.client.get_received_message(timeout=1)
         if(statusinfo is None):
             print("getCurrentStatus: status info is none")
             print(statusinfo)
@@ -80,6 +88,7 @@ class PlatformEnv():
         print("_control_send:",message)
         self.client.send_message(message)
         msg = self.client.get_received_message(timeout=10)
+        return msg
 
     def _send(self,msg):
         raise Exception("_send: disabled here")
@@ -98,7 +107,8 @@ class PlatformEnv():
     def Reset(self):
         command = {"CTRL": "Reset"}
         command = json.dumps(command)
-        self._control_send(command)
+        jieguo = self._control_send(command)
+        return jieguo
 
     def Save(self):
         command = {"CTRL": "Save"}
@@ -207,7 +217,8 @@ class Env():
     def GetCurrentStatus(self):
         command = {"CMD": "GetCurrentStatus"}
         command = json.dumps(command)
-        statusinfo = self._act_send(command)
+        self._act_send(command)
+        statusinfo = self.client.get_received_message(timeout=10)
         if(statusinfo is None):
             print("getCurrentStatus: status info is none")
         if "status" in statusinfo:
