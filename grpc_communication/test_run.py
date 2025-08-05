@@ -18,9 +18,9 @@ def main():
     try:
         # 创建3个连接：2个基于data_act.proto，1个基于data.proto
         # 假设三个连接指向不同的服务端地址，实际使用时替换为真实地址
-        client1 = manager.create_data_act_client("169.254.64.50:30001")  # data_act连接1
-        client2 = manager.create_data_act_client("169.254.64.50:40001")  # data_act连接2
-        client3 = manager.create_data_client("169.254.64.50:50005")     # data连接
+        client1 = manager.create_data_act_client("192.168.1.115:30001")  # data_act连接1
+        client2 = manager.create_data_act_client("192.168.1.115:40001")  # data_act连接2
+        client3 = manager.create_data_client("192.168.1.115:50005")     # data连接
         
         # 连接服务器
         if not client1.connect():
@@ -44,6 +44,8 @@ def main():
         for ep in range(Episode):
             print("================ {} th =============".format(ep))
             platformEnv.Reset()
+            platformEnv.Step() 
+            platformEnv.Step() 
             plat_timesteps = 0
             done_mask=0
             while True:

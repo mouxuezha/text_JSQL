@@ -93,11 +93,11 @@ class Env():
             print("socket error,{} not send".format(str(message)))
 
     def Step(self, Action={"red_action":[],"blue_action":[]}):  # 尽量保持和之前的接口和含义一致，尽量能兼容之前的东西。
-        action_red = Action["red_action"]
-        self.redEnv.Act(action_red)
+        # action_red = Action["red_action"]
+        # self.redEnv.Act(action_red)
         
-        action_blue = Action["blue_action"]
-        self.blueEnv.Act(action_blue)
+        # action_blue = Action["blue_action"]
+        # self.blueEnv.Act(action_blue)
 
         result = self.platformEnv.Step() 
         
@@ -130,7 +130,8 @@ class Env():
         self.platformEnv.SetSimInterval(timestep)
 
     def SetRender(self, render=True):
-        self.platformEnv.SetRender(render)
+        # self.platformEnv.SetRender(render)
+        print("SetRender: 这玩意就没实现过，也不知道是用来干什么的，鉴定为寄")
 
     def GetCurrentResult(self):
         result = self.platformEnv.GetCurrentResult()
