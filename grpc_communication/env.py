@@ -125,25 +125,6 @@ class PlatformEnv():
         print("_act_send:",message)
         self.client.send_message(message)
 
-    def GetCurrentStatus(self):
-        command = {"CMD": "GetCurrentStatus"}
-        command = json.dumps(command)
-        statusinfo = self._act_send(command)
-        if(statusinfo is None):
-            print("getCurrentStatus: status info is none")
-        if "status" in statusinfo:
-            return statusinfo
-        else:
-            statusinfo = self._send(command)
-        return statusinfo
-
-    def GetWeaponInfo(self):
-        command = {"CMD": "GetWeaponInfo"}
-        command = json.dumps(command)
-        weaponinfo = self._act_send(command)
-        print("GetWeaponInfo OK")
-        return weaponinfo
-
     def SetSimInterval(self, timestep):
         command = {"CMD": "SetSimInterval"}
         SetSimInterval = {"siminterval": timestep}
@@ -151,27 +132,6 @@ class PlatformEnv():
         command = json.dumps(command)
         self._control_send(command)
         # print("SetSimInterval OK")
-
-    def SetRender(self, render=True):
-        command = {"CMD": "SetRender"}
-        command.update({"render": render})
-        command = json.dumps(command)
-        self._act_send(command)
-
-    def GetCurrentResult(self):
-        command = {"CMD": "GetCurrentResult"}
-        command = json.dumps(command)
-        result = self._act_send(command)
-        print("GetCurrentResult OK")
-        return result
-        
-
-    def GetPisResult(self):
-        command = {"CMD": "GetPisResult"}
-        command = json.dumps(command)
-        result = self._act_send(command)
-        # print("GetPisResult OK")
-        return result
 
     def statusparser(self, result):
         if "status" not in json.loads(result).keys():
@@ -182,13 +142,6 @@ class PlatformEnv():
         
         State = status
         return State
-
-    def get_states(self):
-        result = self.GetCurrentStatus()
-        while (self.statusparser(result) == None):
-            result = self.GetCurrentStatus()
-        state = self.statusparser(result)
-        return state
 
 
 class Env():

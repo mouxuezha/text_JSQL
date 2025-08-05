@@ -9,11 +9,12 @@ import json
 # import psutil # 算了，考虑到内网更新库的蛋疼性，不引入其他包了凑活用把
 
 def get_states(env):
-    result = env.GetCurrentStatus()
-    while (env.statusparser(result) == None):
+    redresult, blueresult = env.GetCurrentStatus()
+    while (env.statusparser(redresult) == None):
         env.Step()
-        result = env.GetCurrentStatus()
-    redState, blueState = env.statusparser(result)
+        redresult, blueresult = env.GetCurrentStatus()
+    redState= env.statusparser(redresult)
+    blueState = env.statusparser(blueresult)
     return redState, blueState
 
 def auto_save_file_name(log_folder = r'C:\Users\42418\Desktop\2024ldjs\EnglishMulu\auto_test'):

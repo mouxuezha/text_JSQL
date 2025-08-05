@@ -28,7 +28,7 @@ class auto_run(object):
     def __init_env(self):
         # self.max_episode_len = self.net_args.max_episode_len
         # self.env = Env(self.net_args.ip, self.net_args.port)
-        Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"30002","control_ip":"169.254.64.50","control_port":"50005"}
+        Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
         self.env = Env(Env_config=Env_config)
 
 
@@ -125,7 +125,7 @@ class auto_run(object):
         timestep = 0 # 每个episode的步数
         
         env.Reset()
-        for i in range(10):
+        for i in range(3):
             action = {"red_action":[],"blue_action":[]}
             jieguo = env.Step(Action = action)
 
@@ -171,7 +171,7 @@ class auto_run(object):
 
             env.Step(Action = action)
             next_redState, next_blueState = get_states(env)
-
+            # next_redState, next_blueState = 
             cur_result = json.loads(env.GetCurrentResult())
             
             timestep += 1
@@ -271,6 +271,7 @@ class auto_run(object):
 
             # 智能体与环境交互生成训练数据
             while True:
+                time.sleep(0.1)
                 env.SetRender(True) # 训练界面可视化：False --> 关闭
                 act = []
                 

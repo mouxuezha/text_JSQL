@@ -14,21 +14,37 @@ waimian_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 waimian_path = os.path.join(waimian_path, '..')
 waimian_path = os.path.join(waimian_path, '..') # 笨是笨一点，但总之退出去了。也就调试的时候用一下。
 sys.path.insert(0, waimian_path)
-from grpc_communication.grpc_client_lib import GRPCClientManager
+from grpc_communication.grpc_client_lib import *
 from grpc_communication.env import AgentEnv
 from grpc_communication.env import PlatformEnv
 
 class Env():
-    def __init__(self, Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"30002","control_ip":"169.254.64.50","control_port":"50005"}):
+    def __init__(self, Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}):
         manager = GRPCClientManager()
         red_str = Env_config["red_ip"] + ":"+Env_config["red_port"]
+        print("redstr: ", red_str)
         red_client = manager.create_data_act_client(red_str)  # data_act连接1
 
         blue_str = Env_config["blue_ip"] + ":"+Env_config["blue_port"]
+        print("bluestr: ", blue_str)
         blue_client = manager.create_data_act_client(blue_str)  # data_act连接2
 
         control_str = Env_config["control_ip"] + ":"+Env_config["control_port"]
         control_client = manager.create_data_client(control_str)
+        print("  ENV INIT  测试客户端是否创建完成  ")
+        if not red_client.connect():
+            print("客户端1连接失败")
+            #return
+            
+        if not blue_client.connect():
+            print("客户端2连接失败")
+            #return
+            
+        if not control_client.connect():
+            print("客户端3连接失败")
+            #return
+        
+
 
         self.redEnv = AgentEnv(red_client)
         self.blueEnv = AgentEnv(blue_client)
@@ -104,8 +120,9 @@ class Env():
         self.platformEnv.Load(filename)
 
     def GetCurrentStatus(self):
-        statusinfo = self.platformEnv.GetCurrentStatus()
-        return statusinfo
+        red_statusinfo = self.redEnv.GetCurrentStatus()
+        blue_statusinfo = self.blueEnv.GetCurrentStatus()
+        return red_statusinfo,blue_statusinfo
 
     def GetWeaponInfo(self):
         weaponinfo = self.platformEnv.GetWeaponInfo()
@@ -130,16 +147,21 @@ class Env():
         return result
 
     def statusparser(self, result):
-        #print(result)
-        if "status" not in json.loads(result).keys():
-            return None
-        if result.find('status') < 0:
-            return None
-        if json.loads(result)["status"] == "":
-            return None
-        status = json.loads(json.loads(result)["status"])
-        redState = status["redState"]
-        blueState = status["blueState"]
+        # print(result)
+        if result is not None:
+            if "status" not in json.loads(result).keys():
+                return None
+            if result.find('status') < 0:
+                return None
+            if json.loads(result)["status"] == "":
+                return None
+            status = json.loads(json.loads(result)["status"])
+            redState = status["redState"]
+            blueState = status["blueState"]
+        else:
+            redState = {}
+            blueState = {}
+            print("statusparser received None")
         return redState, blueState
 
     def GetLandForm(self,lon,lat):
