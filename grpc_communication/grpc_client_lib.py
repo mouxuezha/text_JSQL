@@ -72,7 +72,7 @@ class GRPCClientBase:
         """从队列获取接收到的消息"""
         try:
             n_try = 1145 
-            while((len(self.request_queue.queue)==0) and n_try>0):
+            while((len(self.response_queue.queue)==0) and n_try>0):
                 time.sleep(0.01)
                 n_try = n_try-1
                 

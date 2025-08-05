@@ -72,10 +72,11 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
     def step(self,status:dict):
         self.status = status
         self.act = []  # 每一步先把上一步的清了，鉴定为好。
-        if self.player=="red":
-            self.num = status["redbmc3"]["simTime"]
-        elif self.player=="blue":
-            self.num = status["bluebmc3"]["simTime"]
+        # if self.player=="red":
+        #     self.num = status["redbmc3"]["simTime"]
+        # elif self.player=="blue":
+        #     self.num = status["bluebmc3"]["simTime"]
+        self.num = self.num + 1
 
         # 这得有个说法，过滤出两个list，分别给到两个类型的agent里面去。
         status_global, status_local_list, unit_ids_global, unit_ids_local = self.status_filter(status)

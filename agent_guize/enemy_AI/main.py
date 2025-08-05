@@ -5,6 +5,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from support.Env import Env,Env_demo
 from agent.agent_dispatch import agent_dispatch
 from support.tools import *
+from image_manager.huatu import huatu
 
 import json
 import time 
@@ -23,12 +24,15 @@ class auto_run(object):
 
         self.init_agents()
         self.save_location = r"auto_test"
+
+        self.huatu = huatu()
         pass
 
     def __init_env(self):
         # self.max_episode_len = self.net_args.max_episode_len
         # self.env = Env(self.net_args.ip, self.net_args.port)
-        Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
+        # Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
+        Env_config={"red_ip":"192.168.1.115","red_port":"30001","blue_ip":"192.168.1.115","blue_port":"40001","control_ip":"192.168.1.115","control_port":"50005"}
         self.env = Env(Env_config=Env_config)
 
 
@@ -133,8 +137,8 @@ class auto_run(object):
         cur_redState, cur_blueState = get_states(env)
         
         unit_ids_dict={}
-        unit_ids_dict['RedShipID']=cur_redState.keys()
-        unit_ids_dict['BlueShipID']=cur_blueState.keys()
+        unit_ids_dict['RedShipID'] = list(cur_redState.keys())
+        unit_ids_dict['BlueShipID'] = list(cur_blueState.keys())
         # # 和去年的不同，这里要初始化global和local
         redAgent.init_agent(unit_ids_dict['RedShipID'])
         blueAgent.init_agent(unit_ids_dict['BlueShipID'])     
@@ -189,6 +193,11 @@ class auto_run(object):
                 redScore_str = "redScore: " + str(cur_result["redScore"])
                 print(redScore_str)
                 print(blueScore_str)
+
+                #  安排点画图的东西。
+                if timestep %100==0:
+                    # 那就画图，狠狠地画图。
+                    self.huatu.visual_status_2D(timestep,cur_redState,cur_blueState)
                 # tips = '\n get result: timestep =' + str(timestep) + '\n'
                 # result = env.Terminal()
                 if (timestep > args.max_episode_len):

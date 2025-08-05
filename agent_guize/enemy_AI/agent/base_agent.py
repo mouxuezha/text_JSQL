@@ -27,7 +27,7 @@ class BaseAgent(object):
         self.time_ = time.time()
         self.num = 0 
 
-        method_name = self.__class__.__name__ + "." + inspect.stack()[0][3]
+        # method_name = self.__class__.__name__ + "." + inspect.stack()[0][3]
         # 以下xxh定制，不保熟 # 已经过了很多年，总体上是保熟的了
         self.abstract_state = {}  # key 是装备ID，value是抽象状态
         # 抽象状态目前设想这几种，移动攻击、隐藏警戒、跟踪追击、巡逻侦察、自由开火、跟随己方单位。再加一个“不用”。
@@ -40,15 +40,15 @@ class BaseAgent(object):
         self.deploy_folder = ""
         # self.weapon_list = ["HighExplosiveShot_ZT", "HighExplosiveShot", "ShortRangeMissile", "RPG", "AGM",
         #                     "ArmorPiercingShot_ZT", "ArmorPiercingShot", "Bullet_ZT", "bullet"]
-        self.weapon_list = self.text_loader.get_certain_text(method_name,"weapon_list")  
+        self.weapon_list = self.text_loader.get_certain_text("BaseAgent.__init__","weapon_list")  
         # 这个是有优先级顺序的。zt的放在不zt的前面，否则不对。因为后面是从前往后遍历。
         # self.landform_list = landform_type()
         # self.landform_list = ["construction", "forest", "river", "covered_road", "open_area",
         #                       "default"]  # 这个也是有优先顺序的，看哪些比较好
-        self.landform_list = self.text_loader.get_certain_text(method_name,"landform_list")  
+        self.landform_list = self.text_loader.get_certain_text("BaseAgent.__init__","landform_list")  
         
         # self.unit_type_list = ["WheeledCmobatTruck_ZB100", "WheeledCmobatTruck_ZB200", "ArmoredTruck_ZTL100", "missile_truck", "Infantry", "MainBattleTank_ZTZ100", "MainBattleTank_ZTZ200", "Howitzer_C100", "ShipboardCombat_plane", "JammingTruck","CruiseMissile"] 
-        self.unit_type_list = self.text_loader.get_certain_text(method_name,"unit_type_list")  
+        self.unit_type_list = self.text_loader.get_certain_text("BaseAgent.__init__","unit_type_list")  
 
         self.detected_state = {}
         self.detected_state2 = {}  # 这个预计用于折腾什么路径规划啊那些。就key是ID，value是观测到的不同帧数的路径好了。
@@ -61,7 +61,7 @@ class BaseAgent(object):
         #                  "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
         #                  "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
         #                  "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
-        self.weapon_V = self.text_loader.get_certain_text(method_name,"weapon_V")
+        self.weapon_V = self.text_loader.get_certain_text("BaseAgent.__init__","weapon_V")
         self.flag_zhandian = False
 
         self.commands_queue = queue.Queue(maxsize=114514) # 这个是新加的，用来处理和大模型的交互。
