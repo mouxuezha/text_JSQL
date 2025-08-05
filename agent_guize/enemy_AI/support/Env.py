@@ -147,20 +147,15 @@ class Env():
     def statusparser(self, result):
         # print(result)
         if result is not None:
-            if "status" not in json.loads(result).keys():
-                return None
-            if result.find('status') < 0:
-                return None
-            if json.loads(result)["status"] == "":
-                return None
-            status = json.loads(json.loads(result)["status"])
-            redState = status["redState"]
-            blueState = status["blueState"]
+            status = json.loads(result)
+            # status = json.loads(json.loads(result)["status"])
+            # redState = status["redState"]
+            # blueState = status["blueState"]
+            jieguo = status
         else:
-            redState = {}
-            blueState = {}
+            jieguo = {}
             print("statusparser received None")
-        return redState, blueState
+        return jieguo
 
     def GetLandForm(self,lon,lat):
         command = {"CMD": "GetCurrentPlatform"}

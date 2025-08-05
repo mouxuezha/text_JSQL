@@ -38,11 +38,11 @@ class AgentEnv():
         command = json.dumps(command)
         statusinfo = self._act_send(command)
         
-        # 调试用的延时程序
-        n_try = 1145 
-        while((len(self.client.request_queue.queue)==0) and n_try>0):
-            time.sleep(0.1)
-            n_try = n_try-1
+        # # 调试用的延时程序
+        # n_try = 1145 
+        # while((len(self.client.request_queue.queue)==0) and n_try>0):
+        #     time.sleep(0.1)
+        #     n_try = n_try-1
         
         statusinfo = self.client.get_received_message(timeout=1)
         if(statusinfo is None):
@@ -50,10 +50,12 @@ class AgentEnv():
             print(statusinfo)
             return
         print(statusinfo)
-        if "status" in statusinfo:
-            return statusinfo
-        else:
-            statusinfo = self._act_send(command)
+
+        # 这段补不明觉厉，感觉没啥意义。且待原作者子航鉴定一下再删。
+        # if "status" in statusinfo:
+        #     return statusinfo
+        # else:
+        #     statusinfo = self._act_send(command)
         return statusinfo
 
     def statusparser(self, result):
