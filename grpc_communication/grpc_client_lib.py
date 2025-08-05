@@ -71,11 +71,11 @@ class GRPCClientBase:
     def get_received_message(self, timeout: float = None) -> Optional[str]:
         """从队列获取接收到的消息"""
         try:
-            n_try = 1145 
-            while((len(self.request_queue.queue)==0) and n_try>0):
-                time.sleep(0.01)
-                n_try = n_try-1
-                
+            # n_try = 1145 
+            # while((len(self.request_queue.queue)==0) and n_try>0):
+            #     time.sleep(0.01)
+            #     n_try = n_try-1
+
             # 改成了 response queue
             jieguo = self.response_queue.get(block=True,timeout=timeout)
             return jieguo
