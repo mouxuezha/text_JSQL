@@ -70,9 +70,9 @@ class huatu():
         ax = self.draw_points(ax,red_x,red_y,red_ID,side="red")
         ax = self.draw_points(ax,blue_x,blue_y,blue_ID,side="blue")
 
-        
-        # self.set_ticks_star(ax)
-        self.save_fig(name="zhongjian_2d" + str(timestep))
+        ax = self.set_ticks_LLA(ax)
+        self.show_plot()
+        self.save_fig(name="visual_2d" + str(timestep))
 
     def get_points(self,status):
         # 对一组态势里面的所有单位，把那些个东西取出来。
@@ -99,3 +99,10 @@ class huatu():
 
         return ax
 
+    def set_ticks_LLA(self,ax):
+        # 这个是直接画图，可惜没有什么好的办法把海岸线画出来。
+        ax.set_xlim(47.00, 49.00) # 经度 
+        ax.set_ylim(12.00, 14.00) # 纬度
+        plt.tick_params(axis="both",which="major",labelsize = 14 , direction="in", length=8)  
+        self.ax.set_aspect("equal") # 由于都是2度，所以也可以equal。
+        return ax   
