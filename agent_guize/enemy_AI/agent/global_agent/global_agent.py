@@ -40,7 +40,7 @@ class GlobalAgent(BaseAgent):
             local_agent_single.detected_state = self.detected_state
             
             # 然后是当前的命令设定，也得更新进去。
-            local_agent_single.group_A_gai_config = self.group_A_gai_config
+            # local_agent_single.group_A_gai_config = self.group_A_gai_config
         
         
         pass
@@ -1032,6 +1032,13 @@ class GlobalAgent(BaseAgent):
     
     def step_red_2025_test(self,status:dict):
         # 这句统一拿出来外面写了。
+        truck_units = self.select_by_type("ZNDDTruck_Ground")
+        UAV_unit = self.select_by_type("Recon_UAV_FixWing")
+        kuaiting_unit = self.select_by_type("Guide_Ship_Surface")
+
+        if self.num == 10:
+            target_LLA = [46.340332,11.296934,0]
+            self.set_mission_focus_fire(truck_units, "", target_LLA=target_LLA,weapon_type="LowCostAttackMissile") # 这个有一个问题就是依赖于探测。
         self.act = self.Gostep_all()
         return self.act 
 

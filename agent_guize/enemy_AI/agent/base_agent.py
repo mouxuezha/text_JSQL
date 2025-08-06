@@ -51,32 +51,15 @@ class BaseAgent(object):
 
         self.detected_state = {}
         self.detected_state2 = {}  # 这个预计用于折腾什么路径规划啊那些。就key是ID，value是观测到的不同帧数的路径好了。
-        # 就只存两帧，多的不要。
-        # self.group_A_gai_config = dict()
-        # self.group_A_gai_reset(name="red")
-        # self.group_A_gai_reset(name="blue")
 
-        # self.weapon_V = {"HighExplosiveShot_ZT": 1200, "HighExplosiveShot": 1000,
-        #                  "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
-        #                  "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
-        #                  "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
         self.weapon_V = self.text_loader.get_certain_text("BaseAgent.__init__","weapon_V")
+        self.weapon_range = self.text_loader.get_certain_text("BaseAgent.__init__","weapon_range")
         self.flag_zhandian = False
 
         self.commands_queue = queue.Queue(maxsize=114514) # 这个是新加的，用来处理和大模型的交互。
         self.player = "undefined" # red or blue
         self.role = "undefined" # global or local
         self.missile_truck_attacked = dict() # 这个用于红方记录打了多少个车，从而决定能不能开始发射导弹了。
-        # 2024 our_duizhan
-        # self.building_loaction_list = [] 
-        # self.building_loaction_list.append([100.137777,13.6442,0])
-        # self.building_loaction_list.append([100.1644399,13.65847,0])
-        # self.building_loaction_list.append([100.103974397,13.63564213,0])
-        # self.building_loaction_list.append([100.1167513,13.6432282,0])
-        # self.building_loaction_list.append([100.140676439,13.607695814,0])
-
-        # self.bridge_location_list = load_bridge_json("beifen\\Bridge.json")
-        # 算了这个直接读取JSON好了，不然一个一个复制粘贴不理想。
 
 
  
@@ -658,10 +641,10 @@ class BaseAgent(object):
             self.abstract_state[attacker_ID] = {"abstract_state": "open_fire", "target_LLA": target_LLA, "detected_state":detected_state,"flag_runover": False}
         pass
     
-    def set_prepare_and_fire(self, attacker_ID, target_LLA):
+    def set_prepare_and_fire(self, attacker_ID, target_LLA, weapon_type):
         # 这个是服务于齐达开火的，没准备就准备，
         self.abstract_state[attacker_ID] = {"abstract_state": "prepare_and_fire",
-            "target_LLA": target_LLA, "flag_done": False}
+            "target_LLA": target_LLA, "weapon_type":weapon_type,"flag_done": False}
         
     def set_follow_and_defend(self, attacker_ID, VIP_ID):
         if (type(attacker_ID) == dict) or (type(attacker_ID) == list):
@@ -1108,19 +1091,30 @@ class BaseAgent(object):
     
     def __handle_prepare_and_fire(self, attacker_ID, target_LLA,weapon_type):
         # 这个是齐射开火的。进入prepare_and_fire状态后立即停车、转状态、等CD，完成之后开火。
-
-        attacker_state = self.status[attacker_ID]["状态"]
+        try:
+            attacker_state = self.status[attacker_ID]["isHiddenFlag"]  # 隐藏的，说法是另有一个变量。
+        except:
+            print("__handle_prepare_and_fire warning: 说好的isHiddenFlag还没做。")
+            attacker_state = 0
         flag_done = False
-        if attacker_state != "隐蔽":
-            # 那就说明已经转状态了，那就得等CD完成。
+        if attacker_state == 0:
+            # 那就说明已经转状态了，那就得等CD完成。 # 这个也还没说法，
             # 要是没给就算了
-            change_state_CD = self.status[attacker_ID]["状态转换CD"]
+            try:
+                change_state_CD = self.status[attacker_ID]["状态转换CD"]
+            except:
+                print("__handle_prepare_and_fire warning: 说好的状态转换CD还没做。")   
+                change_state_CD = 0         
+            
             if change_state_CD > 0:
                 # 那就说明还没到，那就继续等。
                 pass
             else:
                 # 那就说明已经转换完成了
                 flag_done = self.__handle_target_attack(attacker_ID,target_LLA,weapon_type=weapon_type)
+        elif attacker_state == 1:
+            # 这个认为是得转状态。
+            self._Change_State(attacker_ID,0) # 退出隐蔽状态
         
         self.abstract_state[attacker_ID]["flag_done"]=flag_done
 
@@ -1866,7 +1860,7 @@ class BaseAgent(object):
                     arrive_time = np.concatenate((arrive_time, arrive_time_singe), axis=0)
                 
                 # 先来一版选择打击目标的。
-                if weapon_type == "贵的":
+                if weapon_type == "HighCostAttackMissile":
                     # 选择贵的弹
                     arrive_time = arrive_time[:,1]
                 else:
@@ -1881,10 +1875,12 @@ class BaseAgent(object):
                 start_time_dict = {} # 这个是发射时间，key是单位ID，value是发射时间。
                 for ID_single in ID_list:
                     start_time_dict[ID_single] = start_time[ID_list.index(ID_single)]
+                self.mission_set[mission_ID]["start_time_dict"] = start_time_dict
             else:
                 # 那就是已经初始化了发射时间了。
                 pass
         
+        start_time_dict = self.mission_set[mission_ID]["start_time_dict"]
         # 然后看当前发射时间,轮到谁了，谁就开始
         relative_time_now = self.num - self.mission_set[mission_ID]["time_arrange"][0]
         for ID_single in ID_list:
@@ -1896,7 +1892,7 @@ class BaseAgent(object):
 
         
 
-        # 还得有个更新目标位置的机制，准备期间是可以动态改目标位置的。
+        # 还得有个更新目标位置的机制，准备期间是可以动态改目标位置的。但是这个得有探测了之后再来弄才是能弄的，不然就显得有几分弱智了。
         print("unfinished yet")
         pass 
 
@@ -2157,25 +2153,36 @@ class BaseAgent(object):
     
     def __handle_mission_arrive(self, attacker_ID, target_LLA):
         # 这个是计算火力到达时间。干脆两种弹都弄出来反馈回去
-        attacker_unit = self.status["attacker_ID"] 
-        state = attacker_unit["状态"]
-
+        attacker_unit = self.status[attacker_ID] 
+        try:
+            attacker_state = attacker_unit["isHiddenFlag"]  # 隐藏的，说法是另有一个变量。
+        except:
+            print("__handle_prepare_and_fire warning: 说好的isHiddenFlag还没做。")
+            attacker_state = 1
         time_waiting = 0 
-        if state != "起竖":
+        if attacker_state != 1:
             time_waiting = time_waiting + 10 # 数据还需要具体核实。
 
         # 然后根据距离计算打过去需要多少时间
-        V_cheap = self.weapon_V["便宜的"]
-        V_rich = self.weapon_V["贵的"]
+        V_cheap = self.weapon_V["LowCostAttackMissile"]
+        V_rich = self.weapon_V["HighCostAttackMissile"]
         
         attacker_LLA = self.get_LLA(attacker_ID)
 
         jvli = self.distance2(attacker_LLA, target_LLA)
-        if jvli > "射程":
+        if jvli > self.weapon_range["LowCostAttackMissile"]:
             # 超出射程了，那就置为别的值
-            jvli = 1145141919
+            jvli_cheap = 1145141919
+        else:
+            jvli_cheap = jvli 
 
-        jieguo = [time_waiting+jvli/V_cheap, time_waiting+jvli/V_rich] # 这个是结果，里面是两个值，一个是便宜弹的火力到达时间，一个是贵弹的火力到达时间。
+        if jvli > self.weapon_range["HighCostAttackMissile"]:
+            # 超出射程了，那就置为别的值
+            jvli_rich = 1145141919
+        else:
+            jvli_rich = jvli             
+
+        jieguo = [time_waiting+jvli_cheap/V_cheap, time_waiting+jvli_rich/V_rich] # 这个是结果，里面是两个值，一个是便宜弹的火力到达时间，一个是贵弹的火力到达时间。
 
         return jieguo
 
@@ -2185,6 +2192,9 @@ class BaseAgent(object):
         # 相应地，做一个沿着海岸线开的东西，可能有用。
         index = len(self.mission_set) # 这个是任务ID，直接用任务数量就行。
         mission_ID = "scout_" + str(index)
+        if type(ID_list) == dict:
+            # 兼容一下。
+            ID_list = list(ID_list.keys())        
         if "running_time" in kargs:
             running_time = kargs["running_time"]
         else:
@@ -2223,7 +2233,9 @@ class BaseAgent(object):
             running_time = kargs["running_time"]
         else:
             running_time = 1500
-            
+        if type(ID_list) == dict:
+            # 兼容一下。
+            ID_list = list(ID_list.keys())            
         if "flag_active" in kargs:
             flag_active = kargs["flag_active"]
         else:
@@ -2252,6 +2264,10 @@ class BaseAgent(object):
         # 得想想，是只打一波还是打到死，恐怕只打一波是比较合理的。以及目标是ID还是LLA。恐怕是ID比较合适，从维护的态势池子里还得打个提前量。# 相应地，检测到弹就开始蛇皮走位。
         index = len(self.mission_set) # 这个是任务ID，直接用任务数量就行。
         mission_ID = "focus_fire_" + str(index)
+        if type(ID_list) == dict:
+            # 兼容一下。
+            ID_list = list(ID_list.keys())
+            
         if "running_time" in kargs:
             running_time = kargs["running_time"]
         else:
@@ -2280,15 +2296,24 @@ class BaseAgent(object):
         else:
             target_LLA = self.get_LLA(target_ID)
         
+        if "weapon_type" in kargs:
+            weapon_type = kargs["weapon_type"]
+        else:
+            weapon_type = "LowCostAttackMissile"
+        
         time_arrange = [self.num + 1, self.num + 1 + running_time]
 
-        self.mission_set[mission_ID] = {"type":"focus_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "target_ID":target_ID,"target_LLA":target_LLA,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
+        self.mission_set[mission_ID] = {"type":"focus_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange,"weapon_type":weapon_type, "target_ID":target_ID,"target_LLA":target_LLA,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
 
     def set_mission_supresse_fire(self, ID_list, space_arrange, **kargs):
         # 这个是设想中的对特定区域压制射击模式，持续一段时间，好了就发射好了就发射。
         # 意图是以大量的火力压垮对方防御，或者是实现对敌方目标的露头就打。
         index = len(self.mission_set) # 这个是任务ID，直接用任务数量就行。
         mission_ID = "supresse_fire_" + str(index)
+        if type(ID_list) == dict:
+            # 兼容一下。
+            ID_list = list(ID_list.keys())        
+
         if "running_time" in kargs:
             running_time = kargs["running_time"]
         else:
@@ -2324,7 +2349,9 @@ class BaseAgent(object):
         # 有商船就靠到商船旁边去。不过这个逻辑应该在abstract_state层去实现
         index = len(self.mission_set) # 这个是任务ID，直接用任务数量就行。
         mission_ID = "preserve_" + str(index)
-
+        if type(ID_list) == dict:
+            # 兼容一下。
+            ID_list = list(ID_list.keys())
         if "time_arrange" in kargs:
             time_arrange = kargs["time_arrange"]
         else:
@@ -2367,7 +2394,7 @@ class BaseAgent(object):
         # 逻辑应该是：开着的任务中，如果单位都被占用了，就关闭。关了的任务中，如果时间到了，就开起来。
         # 后面要是想加事件触发任务的话，也是加在这里面。如果是临机决策给出的任务，就直接把标志位安排成true，实现某种意义上的事件触发
         # 没办法边调试边写，只好采取了目前这种相对傻逼的、隐患比较多的，写一大堆等具备条件再测的。智者所不取。
-        flag_active = self.mission_set[mission_ID_single]["force_arrange"]
+        flag_active = self.mission_set[mission_ID_single]["flag_active"]
         if flag_active:
             # 这个其实可以过几步检测一次，不用每一步都检测。
 
@@ -2628,6 +2655,76 @@ class BaseAgent(object):
                 enemy_LLA_selected = target_LLA
 
         return enemy_ID_selected, enemy_LLA_selected, enemy_distance_min
+    
+    def range_estimate4(self, attcker_ID, detectinfo,target_LLA,weapon_type):
+        # 这个是服务于2025年比赛的，逻辑是找满足射程且在目标点附近的目标，然后根据最近的，对具体的瞄准点进行微调。
+        enemy_ID_selected_list = []
+        enemy_LLA_selected_list = []
+        enemy_distance_min_list = []
+
+        # 先搞一点默认值
+        enemy_ID_selected = ""
+        enemy_distance_min = 1145141919810
+        bili = 0.95 # 2024年，弹药相对来说是足够的，因此距离可以放开了，不用再压制自己的火力了，可以拼一枪。
+        enemy_LLA_selected = [0, 0, 0]
+        
+        # 优先级机制先保留吧，删了可惜。留下来作为根据模型指令设定优先级的接口，没啥不好的
+        prior_list = self.get_prior_list(attcker_ID)
+
+        for i in range(len(prior_list)):
+            prior_str = prior_list[i]  # 其实就是根据优先级多做几次方案1，而已。
+            flag_select_prior = False
+            # for enemy_ID in detectinfo:
+            for enemy_ID in self.detected_state2:
+                # 检测这个目标是不是新鲜的。
+                if self.detected_state2[enemy_ID]["this"]["num"] < self.num - 500:
+                    # 就说明目标信息已经不新鲜了，就不打了 # 正常情况下，这里面有的肯定都有this属性
+                    # 如果这帧是能够detectinfo里有的，那肯定已经更新到deteced_state2里面了。
+                    continue
+
+                # 如果目标是新鲜的，就检测是不是合适打。
+                attacker_LLA = self.__get_LLA(attacker_ID)
+                target_LLA = self.detected_state2[enemy_ID]["this"]["LLA"]
+                
+                flag_enemy_stay = False
+                # 检测一下，目标是不是固定的。如果是固定的就改个flag。
+                try:
+                    target_LLA_last = self.detected_state2[enemy_ID]["last"]["LLA"]
+                except:
+                    target_LLA_last = target_LLA
+                # 坐标取出来之后直接比较了。复用距离程序
+                enemy_distance_last = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
+                                    target_LLA_last[0], target_LLA_last[1], target_LLA_last[2])
+                if enemy_distance_last<0.1:
+                    # 还是来个容错，不要求完全相等
+                    flag_enemy_stay =True # 那就认为目标是静止的。
+
+
+                enemy_distance = self.distance(target_LLA[0], target_LLA[1], target_LLA[2],
+                                               attacker_LLA[0], attacker_LLA[1], attacker_LLA[2])
+                flag_select = False
+                # 在当前逻辑下，只要找最大范围内的就行了。
+                if (enemy_distance < enemy_distance_min) and (prior_str in enemy_ID):
+                    flag_select = (("MainBattleTank" in attacker_ID) and (enemy_distance < 2000 * bili)) \
+                                  or (("Howitzer_C100" in attacker_ID) and (enemy_distance < 3000 * bili)) \
+                                  or (("ArmoredTruck" in attacker_ID) and (enemy_distance < 1000 * bili)) \
+                                  or (("WheeledCmobatTruck" in attacker_ID) and (enemy_distance < 700 * bili)) \
+                                  or (("Infantry" in attacker_ID) and (enemy_distance < 800 * bili)) \
+                                  or (("missile_truck" in attacker_ID) and (enemy_distance < 600000 * bili)) \
+                                  or (("ShipboardCombat_plane" in attacker_ID) and (enemy_distance < 2000 * bili)) \
+                                  or (("CruiseMissile" in attacker_ID) and (enemy_distance < 3000 * bili))
+                    # or (("ShipboardCombat_plane" in attacker_ID) and (enemy_distance < 15000 * bili))
+                    
+                    # 增加一个处理，如果自己是无人机，那就只打静止的目标。
+                    if ("ShipboardCombat_plane" in attacker_ID) or ("CruiseMissile" in attacker_ID):
+                        flag_select = flag_select and flag_enemy_stay
+
+                if flag_select:
+                    enemy_distance_min_list.append(enemy_distance)
+                    enemy_ID_selected_list.append(enemy_ID)
+                    enemy_LLA_selected_list.append(target_LLA)
+
+        return enemy_ID_selected_list, enemy_LLA_selected_list, enemy_distance_min_list
 
     def __target_LLA_local_modification(self, target_ID_local, target_LLA_local,
                                         target_distance_local, attacker_ID, weapon_selected):
@@ -2889,109 +2986,114 @@ class BaseAgent(object):
             del self.detected_state2[target_ID]
         
         return
-
-    def get_prior_list(self, type):
-        # 这个是输入输入装备种类或者别的什么种类的字符串，输入一个目标优先级列表
-        # 这个搞高级一点，输入个ID进来，然后根据自身弹量来确定优先级？不，不要搞乱了，这里只要优先级，能不能打到后面再判断
-        if ("MainBattleTank" in type):
-            # 有机械化突击能力的东西，就先打机械化的东西。
-            if self.num < 1000:  # 先不打小车
-                # prior_list = ["MainBattleTank", "ArmoredTruck", "missile_truck", "Howitzer"]
-                prior_list = [ "missile_truck", "MainBattleTank","JammingTruck", "Howitzer", "Infantry"] # 先不打小车，用于调试
-            else:
-                prior_list = ["missile_truck", "MainBattleTank","JammingTruck", "ArmoredTruck", "WheeledCmobatTruck", "Infantry",  "Howitzer", "Infantry"]
-        elif ("ArmoredTruck" in type):
-            if self.num < 20:  # 先不打别的，就打防空车。
-                prior_list = ["missile_truck", "MainBattleTank"]
-            else:
-                prior_list = ["missile_truck","JammingTruck", "MainBattleTank", "ArmoredTruck", "Infantry", "missile_truck",
-                              "Howitzer"]
-        elif ("Howitzer" in type) or ("Infantry" in type):
-            prior_list = ["MainBattleTank", "missile_truck", "JammingTruck", "ArmoredTruck", "WheeledCmobatTruck", "Infantry",
-                          "Howitzer"]
-
-        elif ("ShipboardCombat_plane" in type):
-            prior_list = []
-            # 这里面还得详细区分一下，蓝方的主要打红方的榴弹炮，红方的就自由一些
-            if "ShipboardCombat_plane1" in type: # 这个type其实输入进来的是attacker ID。
-                if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
-                    if self.num < 480:  # 先不打小车，反正打不中。
-                        pass
-                        # 调试用的。
-                        # prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
-                    elif self.num < 1000:
-                        prior_list = ["Howitzer"]
-                    else:
-                        # prior_list = ["Howitzer", "missile_truck", "ArmoredTruck",  "Infantry"]
-                        prior_list = ["Howitzer", "MainBattleTank", "ArmoredTruck"]
-            elif "ShipboardCombat_plane0" in type:
-                # 红方反而可以有啥打啥，不用特别去针对。
-                if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
-                    if self.num < 480:
-                        prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
-                        # pass
-                    else:
-                        prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
-            else:
-                # 容错的，以防万一。
-                if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
-                    prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
-
-
-        elif ("Infantry" in type):
-
-            if self.num < 100:  # 先打机械的
-                prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck"]
-            else:
-                prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry", ]
-
-        elif ("missile_truck" in type):
-            # 优先打击敌方火力单位好了。
-            # 这个也来实现一个“导弹先不慌开火”
-            if self.num<2200:
-                prior_list = [] 
-            else:
-                prior_list = ["MainBattleTank",  "missile_truck", "Howitzer", "ArmoredTruck", "Infantry",
-                            "WheeledCmobatTruck"]
-        elif ("WheeledCmobatTruck" in type):
-            # 只能打兵的，那就打兵了。
-            # 子弹应该很难消耗完，所以子弹打到车上去了讲道理也不是很有所谓。
-            prior_list = ["Infantry", "Truck", "Howitzer", "missile_truck", "MainBattleTank"]
-        elif("CruiseMissile" in type):
-            # # 统一设定成巡飞弹开始不开火，除非遇到敌方防空，后面快爆炸了就是有什么来什么了。
-            if "RedCruiseMissile" in type:
-                # 那这个就是红方的，省着点儿炸。
-                if "RedCruiseMissile_0" in type:
-                    yuzhi = 1200 
-                else:
-                    yuzhi = 1400
-                if self.num < yuzhi: 
-                    prior_list = [] # 先探测，先不打
-                elif self.num < yuzhi+400:
-                    prior_list = ["missile_truck"]
-                else:
-                    # 有什么打什么了。
-                    prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
-
-            elif "BlueCruiseMissile" in type:
-                # 那这个就是蓝方的，就得早点给它炸了
-                if "BlueCruiseMissile_0" in type:
-                    yuzhi = 800 
-                else:
-                    yuzhi = 1000
-
-                if self.num < yuzhi:  
-                    prior_list = [] # 先探测，先不打
-                else:
-                    # 有什么打什么了。# 按理说是打不了"JammingTruck"的
-                    prior_list = [ "MainBattleTank",  "Howitzer","JammingTruck"]         
-            else:
-                    prior_list = [ "MainBattleTank",  "Howitzer","JammingTruck"]              
-        else:
-            # 以防万一
-            prior_list = ["missile_truck", "MainBattleTank", "Howitzer", "Infantry", "ArmoredTruck",
-                          "WheeledCmobatTruck"]
+    
+    def get_prior_list(self, weapon_type):
+        # 这个姑且不搞太复杂的逻辑，做成能从外面读进来的。
+        prior_list = self.weapon_range = self.text_loader.get_certain_text("BaseAgent.__init__",weapon_type)
         return prior_list
+    
+    # def get_prior_list(self, type):
+    #     # 这个是输入输入装备种类或者别的什么种类的字符串，输入一个目标优先级列表
+    #     # 这个搞高级一点，输入个ID进来，然后根据自身弹量来确定优先级？不，不要搞乱了，这里只要优先级，能不能打到后面再判断
+    #     if ("MainBattleTank" in type):
+    #         # 有机械化突击能力的东西，就先打机械化的东西。
+    #         if self.num < 1000:  # 先不打小车
+    #             # prior_list = ["MainBattleTank", "ArmoredTruck", "missile_truck", "Howitzer"]
+    #             prior_list = [ "missile_truck", "MainBattleTank","JammingTruck", "Howitzer", "Infantry"] # 先不打小车，用于调试
+    #         else:
+    #             prior_list = ["missile_truck", "MainBattleTank","JammingTruck", "ArmoredTruck", "WheeledCmobatTruck", "Infantry",  "Howitzer", "Infantry"]
+    #     elif ("ArmoredTruck" in type):
+    #         if self.num < 20:  # 先不打别的，就打防空车。
+    #             prior_list = ["missile_truck", "MainBattleTank"]
+    #         else:
+    #             prior_list = ["missile_truck","JammingTruck", "MainBattleTank", "ArmoredTruck", "Infantry", "missile_truck",
+    #                           "Howitzer"]
+    #     elif ("Howitzer" in type) or ("Infantry" in type):
+    #         prior_list = ["MainBattleTank", "missile_truck", "JammingTruck", "ArmoredTruck", "WheeledCmobatTruck", "Infantry",
+    #                       "Howitzer"]
+
+    #     elif ("ShipboardCombat_plane" in type):
+    #         prior_list = []
+    #         # 这里面还得详细区分一下，蓝方的主要打红方的榴弹炮，红方的就自由一些
+    #         if "ShipboardCombat_plane1" in type: # 这个type其实输入进来的是attacker ID。
+    #             if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
+    #                 if self.num < 480:  # 先不打小车，反正打不中。
+    #                     pass
+    #                     # 调试用的。
+    #                     # prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
+    #                 elif self.num < 1000:
+    #                     prior_list = ["Howitzer"]
+    #                 else:
+    #                     # prior_list = ["Howitzer", "missile_truck", "ArmoredTruck",  "Infantry"]
+    #                     prior_list = ["Howitzer", "MainBattleTank", "ArmoredTruck"]
+    #         elif "ShipboardCombat_plane0" in type:
+    #             # 红方反而可以有啥打啥，不用特别去针对。
+    #             if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
+    #                 if self.num < 480:
+    #                     prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
+    #                     # pass
+    #                 else:
+    #                     prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
+    #         else:
+    #             # 容错的，以防万一。
+    #             if self.num % 10 == 0:  # 这个没有CD，手动给它加个CD
+    #                 prior_list = ["missile_truck", "MainBattleTank", "JammingTruck"]
+
+
+    #     elif ("Infantry" in type):
+
+    #         if self.num < 100:  # 先打机械的
+    #             prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck"]
+    #         else:
+    #             prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry", ]
+
+    #     elif ("missile_truck" in type):
+    #         # 优先打击敌方火力单位好了。
+    #         # 这个也来实现一个“导弹先不慌开火”
+    #         if self.num<2200:
+    #             prior_list = [] 
+    #         else:
+    #             prior_list = ["MainBattleTank",  "missile_truck", "Howitzer", "ArmoredTruck", "Infantry",
+    #                         "WheeledCmobatTruck"]
+    #     elif ("WheeledCmobatTruck" in type):
+    #         # 只能打兵的，那就打兵了。
+    #         # 子弹应该很难消耗完，所以子弹打到车上去了讲道理也不是很有所谓。
+    #         prior_list = ["Infantry", "Truck", "Howitzer", "missile_truck", "MainBattleTank"]
+    #     elif("CruiseMissile" in type):
+    #         # # 统一设定成巡飞弹开始不开火，除非遇到敌方防空，后面快爆炸了就是有什么来什么了。
+    #         if "RedCruiseMissile" in type:
+    #             # 那这个就是红方的，省着点儿炸。
+    #             if "RedCruiseMissile_0" in type:
+    #                 yuzhi = 1200 
+    #             else:
+    #                 yuzhi = 1400
+    #             if self.num < yuzhi: 
+    #                 prior_list = [] # 先探测，先不打
+    #             elif self.num < yuzhi+400:
+    #                 prior_list = ["missile_truck"]
+    #             else:
+    #                 # 有什么打什么了。
+    #                 prior_list = ["missile_truck", "MainBattleTank", "ArmoredTruck", "WheeledCmobatTruck", "missile_truck", "Howitzer", "Infantry"]
+
+    #         elif "BlueCruiseMissile" in type:
+    #             # 那这个就是蓝方的，就得早点给它炸了
+    #             if "BlueCruiseMissile_0" in type:
+    #                 yuzhi = 800 
+    #             else:
+    #                 yuzhi = 1000
+
+    #             if self.num < yuzhi:  
+    #                 prior_list = [] # 先探测，先不打
+    #             else:
+    #                 # 有什么打什么了。# 按理说是打不了"JammingTruck"的
+    #                 prior_list = [ "MainBattleTank",  "Howitzer","JammingTruck"]         
+    #         else:
+    #                 prior_list = [ "MainBattleTank",  "Howitzer","JammingTruck"]              
+    #     else:
+    #         # 以防万一
+    #         prior_list = ["missile_truck", "MainBattleTank", "Howitzer", "Infantry", "ArmoredTruck",
+    #                       "WheeledCmobatTruck"]
+    #     return prior_list
 
     def check_attack_missile_truck(self, weapon_selected, target_ID):
         # 这个是用来监控打死了对面多少的导弹车。

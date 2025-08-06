@@ -8,7 +8,11 @@
         "weapon_V": {"HighExplosiveShot_ZT": 1200, "HighExplosiveShot": 1000,
                          "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
                          "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
-                         "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
+                         "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300},
+        "weapon_range":{"HighExplosiveShot_ZT": 1200, "HighExplosiveShot": 1000,
+        "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
+        "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
+        "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
     },
     "agent_dispatch.__init__":
     {

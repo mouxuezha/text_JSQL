@@ -134,8 +134,11 @@ class Env():
         print("SetRender: 这玩意就没实际用过，鉴定为寄")
 
     def GetCurrentResult(self):
-        result = self.platformEnv.GetCurrentResult()
+        # result = self.platformEnv.GetCurrentResult()
+        print("Env.GetCurrentResult: 这接口目前还没有")
         # print("GetCurrentResult OK")
+        result = {"blueScore":"0","redScore":"0"}
+        # result =str(result)
         return result
 
     def GetPisResult(self):

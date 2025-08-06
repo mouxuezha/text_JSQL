@@ -175,8 +175,9 @@ class auto_run(object):
 
             env.Step(Action = action)
             next_redState, next_blueState = get_states(env)
-            # next_redState, next_blueState = 
-            cur_result = json.loads(env.GetCurrentResult())
+
+            # cur_result = json.loads(env.GetCurrentResult())
+            cur_result = env.GetCurrentResult()
             
             timestep += 1
 
@@ -188,7 +189,8 @@ class auto_run(object):
             if (timestep % 10 == 0) or (timestep > args.max_episode_len):
                 print("running, timestep = "+str(timestep))
                 # 获取当前分数
-                cur_result = json.loads(env.GetCurrentResult())
+                # cur_result = json.loads(env.GetCurrentResult())
+                cur_result = env.GetCurrentResult()
                 blueScore_str = "blueScore: " + str(cur_result["blueScore"])
                 redScore_str = "redScore: " + str(cur_result["redScore"])
                 print(redScore_str)

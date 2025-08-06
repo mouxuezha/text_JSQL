@@ -1,11 +1,23 @@
 {
     "BaseAgent.__init__" : 
     {
-        "weapon_list":["HighCostAttackMissile", "LowCostAttackMissile", "AIM_AirMissile", "JDAM","Short_Range_InterceptMissile","Long_Range_InterceptMissile"],
+        "weapon_list":["HighCostAttackMissile", "LowCostAttackMissile", "AIM_AirMissile", "JDAM","Short_Range_InterceptMissile","Long_Range_InterceptMissile","ShipToGround_CruiseMissile"],
         "landform_list":["land", "sea"],
         "unit_type_list":["Guide_Ship_Surface", "ZNDDTruck_Ground", "Recon_UAV_FixWing","Cruiser_Surface", "Destroyer_Surface", "Flagship_Surface", "Shipboard_Aircraft_FixWing"],
-        "weapon_V": {"HighCostAttackMissile": 1200, "LowCostAttackMissile": 1000,
-                         "AIM_AirMissile": 1800, "JDAM": 500,"Short_Range_InterceptMissile":1000,"Long_Range_InterceptMissile":1000}
+        "weapon_V": {"HighCostAttackMissile": 1200, "LowCostAttackMissile": 500,
+                         "AIM_AirMissile": 1000, "JDAM": 170,"Short_Range_InterceptMissile":1360,"Long_Range_InterceptMissile":1360,"ShipToGround_CruiseMissile":250},
+        "weapon_range":{"HighCostAttackMissile": 600000, "LowCostAttackMissile": 300000,
+        "AIM_AirMissile": 10000, "JDAM": 10000,"Short_Range_InterceptMissile":20000,"Long_Range_InterceptMissile":50000,"ShipToGround_CruiseMissile":200000}
+    },
+    "BaseAgent.get_prior_list":
+    {
+        "HighCostAttackMissile": ["Flagship_Surface", "Cruiser_Surface", "Destroyer_Surface"],
+        "LowCostAttackMissile": ["Flagship_Surface", "Cruiser_Surface", "Destroyer_Surface"],
+        "AIM_AirMissile" : ["Recon_UAV_FixWing","LowCostAttackMissile","HighCostAttackMissile" ],
+        "JDAM" : ["ZNDDTruck_Ground","Guide_Ship_Surface"],
+        "ShipToGround_CruiseMissile" : ["ZNDDTruck_Ground","Guide_Ship_Surface"],
+        "Short_Range_InterceptMissile" : ["HighCostAttackMissile","LowCostAttackMissile", "Recon_UAV_FixWing"],
+        "Long_Range_InterceptMissile" : ["HighCostAttackMissile","LowCostAttackMissile", "Recon_UAV_FixWing"]
     },
     "agent_dispatch.__init__":
     {
