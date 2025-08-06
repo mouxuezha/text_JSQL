@@ -9,5 +9,12 @@
                          "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
                          "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
                          "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
+    },
+    "agent_dispatch.__init__":
+    {
+        "name_list_red":["MainBattleTank_ZTZ100", "ArmoredTruck_ZTL100", "WheeledCmobatTruck_ZB100", "Howitzer_C100",
+        "missile_truck", "Infantry", "ShipboardCombat_plane","CruiseMissile", "JammingTruck"],
+        "name_list_blue":["MainBattleTank_ZTZ200", "ArmoredTruck_ZTL200", "WheeledCmobatTruck_ZB200", "Howitzer_C200",
+        "missile_truck", "Infantry", "ShipboardCombat_plane","CruiseMissile","JammingTruck"]  
     }
 }

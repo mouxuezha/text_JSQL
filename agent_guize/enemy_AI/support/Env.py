@@ -131,7 +131,7 @@ class Env():
 
     def SetRender(self, render=True):
         # self.platformEnv.SetRender(render)
-        print("SetRender: 这玩意就没实现过，也不知道是用来干什么的，鉴定为寄")
+        print("SetRender: 这玩意就没实际用过，鉴定为寄")
 
     def GetCurrentResult(self):
         result = self.platformEnv.GetCurrentResult()

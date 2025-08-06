@@ -1,0 +1,15 @@
+{
+    "BaseAgent.__init__" : 
+    {
+        "weapon_list":["HighCostAttackMissile", "LowCostAttackMissile", "AIM_AirMissile", "JDAM","Short_Range_InterceptMissile","Long_Range_InterceptMissile"],
+        "landform_list":["land", "sea"],
+        "unit_type_list":["Guide_Ship_Surface", "ZNDDTruck_Ground", "Recon_UAV_FixWing","Cruiser_Surface", "Destroyer_Surface", "Flagship_Surface", "Shipboard_Aircraft_FixWing"],
+        "weapon_V": {"HighCostAttackMissile": 1200, "LowCostAttackMissile": 1000,
+                         "AIM_AirMissile": 1800, "JDAM": 500,"Short_Range_InterceptMissile":1000,"Long_Range_InterceptMissile":1000}
+    },
+    "agent_dispatch.__init__":
+    {
+        "name_list_red":["Guide_Ship_Surface", "ZNDDTruck_Ground", "Recon_UAV_FixWing"],
+        "name_list_blue":["Cruiser_Surface", "Destroyer_Surface", "Flagship_Surface", "Shipboard_Aircraft_FixWing"]  
+    }
+}

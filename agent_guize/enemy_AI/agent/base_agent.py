@@ -16,7 +16,6 @@ from enum import Enum
 from support.tools import load_bridge_json
 
 from examples.text_loader import text_loader
-import inspect
 
 class BaseAgent(object):
     def __init__(self):
@@ -503,7 +502,8 @@ class BaseAgent(object):
         # 统一弄一个，以示并无偏私之意
 
         self.Gostep_mission_set()
-        self.Gostep_abstract_state()
+        self.act = self.Gostep_abstract_state()
+        return self.act
         
 
     # xxh尝试整点儿复合命令

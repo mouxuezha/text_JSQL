@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 class text_loader():
     def __init__(self):
         self.data_location = "examples"
-        self.case_name = "陆火联合.json"
+        self.case_name = "对海打击红方.json"
         self.data = {}
         self.load_JSON()
         pass
@@ -19,7 +19,7 @@ class text_loader():
             self.data=json.load(f)
         pass 
 
-    def set_case(self,case_name="陆火联合.json"):
+    def set_case(self,case_name="对海打击红方.json"):
         self.case_name = case_name
         pass
 

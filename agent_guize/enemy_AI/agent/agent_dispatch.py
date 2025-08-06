@@ -11,6 +11,9 @@ import random
 import numpy as np 
 import queue
 
+from examples.text_loader import text_loader
+import inspect
+
 class agent_dispatch(object):  # 这个是用来处理分级态势的，注意保持好和之间的接口。也是step然后过滤啥的。
     def __init__(self, player="red") -> None:
         self.status_old = dict() # 这个用于实现记忆功能，默认被干扰了的东西能够共享到被干扰之前的状态。给进去之后自己要不要记录那就是自己的事情了捏。
@@ -27,17 +30,22 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         self.deploy_folder = "auto_test"
         self.deploy_modify_flag = False
 
+        self.text_loader = text_loader()
+
         # self.init_agent()
         self.unit_ID_list = [] 
         self.status = dict()
+        method_name = self.__class__.__name__ + "." + inspect.stack()[0][3]
         if self.player == "red":
-            self.name_list = ["MainBattleTank_ZTZ100", "ArmoredTruck_ZTL100", "WheeledCmobatTruck_ZB100", "Howitzer_C100",
-                            "missile_truck", "Infantry", "ShipboardCombat_plane","CruiseMissile", "JammingTruck"] 
+            # self.name_list = ["MainBattleTank_ZTZ100", "ArmoredTruck_ZTL100", "WheeledCmobatTruck_ZB100", "Howitzer_C100",
+            #                 "missile_truck", "Infantry", "ShipboardCombat_plane","CruiseMissile", "JammingTruck"] 
+            self.name_list =self.text_loader.get_certain_text(method_name,"name_list_red")  
         elif self.player == "blue":
             # print("unfinished yet, pause")
             # input()
-            self.name_list = ["MainBattleTank_ZTZ200", "ArmoredTruck_ZTL200", "WheeledCmobatTruck_ZB200", "Howitzer_C200",
-                            "missile_truck", "Infantry", "ShipboardCombat_plane","CruiseMissile","JammingTruck"]             
+            # self.name_list = ["MainBattleTank_ZTZ200", "ArmoredTruck_ZTL200", "WheeledCmobatTruck_ZB200", "Howitzer_C200",
+            #                 "missile_truck", "Infantry", "ShipboardCombat_plane","CruiseMissile","JammingTruck"]        
+            self.name_list =self.text_loader.get_certain_text(method_name,"name_list_blue")       
         pass
 
         self.commands_queue = queue.Queue(maxsize=114514) # 这个是新加的，用来处理和大模型的交互。

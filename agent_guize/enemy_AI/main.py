@@ -160,8 +160,8 @@ class auto_run(object):
         # env.Step(Action = action)
         
 
-        # 获取红蓝方态势信息
-        cur_redState, cur_blueState = get_states(env)
+        # # 获取红蓝方态势信息
+        # cur_redState, cur_blueState = get_states(env)
 
         while True:
             env.SetRender(True) # 训练界面可视化：False --> 关闭
