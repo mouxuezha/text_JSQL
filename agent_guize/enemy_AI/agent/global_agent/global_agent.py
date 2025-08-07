@@ -1032,7 +1032,7 @@ class GlobalAgent(BaseAgent):
     
     def step_red_2025_test(self,status:dict):
         # 这句统一拿出来外面写了。
-        truck_units = self.select_by_type("ZNDDTruck_Ground")
+        truck_units = self.select_by_type("Truck_Ground")
         UAV_unit = self.select_by_type("Recon_UAV_FixWing")
         kuaiting_unit = self.select_by_type("Guide_Ship_Surface")
 
@@ -1040,7 +1040,7 @@ class GlobalAgent(BaseAgent):
             target_LLA = [46.340332,11.296934,0]
             self.set_mission_focus_fire(truck_units, "", target_LLA=target_LLA,weapon_type="LowCostAttackMissile") # 这个有一个问题就是依赖于探测。没探测了就歇了。
 
-            self.set_mission_scout(UAV_unit,space_arrange=[12.0,46.0,11.0,48.0],)
+            # self.set_mission_scout(UAV_unit,space_arrange=[12.0,46.0,11.0,48.0])
 
         self.act = self.Gostep_all()
         return self.act 

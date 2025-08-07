@@ -243,7 +243,7 @@ class BaseAgent(object):
         # else:
         #     print("unfinshed yet, using defualt.")
         #     Unit_Type_int = 0 
-        AttackAction = {"Type": "Launch", "Id": Id, "Lon": lon, "Lat": lat, "Alt": alt, "MissileType": Unit_Type_int}
+        AttackAction = {"Type": "Launch", "Id": Id, "Lon": str(lon), "Lat": str(lat), "Alt": str(alt), "WeaponType": Unit_Type}
         # self._exec_group_cmd(Id, "Attack", **AttackAction)
         self.act.append(AttackAction)
         return AttackAction
