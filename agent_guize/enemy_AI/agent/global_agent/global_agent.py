@@ -1038,9 +1038,9 @@ class GlobalAgent(BaseAgent):
 
         if self.num == 10:
             target_LLA = [46.340332,11.296934,0]
-            self.set_mission_focus_fire(truck_units, "", target_LLA=target_LLA,weapon_type="LowCostAttackMissile") # 这个有一个问题就是依赖于探测。没探测了就歇了。
-
-            # self.set_mission_scout(UAV_unit,space_arrange=[12.0,46.0,11.0,48.0])
+            # self.set_mission_focus_fire(truck_units, "", target_LLA=target_LLA,weapon_type="LowCostAttackMissile") # 这个有一个问题就是依赖于探测。没探测了就歇了。
+            self.set_mission_scout(UAV_unit,space_arrange=[46.0,12.0,48.0,11.0]) # 好，几乎完事了，尚欠快艇的调度。
+            self.set_mission_supresse_fire(truck_units,space_arrange=[46.0,12.0,48.0,11.0],)
 
         self.act = self.Gostep_all()
         return self.act 

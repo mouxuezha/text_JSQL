@@ -8,7 +8,8 @@
                          "AIM_AirMissile": 1000, "JDAM": 170,"Short_Range_InterceptMissile":1360,"Long_Range_InterceptMissile":1360,"ShipToGround_CruiseMissile":250},
         "weapon_range":{"HighCostAttackMissile": 600000, "LowCostAttackMissile": 300000,
         "AIM_AirMissile": 10000, "JDAM": 10000,"Short_Range_InterceptMissile":20000,"Long_Range_InterceptMissile":50000,"ShipToGround_CruiseMissile":200000},
-        "unit_V": {"Guide_Ship_Surface":18, "Truck_Ground":16, "Recon_UAV_FixWing":50, "Cruiser_Surface": 15, "Destroyer_Surface":18, "Flagship_Surface":12, "Shipboard_Aircraft_FixWing":250}
+        "unit_V": {"Guide_Ship_Surface":18, "Truck_Ground":16, "Recon_UAV_FixWing":50, "Cruiser_Surface": 15, "Destroyer_Surface":18, "Flagship_Surface":12, "Shipboard_Aircraft_FixWing":250},
+        "detect_range": {"Guide_Ship_Surface":50000, "Truck_Ground":1, "Recon_UAV_FixWing":20000, "Cruiser_Surface":50000, "Destroyer_Surface" : 50000, "Flagship_Surface":50000, "Shipboard_Aircraft_FixWing":20000}  
     },
     "BaseAgent.get_prior_list":
     {
