@@ -165,14 +165,13 @@ class auto_run(object):
 
         while True:
             env.SetRender(True) # 训练界面可视化：False --> 关闭
-            act = []
+            # act = []
                 
             # 红蓝方智能体产生动作
-            act += redAgent.step(cur_redState)
-            act += blueAgent.step(cur_blueState)
+            red_act = redAgent.step(cur_redState)
+            blue_act = blueAgent.step(cur_blueState)
 
-            action = {"Action": act}
-
+            action = {"red_action":red_act,"blue_action":blue_act}
             env.Step(Action = action)
             next_redState, next_blueState = get_states(env)
 

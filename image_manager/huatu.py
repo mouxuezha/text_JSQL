@@ -71,7 +71,7 @@ class huatu():
         ax = self.draw_points(ax,blue_x,blue_y,blue_ID,side="blue")
 
         ax = self.set_ticks_LLA(ax)
-        self.show_plot()
+        # self.show_plot()
         self.save_fig(name="visual_2d" + str(timestep))
 
     def get_points(self,status):
@@ -80,8 +80,8 @@ class huatu():
         y = [] 
         ID_list = [] 
         for attacker_ID in status:
-            x_single = status[attacker_ID]["lon"]
-            y_single = status[attacker_ID]["lat"]
+            x_single = status[attacker_ID]["VehicleState"]["lon"]
+            y_single = status[attacker_ID]["VehicleState"]["lat"]
             ID_single = attacker_ID
             x.append(x_single)
             y.append(y_single)
@@ -89,7 +89,7 @@ class huatu():
         
         return x,y,ID_list
     
-    def draw_points(ax,red_x,red_y,red_ID,side="red"):
+    def draw_points(self,ax,red_x,red_y,red_ID,side="red"):
 
         ax.scatter(red_x,red_y,s=10,color=side)
         
@@ -101,8 +101,8 @@ class huatu():
 
     def set_ticks_LLA(self,ax):
         # 这个是直接画图，可惜没有什么好的办法把海岸线画出来。
-        ax.set_xlim(47.00, 49.00) # 经度 
-        ax.set_ylim(12.00, 14.00) # 纬度
-        plt.tick_params(axis="both",which="major",labelsize = 14 , direction="in", length=8)  
+        ax.set_xlim(47.00-2, 49.00+1) # 经度 
+        ax.set_ylim(12.00-2, 14.00+1) # 纬度
+        plt.tick_params(axis="both",which="major",labelsize = 12 , direction="in", length=8)  
         self.ax.set_aspect("equal") # 由于都是2度，所以也可以equal。
         return ax   

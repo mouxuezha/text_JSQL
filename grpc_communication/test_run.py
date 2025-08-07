@@ -59,7 +59,7 @@ def main():
 
                 if plat_timesteps >= 0:  
                     #act.append({"Type": "Launch", "Id": "warhead0","Lon": 124.5, "Lat": 18.28,"MissileType":1}) 
-                    redact.append({"Type": "Launch", "Id": "Truck0","Lon": 125, "Lat": 18.28,"MissileType":0}) 
+                    redact.append({"Type": "Launch", "Id": "Truck0","Lon": 125, "Lat": 18.28,"MissileType":0})  # 这能发射成功我是不信的
                     redact.append({"Type": "Launch", "Id": "Truck0","Lon": 125.1, "Lat": 18.28,"MissileType":0}) 
                     # redact.append({"Type": "Launch", "Id": "Truck0","Lon": 125.2, "Lat": 18.28,"MissileType":0}) 
                     # redact.append({"Type": "Launch", "Id": "Truck0","Lon": 125.3, "Lat": 18.28,"MissileType":0}) 

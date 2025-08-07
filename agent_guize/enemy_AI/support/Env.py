@@ -93,20 +93,19 @@ class Env():
             print("socket error,{} not send".format(str(message)))
 
     def Step(self, Action={"red_action":[],"blue_action":[]}):  # 尽量保持和之前的接口和含义一致，尽量能兼容之前的东西。
-        # action_red = Action["red_action"]
-        # self.redEnv.Act(action_red)
+        # ？？？谁给我注了的？注了那玩个毛
+
+        action_red = {"Action":Action["red_action"]}
+        self.redEnv.Act(action_red)
         
-        # action_blue = Action["blue_action"]
-        # self.blueEnv.Act(action_blue)
+        action_blue = {"Action":Action["blue_action"]}
+        self.blueEnv.Act(action_blue)
 
         result = self.platformEnv.Step() 
         
         return result
 
     def Reset(self):
-        # command = {"CMD": "Reset"}
-        # command = json.dumps(command)
-        # result = self._send(command)
         result = self.platformEnv.Reset() # 这个本来有返回值的，但是分析认为没有也不为大害，因此也就罢了。
         return result
 
