@@ -41,6 +41,7 @@ class BaseAgent(object):
         self.unit_V = self.text_loader.get_certain_text("BaseAgent.__init__","unit_V")
         self.detect_range = self.text_loader.get_certain_text("BaseAgent.__init__","detect_range")  
         # 一个隐患：为了简化，这里面没专门分对地对空了。按说应该分一下。
+        self.map_range = self.text_loader.get_certain_text("BaseAgent.__init__","map_range")  
 
         self.detected_state = {}
         self.detected_state2 = {}  # 这个预计用于折腾什么路径规划啊那些。就key是ID，value是观测到的不同帧数的路径好了。
@@ -543,14 +544,10 @@ class BaseAgent(object):
             my_abstract_state = self.abstract_state[my_ID]
             if my_abstract_state == {}:
                 # 默认状态的处理
-                if ("ArmoredTruck_ZTL100" in my_ID) or ("ShipboardCombat_plane" in my_ID) \
-                        or ("WheeledCmobatTruck" in my_ID) or ("MainBattleTank" in my_ID) \
-                        or ("missile_truck" in my_ID):
-                    # if ("ArmoredTruck_ZTL100" in my_ID) or ("ShipboardCombat_plane" in my_ID):
-                    # 对部分装备，如果是空的，就准备好润
-                    # self.set_partrol_and_monitor(my_ID, self.__get_LLA(my_ID))
-                    # 2024，没啥好润的了，这版应该是直接藏起来可也。
-                    self.set_hidden_and_alert(my_ID)
+                if ("_FixWing" in my_ID):
+                    # 飞机的默认状态不是隐蔽，而是巡逻转圈那个。
+                    my_LLA = self.get_LLA(my_ID)
+                    self.set_UAV_scout(my_ID,center_LLA=my_LLA,R=10000)
                 else:
                     # 对别的装备，如果是空的，就隐蔽起来。
                     self.set_hidden_and_alert(my_ID)
@@ -897,7 +894,7 @@ class BaseAgent(object):
             # 那就说明输入的是ID了，那就需要转化一下了。
             center_LLA = self.__get_LLA(center_LLA)
 
-        flag_attack = True  # 调试，开始打炮了。
+        flag_attack = False  # 调试，开始打炮了。 
         if flag_attack:
             flag_done = self.__handle_one_shot_attack(attacker_ID)
             if flag_done and "CruiseMissile" in attacker_ID:
@@ -918,7 +915,7 @@ class BaseAgent(object):
         if self.num % 1 == mod_num:
             # 这里参数得弄好，不然会出现转完了下一步还满足转的条件，就一直在边上转来转去。
             flag_edge = self.check_edge(attacker_ID,d_l=0.004) # 不用去的太靠边也行的奥。
-            flag_distance = self.check_distance(attacker_ID,d_l=3000) # 检测一下当前单位和地面单位集群的平均距离，如果距离大了就转弯。
+            flag_distance = self.check_distance(attacker_ID,d_l=30000) # 检测一下当前单位和地面单位集群的平均距离，如果距离大了就转弯。
 
             if flag_edge or flag_distance:
                 # 把这个flag换了.在特定条件下改变飞的方向。这样不会飞到太远的没有意义的地方去应该。
@@ -3032,6 +3029,7 @@ class BaseAgent(object):
         for target_ID in self.detected_state2:
             if (self.num - self.detected_state2[target_ID]["this"]["num"]) > 500:
                 # 姑且是500帧之前的东西就认为是没用了。
+                # 2025，这个得多一点可能。
                 list_deleted.append(target_ID)
             # 然后被打过且从态势里消失的东西也先不存了。就认为是炸了。
             elif "num_attacked" in self.detected_state2[target_ID]:
@@ -3323,12 +3321,19 @@ class BaseAgent(object):
         attacker_LLA = self.get_LLA(attacker_ID)
         flag_near = False
         if self.abstract_state[attacker_ID]["turn_cd"] == 0:
-            if (attacker_LLA[0] < 100.0923 + d_l) or (attacker_LLA[0] > 100.18707 - d_l):
+            # if (attacker_LLA[0] < 100.0923 + d_l) or (attacker_LLA[0] > 100.18707 - d_l):
+            #     flag_near = True
+            #     self.abstract_state[attacker_ID]["turn_cd"] = turn_cd
+            # elif (attacker_LLA[1] < 13.6024 + d_l) or (attacker_LLA[1] > 13.6724 - d_l):
+            #     flag_near = True
+            #     self.abstract_state[attacker_ID]["turn_cd"] = turn_cd
+            
+            if (attacker_LLA[0] < self.map_range[0] + d_l) or (attacker_LLA[0] > self.map_range[2] - d_l):
                 flag_near = True
                 self.abstract_state[attacker_ID]["turn_cd"] = turn_cd
-            elif (attacker_LLA[1] < 13.6024 + d_l) or (attacker_LLA[1] > 13.6724 - d_l):
+            elif (attacker_LLA[1] < self.map_range[3] + d_l) or (attacker_LLA[1] > self.map_range[1]- d_l):
                 flag_near = True
-                self.abstract_state[attacker_ID]["turn_cd"] = turn_cd
+                self.abstract_state[attacker_ID]["turn_cd"] = turn_cd            
         else:
             # 那就是不符合转的条件，CD减1,最小减少到0
             self.abstract_state[attacker_ID]["turn_cd"] = self.abstract_state[attacker_ID]["turn_cd"]-1
@@ -3653,8 +3658,8 @@ class BaseAgent(object):
         # 显然，这个需要平滑，不然一跳变都傻逼了。刚好用一下detected_state2里面的两帧数据
         # 输出一个法向量，记录了敌方相对于那个点的进攻方向。
         # 只算这几个种类的地面装备，不然全烂了。
-        filter_list = ["MainBattleTank","ArmoredTruck","WheeledCmobatTruck","JammingTruck"] 
-        
+        # filter_list = ["MainBattleTank","ArmoredTruck","WheeledCmobatTruck","JammingTruck"] 
+        filter_list = self.text_loader.get_certain_text("BaseAgent.check_enemy_direction","filter_list")  
         # 敌方位置直接求平均了。
         LLA_all = np.zeros((3,))
         base_LLA = np.array(base_LLA)

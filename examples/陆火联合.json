@@ -12,7 +12,13 @@
         "weapon_range":{"HighExplosiveShot_ZT": 1200, "HighExplosiveShot": 1000,
         "ShortRangeMissile": 1800, "RPG": 245, "AGM": 680,
         "ArmorPiercingShot_ZT": 1700, "ArmorPiercingShot": 1500,
-        "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300}
+        "Bullet_ZT": 840, "bullet": 600,"CruiseMissile": 300},
+        "detect_range": {"WheeledCmobatTruck_ZB100":2000, "WheeledCmobatTruck_ZB200":2000, "ArmoredTruck_ZTL100":2000, "missile_truck":2000, "Infantry":400, "MainBattleTank_ZTZ100":2000, "MainBattleTank_ZTZ200":2000, "Howitzer_C100":2000, "ShipboardCombat_plane":5000, "JammingTruck":2000,"CruiseMissile":5000},
+        "map_range":[100.0923, 13.6724, 100.18707, 13.6024]        
+    },
+    "BaseAgent.check_enemy_direction" : 
+    {
+        "filter_list": ["MainBattleTank","ArmoredTruck","WheeledCmobatTruck","JammingTruck"] 
     },
     "agent_dispatch.__init__":
     {
