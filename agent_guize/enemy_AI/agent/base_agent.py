@@ -48,6 +48,7 @@ class BaseAgent(object):
 
         self.weapon_V = self.text_loader.get_certain_text("BaseAgent.__init__","weapon_V")
         self.weapon_range = self.text_loader.get_certain_text("BaseAgent.__init__","weapon_range")
+        self.WeaponState_list_all  = self.text_loader.get_certain_text("BaseAgent.__init__","WeaponState_list")
         self.flag_zhandian = False
 
         self.commands_queue = queue.Queue(maxsize=114514) # 这个是新加的，用来处理和大模型的交互。
@@ -425,24 +426,30 @@ class BaseAgent(object):
             status = self.status
 
         try:
-            if "this" in status[ID]:
-                # 那就说明是detectstate2
-                LLA = status[ID]["this"]["LLA"]
-            elif "targetAlt" in  status[ID]:
+            if type(status) == dict:
+                if "this" in status[ID]:
+                    # 那就说明是detectstate2
+                    LLA = status[ID]["this"]["LLA"]
+                else:
+                    lon = status[ID]["VehicleState"]["lon"]
+                    lat = status[ID]["VehicleState"]["lat"]
+                    if lon ==None: # 还有奇怪的没有抓到的异常，再处理一下。
+                        lon = 0 
+                    if lat == None:
+                        lat = 0 
+                    alt = status[ID]["VehicleState"]["alt"]
+                    LLA = [lon, lat, alt]
+            elif type(status) == list:
                 # 那就说明是detectstate
-                lon = status[ID]["targetLon"]
-                lat = status[ID]["targetLat"]
-                alt = status[ID]["targetAlt"]
+                for info in status:
+                    if info["realID"] == ID:
+                        selected_status = info
+                        break
+                # 那就说明是detectstate
+                lon = selected_status["targetLon"]
+                lat = selected_status["targetLat"]
+                alt = selected_status["targetAlt"]
                 LLA =  [lon, lat, alt]
-            else:
-                lon = status[ID]["VehicleState"]["lon"]
-                lat = status[ID]["VehicleState"]["lat"]
-                if lon ==None: # 还有奇怪的没有抓到的异常，再处理一下。
-                    lon = 0 
-                if lat == None:
-                    lat = 0 
-                alt = status[ID]["VehicleState"]["alt"]
-                LLA = [lon, lat, alt]
         except:
             # 直接用异常处理吧，来处理万一单位炸了之后会发生什么。
             LLA = [0, 0, 0]   
@@ -560,7 +567,7 @@ class BaseAgent(object):
                 elif my_abstract_state["abstract_state"] == "partrol_and_monitor":
                     self.__handle_partrol_and_monitor(my_ID, my_abstract_state["target_LLA"])
                 elif my_abstract_state["abstract_state"] == "open_fire":
-                    self.__handle_open_fire2(my_ID, my_abstract_state["detected_state"])  # 逻辑升级的open fire
+                    self.__handle_open_fire2(my_ID, my_abstract_state["target_LLA"], my_abstract_state["detected_state"])  # 逻辑升级的open fire
                 elif my_abstract_state["abstract_state"] == "follow_and_defend":
                     self.__handle_follow_and_defend(my_ID, my_abstract_state["VIP_ID"],
                                                     my_abstract_state["flag_stand_by"])
@@ -1143,10 +1150,27 @@ class BaseAgent(object):
             detected_state = kargs["detected_state"]
         else:
             detected_state = self.detected_state
+        if "weapon_type" in kargs:
+            weapon_type = kargs["weapon_type"]
+        else:
+            attacker_type = self.get_unit_type(attacker_ID)
+            weapon_type = self.WeaponState_list_all[attacker_type][0]
+        if "target_LLA" in kargs:
+            target_LLA = kargs["target_LLA"]
+        else:
+            try:
+                # 从探测到的态势里面去拿一个过来，先充当一下
+                target_LLA=self.detected_state2[list(self.detected_state2.keys())[0]]["this"]["LLA"]
+            except:
+                target_LLA = [46.340332,11.296934,0] # 随便写的坐标，实在不行就用这个
+
 
         # target_ID_local, target_LLA_local, target_distance_local = self.range_estimate(attacker_ID, detected_state)
+        # target_ID_local_list, target_LLA_local_list, target_distance_local_list \
+        #     = self.range_estimate3(attacker_ID, detected_state)
         target_ID_local_list, target_LLA_local_list, target_distance_local_list \
-            = self.range_estimate3(attacker_ID, detected_state)
+            = self.range_estimate4(attacker_ID, detected_state,target_LLA=target_LLA,weapon_type=weapon_type)
+
         # list 里面是根据优先级排列的，优先级高的在前面。
         flag_done = False  # 这个量用来记录是不是打了一发了。
         if len(target_ID_local_list) > 0:
@@ -1167,17 +1191,17 @@ class BaseAgent(object):
                         # 有些武器直瞄好，有些武器间瞄好。# 有些武器只允许直瞄
                         # flag_done = self.check_zhimiao(attacker_ID, target_ID_local, weapon_selected)
                         flag_done = True # 直瞄那个关了干脆，不然抽象了。
-                        # 巡飞弹的话还得check一下目标是不是在敌方干扰的覆盖范围内。
-                        flag_ganrao = self.check_CruiseMissile_ganrao(attacker_ID, target_ID_local)
-                        flag_done = flag_done and flag_ganrao
+                        # # 巡飞弹的话还得check一下目标是不是在敌方干扰的覆盖范围内。
+                        # flag_ganrao = self.check_CruiseMissile_ganrao(attacker_ID, target_ID_local)
+                        # flag_done = flag_done and flag_ganrao
                         if flag_done:  # 根据策略，武器类型和直瞄间瞄是不是匹配。如果判出来彳亍就打
                             self._Attack_Action(attacker_ID, target_LLA_local_modified[0], target_LLA_local_modified[1],
                                                 target_LLA_local_modified[2], weapon_selected)
                             
                             self.__handle_mul_shot_attack(attacker_ID, target_ID_local,target_LLA_local_modified, weapon_selected) # 这个是补刀用的。
                             
-                            # 2024，增加一个记录函数，用来记打了几次导弹车，从而间接判断毁伤了多少导弹车。
-                            self.check_attack_missile_truck(weapon_selected, target_ID_local)
+                            # # 2024，增加一个记录函数，用来记打了几次导弹车，从而间接判断毁伤了多少导弹车。
+                            # self.check_attack_missile_truck(weapon_selected, target_ID_local)
                             self.check_attack_all(weapon_selected, target_ID_local) # 干脆都记录了算了。
 
                             break  # 打出来了，那就完事了
@@ -1258,7 +1282,7 @@ class BaseAgent(object):
                             
                             # 2024，增加一个记录函数，用来记打了几次导弹车，从而间接判断毁伤了多少导弹车。
                             # 2025，既然都记录了，那后面就也可以用呗。
-                            self.check_attack_missile_truck(weapon_selected, target_ID_local)
+                            # self.check_attack_missile_truck(weapon_selected, target_ID_local)
                             self.check_attack_all(weapon_selected, target_ID_local) # 干脆都记录了算了。
 
                             break  # 打出来了，那就完事了
@@ -1377,9 +1401,13 @@ class BaseAgent(object):
         # 这个状态也是可以长期持续的，所以不需要退出条件。
         pass
 
-    def __handle_open_fire2(self, attacker_ID,detected_state ):
+    def __handle_open_fire2(self, attacker_ID,target_LLA, detected_state ):
         
-        WeaponState_list = self.status[attacker_ID]["WeaponState"]
+        # WeaponState_list = self.status[attacker_ID]["WeaponState"]
+        # 2025: 现在没有武器列表，得自己搞了。
+        # self.WeaponState_list_all  = self.text_loader.get_certain_text("BaseAgent.__handle_open_fire2","WeaponState_list")
+        attacker_type =self.get_unit_type(attacker_ID)
+        WeaponState_list = self.WeaponState_list_all[attacker_type]
 
         # 2024：这里对导弹车进行一些单独的处理。导弹车只有在对方防空受到一定的削弱之后才会发射。
         # 2025:调的时候想想这个还要不要了，或者要不要类似的机制
@@ -1404,19 +1432,29 @@ class BaseAgent(object):
             self._Change_State(attacker_ID, "stay")
             # self._Change_State(attacker_ID, "hidden")
         # 搞细一点，如果CD还没转好且不是隐蔽，就转隐蔽，如果CD快转好了，就要转起竖
-        my_state = self.status[attacker_ID]["状态"]
-        weapon_CD = self.status[attacker_ID]["weapon_CD"]
+        # my_state = self.status[attacker_ID]["状态"]
+        # weapon_CD = self.status[attacker_ID]["weapon_CD"]
+
+        try:
+            my_state = self.status[attacker_ID]["isHiddenFlag"]  # 隐藏的，说法是另有一个变量。
+            weapon_CD = self.status[attacker_ID]["weapon_CD"]
+        except:
+            print("__handle_open_fire2 warning: 说好的isHiddenFlag还没做。")
+            my_state = 0
+            weapon_CD = 0 
+
+
         time_change_state = 60
-        if my_state != "起竖" and weapon_CD<time_change_state:
-            self._Change_State(attacker_ID, "起竖")
-        elif my_state != "隐蔽" or weapon_CD>time_change_state:
-            self._Change_State(attacker_ID, "隐蔽")
+        if my_state != 0 and weapon_CD<time_change_state:
+            self._Change_State(attacker_ID, 0)
+        elif my_state != 1 or weapon_CD>time_change_state:
+            self._Change_State(attacker_ID, 1)
         
         # 后面是真正的通用的执行开火的程序。
         geshu = len(WeaponState_list)
         # 这个的说法就是，有多少能打的就全都打一遍。虽然会有很多冗余指令，但是管他呢
         for i in range(geshu):
-            self.__handle_one_shot_attack(attacker_ID,detected_state=detected_state)
+            self.__handle_one_shot_attack(attacker_ID,detected_state=detected_state,target_LLA=target_LLA,weapon_type = WeaponState_list[i])
 
         # 按理来说得是打完就隐蔽，然后CD好之前开始转状态，转完CD刚好转完，才是最完美的。
 
@@ -2716,8 +2754,9 @@ class BaseAgent(object):
         for i in range(len(prior_list)):
             prior_str = prior_list[i]  # 其实就是根据优先级多做几次方案1，而已。
             flag_select_prior = False
-            # for enemy_ID in detectinfo:
-            for enemy_ID in self.detected_state2:
+            for enemy_info in detectinfo: # 这个选择机制还得要
+                enemy_ID = enemy_info["realID"]
+            # for enemy_ID in self.detected_state2:
                 # 检测这个目标是不是新鲜的。
 
                 if self.detected_state2[enemy_ID]["this"]["num"] < self.num - 50:
@@ -3047,7 +3086,7 @@ class BaseAgent(object):
     
     def get_prior_list(self, weapon_type):
         # 这个姑且不搞太复杂的逻辑，做成能从外面读进来的。
-        prior_list = self.weapon_range = self.text_loader.get_certain_text("BaseAgent.get_prior_list",weapon_type)
+        prior_list = self.text_loader.get_certain_text("BaseAgent.get_prior_list",weapon_type)
         return prior_list
     
     # def get_prior_list(self, type):
@@ -3181,6 +3220,12 @@ class BaseAgent(object):
             self.detected_state2[target_ID]["num_attacked"] = self.detected_state2[target_ID]["num_attacked"] + 1
         else:
             self.detected_state2[target_ID]["num_attacked"] = 1   
+        
+        if "weapon_attacked" in self.detected_state2[target_ID]:
+            # 记录一下这些个目标被什么东西打过。
+            self.detected_state2[target_ID]["num_attacked"].append("weapon_attacked")
+        else:
+            self.detected_state2[target_ID]["num_attacked"] = [weapon_selected] 
 
     def check_CruiseMissile_ganrao(self, attacker_ID, target_ID):
         # 这个用来check一下，巡飞弹攻击目标是不是在敌方干扰的范围之内。如果是在敌方干扰范围之内就不打了先，如果不是再打。
@@ -3641,8 +3686,16 @@ class BaseAgent(object):
         # 整个自己的平均位置,后面这部分等子航他们聚类要是整好了就换个高级的
         LLA_all = np.array([0, 0, 0])
         LLA_num = 0.00001
-        for attacker_ID in status:
-            LLA_single = self.__get_LLA(attacker_ID)
+        for ID_or_info in status:
+            if type(ID_or_info) == dict:
+                # 花式兼容，这样求平均就敌人和我方都能求了
+                if "realID" in ID_or_info:
+                    attacker_ID = ID_or_info["realID"]
+            else:
+                attacker_ID = ID_or_info
+
+            # LLA_single = self.__get_LLA(attacker_ID)
+            LLA_single = self.get_LLA(attacker_ID, status=status)
             LLA_single = np.array(LLA_single)
 
             LLA_all = LLA_all + LLA_single

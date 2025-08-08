@@ -10,7 +10,8 @@
         "AIM_AirMissile": 10000, "JDAM": 10000,"Short_Range_InterceptMissile":20000,"Long_Range_InterceptMissile":50000,"ShipToGround_CruiseMissile":200000},
         "unit_V": {"Guide_Ship_Surface":18, "Truck_Ground":16, "Recon_UAV_FixWing":50, "Cruiser_Surface": 15, "Destroyer_Surface":18, "Flagship_Surface":12, "Shipboard_Aircraft_FixWing":250},
         "detect_range": {"Guide_Ship_Surface":50000, "Truck_Ground":1, "Recon_UAV_FixWing":20000, "Cruiser_Surface":50000, "Destroyer_Surface" : 50000, "Flagship_Surface":50000, "Shipboard_Aircraft_FixWing":20000},
-        "map_range":[45,15,50,10]
+        "map_range":[45,15,50,10],
+        "WeaponState_list":{"Guide_Ship_Surface":[], "Truck_Ground":["HighCostAttackMissile","LowCostAttackMissile"], "Recon_UAV_FixWing":[],"Cruiser_Surface":["Short_Range_InterceptMissile","Long_Range_InterceptMissile","ShipToGround_CruiseMissile"], "Destroyer_Surface":["Short_Range_InterceptMissile","Long_Range_InterceptMissile"], "Flagship_Surface":["ShipToGround_CruiseMissile"], "Shipboard_Aircraft_FixWing":["AIM_AirMissile", "JDAM"]}
     },
     "BaseAgent.check_enemy_direction" : 
     {
