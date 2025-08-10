@@ -22,7 +22,7 @@ class AgentEnv():
             print(f"客户端1主动获取: {msg}")
 
     def _act_send(self, message):
-        print("_act_send:",message)
+        print("_act_send:",message) # 不print了，实际一般不会去看输出
         self.client.send_message(message)
 
     def Act(self, Action=None):
@@ -45,11 +45,13 @@ class AgentEnv():
         #     n_try = n_try-1
         
         statusinfo = self.client.get_received_message(timeout=1)
-        if(statusinfo is None):
-            print("getCurrentStatus: status info is none")
-            print(statusinfo)
-            return
-        print(statusinfo)
+        
+        # 不print了，实际一般不会去看输出
+        # if(statusinfo is None):
+        #     print("getCurrentStatus: status info is none")
+        #     print(statusinfo)
+        #     return
+        # print(statusinfo)
 
         # 这段补不明觉厉，感觉没啥意义。且待原作者子航鉴定一下再删。
         # if "status" in statusinfo:

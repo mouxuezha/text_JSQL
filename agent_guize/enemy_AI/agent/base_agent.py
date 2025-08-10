@@ -242,8 +242,10 @@ class BaseAgent(object):
         return AttackAction
     
     # 拦截的得专门整一个，因为拦截的指令是发目标ID的，这个的具体实现还得看平台里到底怎么解析。
-    def _Anti_missile_Action(self, Id, Target_ID, weapon_type):
-        AntiMissileAction = {"Type": "Anti_missile", "Id": Id, "Target_ID": Target_ID, "weapon_type": weapon_type}
+    # 好像又变回去了，不是发目标ID了，变成发
+    def _Anti_missile_Action(self, Id, Target_LLA, weapon_type):
+        # AntiMissileAction = {"Type": "Anti_missile", "Id": Id, "Target_ID": Target_ID, "weapon_type": weapon_type}
+        AntiMissileAction = {"Type": "Launch", "Id": Id, "Lon": str(Target_LLA[0]), "Lat": str(Target_LLA[1]), "Alt": str(Target_LLA[2]), "weapon_type": weapon_type}
         self.act.append(AntiMissileAction)
         return AntiMissileAction
 
@@ -430,6 +432,17 @@ class BaseAgent(object):
                 if "this" in status[ID]:
                     # 那就说明是detectstate2
                     LLA = status[ID]["this"]["LLA"]
+                elif "detectionError" in status[ID]:
+                    # 那就说明是detectstate
+                    # for info in status:
+                    #     if info["realID"] == ID:
+                    #         selected_status = info
+                    #         break
+                    # 那就说明是detectstate
+                    lon = status[ID]["targetLon"]
+                    lat = status[ID]["targetLat"]
+                    alt = status[ID]["targetAlt"]
+                    LLA =  [lon, lat, alt]
                 else:
                     lon = status[ID]["VehicleState"]["lon"]
                     lat = status[ID]["VehicleState"]["lat"]
@@ -438,18 +451,7 @@ class BaseAgent(object):
                     if lat == None:
                         lat = 0 
                     alt = status[ID]["VehicleState"]["alt"]
-                    LLA = [lon, lat, alt]
-            elif type(status) == list:
-                # 那就说明是detectstate
-                for info in status:
-                    if info["realID"] == ID:
-                        selected_status = info
-                        break
-                # 那就说明是detectstate
-                lon = selected_status["targetLon"]
-                lat = selected_status["targetLat"]
-                alt = selected_status["targetAlt"]
-                LLA =  [lon, lat, alt]
+                    LLA = [lon, lat, alt]                    
         except:
             # 直接用异常处理吧，来处理万一单位炸了之后会发生什么。
             LLA = [0, 0, 0]   
@@ -806,7 +808,12 @@ class BaseAgent(object):
         attacker_unit = self.status[attacker_ID]
 
         # 雷达都开机吧。后续可以考虑雷达也放在任务那层统一地去调度。
-        radar_state = attacker_unit["雷达状态"]
+        try:
+            radar_state = attacker_unit["VehicleState"]["雷达状态"]
+        except:
+            print("BaseAgent.__handle_anti_missile: 说好的雷达是否开关机标志位还没做")
+            radar_state = 1 
+
         if radar_state == 0:
             # 如果关了就开起来.
             self._Set_Radar_Action(attacker_ID, 1)
@@ -821,12 +828,18 @@ class BaseAgent(object):
 
         for i in range(N_channel):
             # 这里欠缺一个怎么从态势里看到各个火力通道的CD的机制，最好把每个火力通道的CD时间弄出来，如果是多个launcher的话就好弄了
-            if attacker_unit["火力通道"+str(i)] == 0: # 一样的，这些中文的都是等着看最后平台给过来的态势到底是什么样的。
+            try:
+                channel_CD = attacker_unit["火力通道"+str(i)]
+            except:
+                channel_CD = 0 
+
+            if (channel_CD == 0) and (len(target_list)>0): # 一样的，这些中文的都是等着看最后平台给过来的态势到底是什么样的。
                 # 有可用的火力通道，那就具备发射条件，那就狠狠地发射。
                 target_here = target_list.pop(0)
                 # 来个自适应武器类型，就是根据距离判断是要打远程拦截弹还是近程拦截弹
                 weapon_type = self.__weapon_select2(attacker_ID, target_here)
-                self._Anti_missile_Action(attacker_ID, target_here, weapon_type)
+                target_LLA = self.get_LLA(target_here,self.detected_state)
+                self._Anti_missile_Action(attacker_ID, target_LLA, weapon_type) # 来哥说这个也要发LLA
                 break
 
         # raise Exception("__handle_anti_missile unfinished yet")
@@ -1178,8 +1191,9 @@ class BaseAgent(object):
                 target_ID_local = target_ID_local_list[i]
                 target_LLA_local = target_LLA_local_list[i]
                 target_distance_local = target_distance_local_list[i]
-                # 说明找到能打的目标了，那就选个武器开始打了。
-                weapon_selected = self.__weapon_select(attacker_ID, target_ID_local)
+                # 说明找到能打的目标了，那就选个武器开始打了。# 2025:这个不要了先
+                # weapon_selected = self.__weapon_select(attacker_ID, target_ID_local)
+                weapon_selected = weapon_type
                 if len(weapon_selected) > 0:
                     if (self.check_effect(target_ID_local, weapon_selected)):
                         # 如果有合适的武器，再考虑计算修正目标打提前量
@@ -1772,9 +1786,15 @@ class BaseAgent(object):
         # force_arrange_real = self.mission_set[mission_ID]["force_arrange_real"]
         # space_arrange = self.mission_set[mission_ID]["space_arrange"] # 直接作为参数输入了就不用这个了，主要是为了程序结构化好一点，本质是一样的。
         force_arrange_real = ID_list 
-            
-        UAV_units = self.select_by_type("Recon_UAV_FixWing",ID_list=force_arrange_real)
-        kuaiting_units = self.select_by_type("Guide_Ship_Surface",ID_list=force_arrange_real)
+        
+        # if self.player == "red":     
+        #     UAV_units = self.select_by_type("Recon_UAV_FixWing",ID_list=force_arrange_real)
+        #     # kuaiting_units = self.select_by_type("Guide_Ship_Surface",ID_list=force_arrange_real)
+        # elif self.player =="blue":
+        #     UAV_units = self.select_by_type("Shipboard_Aircraft_FixWing",ID_list=force_arrange_real)
+        
+        UAV_units = self.select_by_type("_FixWing",ID_list=force_arrange_real)
+
 
 
         # 生成轨迹，直接分一些条数然后开始扫就完事了，先搞个简单的。正好地图是横着的。
@@ -2011,11 +2031,11 @@ class BaseAgent(object):
     def __handle_mission_preserve(self, mission_ID, ID_list):
         # 这个也关键，而且这个的问题在于得分红蓝方实现。任务这层主要是把协同的事情做了。
         # 红蓝方分开写好了，逻辑差的有点多。
-        if self.role == "red":
+        if self.player == "red":
             # 那就是红方。
             self.__handle_mission_preserve_red(mission_ID, ID_list)
             pass
-        elif self.role == "blue":
+        elif self.player == "blue":
             # 蓝方
             self.__handle_mission_preserve_blue(mission_ID, ID_list)
             pass
@@ -2026,8 +2046,8 @@ class BaseAgent(object):
     def __handle_mission_preserve_red(self,mission_ID, ID_list):
         # 这个是红方用的，走红方的逻辑。
         # 红方的保护是无人机飞回自己家头上盘旋然后回避姿态，就是敌方战斗机来就跑，被打导弹了就做规避。
-        UAV_units = self.select_by_type(type="无人机",ID_list = ID_list)
-        che_units = self.select_by_type(type="导弹车",ID_list = ID_list)
+        UAV_units = self.select_by_type(type="Recon_UAV_FixWing",ID_list = ID_list)
+        che_units = self.select_by_type(type="Truck_Ground",ID_list = ID_list)
         che_LLA_ave  = self.get_LLA_ave(status=che_units)
         if len(UAV_units)>0:
             for UAV_ID in UAV_units:
@@ -2063,9 +2083,13 @@ class BaseAgent(object):
 
         # 应该是这么玩，给每个船都维护一个拦截的堆栈，任务这层维护更新这些堆栈，然后抽象状态那层管的是“好了就开火”
 
-        enemy_missile = self.select_by_type(type="导弹", status=self.detected_state)
+        enemy_cheap_missile = self.select_by_type(type="HighCostAttackMissile", status=self.detected_state)
+        enemy_rich_missile = self.select_by_type(type="LowCostAttackMissile", status=self.detected_state)
+        enemy_UAV = self.select_by_type(type="Recon_UAV_FixWing", status=self.detected_state)
         # 逻辑应该是，给每枚来袭弹找一个它最合适的船（的火力通道）。确保每个导弹都有船去打它尽量，先从一拦一开始分类，每个导弹先分配一个火力通道，然后再说。
         
+        enemy_missile = enemy_cheap_missile | enemy_rich_missile
+
         N_lan_1 = 2
         channel = [] 
         for i in range(N_lan_1):
@@ -2085,9 +2109,9 @@ class BaseAgent(object):
             
         # 至此就算是分配完了。这种搞法本质上是个贪心算法，不保证最优，但是保证能算出来且开销不大。
         # 然后就开始下达指令了，操作抽象状态那层。
-        for attacker_ID in ID_list:
+        for attacker_ID in ID_list: # 这个得用这个而非ID_list，专业点
             # 对每个单位，先把抽象状态设了，然后再往里面append目标。
-            self.set_anti_missile(attacker_ID, mission_ID=missil_ID,N_lan_1=N_lan_1,N_channel=2)
+            self.set_anti_missile(attacker_ID, mission_ID=mission_ID,N_lan_1=N_lan_1,N_channel=2)
         
         # 这步才是真正的分配目标
         for attacker_ID in ID_list:
@@ -2103,10 +2127,11 @@ class BaseAgent(object):
         # 对来袭的导弹判断距离，如果有超过N颗离自己到了一定距离内，就认为要被打了，就开干扰。
 
         # 起手先把敌导弹数量弄出来。
-        enemy_missile = self.select_by_type(type="导弹", status=self.detected_state)
+        enemy_missile = self.select_by_type(type="CostAttackMissile", status=self.detected_state)
 
         # 更具体的逻辑，应该是，对每个船，标记离自己距离近过阈值的来袭导弹的数量。
         # TODO  加弹道预测，判断落点是不是在船周围而不是用单纯的距离阈值。
+        # 好消息是，探测里面有落点预测，坏消息是，未见的保熟。
         thread_num_list = [] 
 
         for ship_ID in ID_list:
@@ -2126,12 +2151,19 @@ class BaseAgent(object):
         for i in range(len(ID_list)):
             index = sorted_indices[i]
             ID = ID_list[index]
-            if "驱逐舰" in ID:
+            if "Cruiser_Surface" in ID:
                 # 那就说明这个里面是有干扰机的。
                 # TODO: 换成从self.status[ID]的挂载list里面去找有无干扰机。
-                if self.status[ID]["Jammer的CD"] == 0:
+                try:
+                    Jammer_CD = self.status[ID]["Jammer的CD"]
+                except:
+                    Jammer_CD = 0
+                    print("BaseAgent.__handle_mission_Jammer: 说好的干扰机CD，现在态势里还没有。")
+
+
+                if Jammer_CD == 0:
                     # 那就是CD已经转好了，
-                    self._SetJammer_Action(ID,Pattern=1)
+                    self._SetJammer_Action(ID, Pattern=1)
                     # 成功发了一个干扰指令，那就
                     N_real_turn_on = N_real_turn_on + 1
                     if N_real_turn_on == N_expect_turn_on:
@@ -2155,7 +2187,7 @@ class BaseAgent(object):
         #     status = self.status
         # status = self.__status_filter(status,model="F2A")
 
-        status = [] 
+        status = {} 
         for ID_single in ID_list:
             status[ID_single] = self.status[ID_single]
 
@@ -2227,7 +2259,7 @@ class BaseAgent(object):
             #     self.set_move_and_attack(attacker_ID, target_LLA)
             
             # 2025：防空拦截状态下，抽象状态被拿去拦截了，先不慌弄抽象状态的一对多，安排一个直接发航渡指令的，这样就能共存了理论上。
-            self._Move_Action(attacker_ID, target_LLA)
+            self._Move_Action(attacker_ID, target_LLA[0],target_LLA[1],target_LLA[2])
 
         pass
     
@@ -2759,6 +2791,10 @@ class BaseAgent(object):
             # for enemy_ID in self.detected_state2:
                 # 检测这个目标是不是新鲜的。
 
+                if not(enemy_ID) in self.detected_state2:
+                    # 那就是这个目标在探测池子里已经没有了，丢了
+                    print("目标丢失，无法打击： " + enemy_ID)
+                    continue
                 if self.detected_state2[enemy_ID]["this"]["num"] < self.num - 50:
                     # 就说明目标信息已经不新鲜了，就不打了 # 正常情况下，这里面有的肯定都有this属性
                     # 如果这帧是能够detectinfo里有的，那肯定已经更新到deteced_state2里面了。
@@ -2838,7 +2874,12 @@ class BaseAgent(object):
         t_dan = int(L_dan / V_dan)
         
         target_type = self.get_unit_type(target_ID_local)
-        V_target = self.weapon_V[target_type]
+        if target_type in self.unit_V:
+            V_target = self.unit_V[target_type]
+        elif target_type in self.weapon_V: 
+            V_target = self.weapon_V[target_type]
+        else:
+            raise Exception("__target_LLA_local_modification: 寄了。cannot get the velocity of target")
 
         flag_fangan = 2
         # 这个是用于提前量方案选择的。2024年，由于是直接进毁伤，所以算提前量的意义其实就没了。
@@ -3223,9 +3264,9 @@ class BaseAgent(object):
         
         if "weapon_attacked" in self.detected_state2[target_ID]:
             # 记录一下这些个目标被什么东西打过。
-            self.detected_state2[target_ID]["num_attacked"].append("weapon_attacked")
+            self.detected_state2[target_ID]["weapon_attacked"].append("weapon_attacked")
         else:
-            self.detected_state2[target_ID]["num_attacked"] = [weapon_selected] 
+            self.detected_state2[target_ID]["weapon_attacked"] = [weapon_selected] 
 
     def check_CruiseMissile_ganrao(self, attacker_ID, target_ID):
         # 这个用来check一下，巡飞弹攻击目标是不是在敌方干扰的范围之内。如果是在敌方干扰范围之内就不打了先，如果不是再打。
@@ -3691,11 +3732,13 @@ class BaseAgent(object):
                 # 花式兼容，这样求平均就敌人和我方都能求了
                 if "realID" in ID_or_info:
                     attacker_ID = ID_or_info["realID"]
+                    LLA_single = self.get_LLA(attacker_ID,status=self.detected_state)
             else:
                 attacker_ID = ID_or_info
+                LLA_single = self.get_LLA(attacker_ID, status=status)
 
             # LLA_single = self.__get_LLA(attacker_ID)
-            LLA_single = self.get_LLA(attacker_ID, status=status)
+            # LLA_single = self.get_LLA(attacker_ID, status=status)
             LLA_single = np.array(LLA_single)
 
             LLA_all = LLA_all + LLA_single

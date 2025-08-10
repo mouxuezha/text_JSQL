@@ -1031,7 +1031,7 @@ class GlobalAgent(BaseAgent):
     #     return self.act 
     
     def step_red_2025_test(self,status:dict):
-        # 这句统一拿出来外面写了。
+        
         truck_units = self.select_by_type("Truck_Ground")
         UAV_unit = self.select_by_type("Recon_UAV_FixWing")
         kuaiting_unit = self.select_by_type("Guide_Ship_Surface")
@@ -1041,12 +1041,24 @@ class GlobalAgent(BaseAgent):
             # self.set_mission_focus_fire(truck_units, "", target_LLA=target_LLA,weapon_type="LowCostAttackMissile") # 这个有一个问题就是依赖于探测。没探测了就歇了。
             self.set_mission_scout(UAV_unit,space_arrange=[46.0,12.0,48.0,11.0]) # 好，几乎完事了，尚欠快艇的调度。
             self.set_mission_supresse_fire(truck_units,space_arrange=[46.0,12.0,48.0,11.0],)
-
+        
+        # 这句统一拿出来外面写了。
         self.act = self.Gostep_all()
         return self.act 
 
     def step_blue_2025_test(self,status:dict):
-        
+        CG_units = self.select_by_type("Cruiser_Surface")
+        DD_unit = self.select_by_type("Destroyer_Surface")
+        CVN_unit = self.select_by_type("Flagship_Surface")
+        plan_unit = self.select_by_type("Shipboard_Aircraft_FixWing")
+        ship_unit = CG_units | DD_unit 
+
+        if self.num == 11:
+            # 蓝方主要是得把拦截的测了，不然玩不了。态势过滤的时候打鸡蛋得在里面
+            target_LLA = [46.340332,11.296934,0]
+            self.set_mission_scout(plan_unit,space_arrange=[45.0,14.0,47.0,12.0]) 
+            self.set_mission_preserve(ship_unit,enemy_direction = [0,1,0])
+
         # 这句统一拿出来外面写了。
         self.act = self.Gostep_all()
         return self.act 
