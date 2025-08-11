@@ -1056,7 +1056,7 @@ class GlobalAgent(BaseAgent):
         if self.num == 11:
             # 蓝方主要是得把拦截的测了，不然玩不了。态势过滤的时候打鸡蛋得在里面
             target_LLA = [46.340332,11.296934,0]
-            # self.set_mission_scout(plan_unit,space_arrange=[45.0, 14.0, 47.0, 12.0]) 
+            self.set_mission_scout(plan_unit,space_arrange=[45.0, 14.0, 47.0, 12.0]) 
             self.set_mission_preserve(ship_unit,enemy_direction = [0,1,0])
 
         # 这句统一拿出来外面写了。

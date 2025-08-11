@@ -15,9 +15,10 @@ import atexit
 class AgentEnv():
     def __init__(self, client):
         self.client = client
+        self.timeout = 114514
 
     def _act_recv(self):
-        msg = self.client.get_received_message(timeout=0.5)
+        msg = self.client.get_received_message(timeout=self.timeout)
         if msg:
             print(f"客户端1主动获取: {msg}")
 
@@ -44,7 +45,7 @@ class AgentEnv():
         #     time.sleep(0.1)
         #     n_try = n_try-1
         
-        statusinfo = self.client.get_received_message(timeout=1)
+        statusinfo = self.client.get_received_message(timeout=self.timeout)
         
         # 不print了，实际一般不会去看输出
         # if(statusinfo is None):
@@ -82,16 +83,17 @@ class AgentEnv():
 class PlatformEnv():
     def __init__(self, client):
         self.client = client
+        self.timeout = 114514
 
     def _control_recv(self):
-        msg = self.client.get_received_message(timeout=10)
+        msg = self.client.get_received_message(timeout=self.timeout)
         if msg:
             print(f"客户端1主动获取: {msg}")
 
     def _control_send(self, message):
         print("_control_send:",message)
         self.client.send_message(message)
-        msg = self.client.get_received_message(timeout=10)
+        msg = self.client.get_received_message(timeout=self.timeout)
         return msg
 
     def _send(self,msg):
@@ -161,9 +163,10 @@ class PlatformEnv():
 class Env():
     def __init__(self, client):
         self.client = client
+        self.timeout = 114514
 
     def _act_recv(self):
-        msg = self.client.get_received_message(timeout=0.5)
+        msg = self.client.get_received_message(timeout=self.timeout)
         if msg:
             print(f"客户端1主动获取: {msg}")
 
@@ -222,7 +225,7 @@ class Env():
         command = {"CMD": "GetCurrentStatus"}
         command = json.dumps(command)
         self._act_send(command)
-        statusinfo = self.client.get_received_message(timeout=10)
+        statusinfo = self.client.get_received_message(timeout=self.timeout)
         if(statusinfo is None):
             print("getCurrentStatus: status info is none")
         if "status" in statusinfo:

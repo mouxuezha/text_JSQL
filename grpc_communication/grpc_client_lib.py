@@ -26,6 +26,7 @@ class GRPCClientBase:
         self.receive_thread = None
         self.chat_stream = None
         self.message_callback = None  # 消息回调函数
+        self.timeout = 114514
 
     def connect(self) -> bool:
         """建立连接"""
@@ -86,7 +87,7 @@ class GRPCClientBase:
         """停止客户端"""
         self.is_running = False
         if self.receive_thread and self.receive_thread.is_alive():
-            self.receive_thread.join(timeout=1.0)
+            self.receive_thread.join(timeout=self.timeout)
         if self.channel:
             self.channel.close()
         self.channel = None
@@ -114,7 +115,7 @@ class DataActClient(GRPCClientBase):
         """生成请求流"""
         while self.is_running:
             try:
-                message = self.request_queue.get(block=True,timeout=0.1)
+                message = self.request_queue.get(block=True,timeout=self.timeout)
                 request = data_act_pb2.StringMessageACT(data=message)
                 yield request
                 self.request_queue.task_done()
@@ -164,7 +165,7 @@ class DataClient(GRPCClientBase):
         """生成请求流"""
         while self.is_running:
             try:
-                message = self.request_queue.get(block=True, timeout=0.1)
+                message = self.request_queue.get(block=True, timeout=self.timeout)
                 request = data_pb2.StringMessage(data=message)
                 yield request
                 self.request_queue.task_done()

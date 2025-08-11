@@ -249,6 +249,8 @@ class BaseAgent(object):
     # 好像又变回去了，不是发目标ID了，变成发
     def _Anti_missile_Action(self, Id, Target_LLA, weapon_type):
         # AntiMissileAction = {"Type": "Anti_missile", "Id": Id, "Target_ID": Target_ID, "weapon_type": weapon_type}
+        if  "CruiseMissile" in Unit_Type:
+            Unit_Type = "CruiseMissile"         
         AntiMissileAction = {"Type": "Launch", "Id": Id, "Lon": str(Target_LLA[0]), "Lat": str(Target_LLA[1]), "Alt": str(Target_LLA[2]), "weapon_type": weapon_type}
         self.act.append(AntiMissileAction)
         return AntiMissileAction
@@ -266,7 +268,7 @@ class BaseAgent(object):
                 On_input = "0" # 关了
         else:
             On_input = str(On)
-        setRadarAction = {"Type": "SetRadar", "Id": Id, "On": On_input}
+        setRadarAction = {"Type": "SetRadar", "Id": Id, "IsRadarOn": On_input}
         self.act.append(setRadarAction)
         return setRadarAction
 
@@ -533,8 +535,8 @@ class BaseAgent(object):
     
     def Gostep_all(self):
         # 统一弄一个，以示并无偏私之意
-
-        self.Gostep_mission_set()
+        self.act = [] 
+        self.act =self.Gostep_mission_set() # 不能这么搞了，得把self.act拿到外面初始化，不然mission这层的直接给action的东西就会没了。
         self.act = self.Gostep_abstract_state()
         return self.act
         
@@ -571,7 +573,7 @@ class BaseAgent(object):
         # 抽象状态整理一下之后，通过communication功能给它更新到local的agent里面。
         # 这个功能放在communication里面了
 
-        self.act = []
+        # self.act = []
 
 
         # 遍历一下abstract_state，把里面每个单位的命令都走一遍。
@@ -1800,7 +1802,9 @@ class BaseAgent(object):
             else:
                 # 非活动状态的倒也不慌删了，反正没啥坏处。总共应该也没几个任务就是了，影响不了多少速度。
                 pass 
-
+        
+        return self.act
+    
     def __handle_mission_scout(self, mission_ID,ID_list,space_arrange):
         # 还得是大模型好使，这种直接就补全出来了。
         # 直接平着扫好了，
@@ -2222,7 +2226,7 @@ class BaseAgent(object):
         if "target_LLA" in kargs:
             target_LLA = kargs["target_LLA"]
         else:
-            target_LLA = [13.325485,50.756836,0]
+            target_LLA = [50.756836, 13.325485,0]
 
 
         # 先求出一个方向
