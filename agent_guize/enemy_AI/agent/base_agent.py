@@ -197,18 +197,26 @@ class BaseAgent(object):
         # 在这里做一层兼容算了。
         if type(vehicleMoveState) == str:
             # 不能直接给到平台里面，得转成数字才能给到平台里面。
-            if vehicleMoveState == "move":
-                vehicleMoveState = 0
-            elif vehicleMoveState == "stay":
-                vehicleMoveState = 1
-            elif vehicleMoveState == "hidden":
-                vehicleMoveState = 2
-            elif vehicleMoveState == "offroad":
-                vehicleMoveState = 3
+            # if vehicleMoveState == "move":
+            #     vehicleMoveState = 0
+            # elif vehicleMoveState == "stay":
+            #     vehicleMoveState = 1
+            # elif vehicleMoveState == "hidden":
+            #     vehicleMoveState = 2
+            # elif vehicleMoveState == "offroad":
+            #     vehicleMoveState = 3
+            # else:
+            #     raise Exception("base_agent: invalid vehicleMoveState in _Change_State")
+            if "hid" in vehicleMoveState:
+                vehicleMoveState = "0" 
             else:
-                raise Exception("base_agent: invalid vehicleMoveState in _Change_State")
+                vehicleMoveState = "1" 
             
-        ChangeState = {"Type": "Change", "Id": Id, "VehicleMoveState": vehicleMoveState}
+        # ChangeState = {"Type": "Change", "Id": Id, "VehicleMoveState": vehicleMoveState}
+        
+        # 2025,这个接口又改了，难顶嗷。
+        ChangeState = {"Type": "ChangeState", "Id": Id, "IsHideOn": vehicleMoveState}
+        
         self.act.append(ChangeState)
         return ChangeState
 
@@ -229,13 +237,9 @@ class BaseAgent(object):
         #     AttackAction = {"Type": "Attack", "Id": Id, "Unit_Type": Unit_Type, "Lon": lon, "Lat": lat, "Alt": alt}
 
         # 2025这可能还得做一个种类的映射，因为弹药类型这次是输入的那些0123什么的
-        # if Unit_Type == "HighCostAttackMissile":
-        #     Unit_Type_int = 0 
-        # elif Unit_Type == "LowCostAttackMissile":
-        #     Unit_Type_int = 1
-        # else:
-        #     print("unfinshed yet, using defualt.")
-        #     Unit_Type_int = 0 
+        if  "CruiseMissile" in Unit_Type:
+            Unit_Type = "CruiseMissile" 
+        
         AttackAction = {"Type": "Launch", "Id": Id, "Lon": str(lon), "Lat": str(lat), "Alt": str(alt), "WeaponType": Unit_Type}
         # self._exec_group_cmd(Id, "Attack", **AttackAction)
         self.act.append(AttackAction)
@@ -251,8 +255,18 @@ class BaseAgent(object):
 
     # 雷达开关机指令函数
     def _Set_Radar_Action(self, Id, On):
-        setRadarAction = {"Type": "Set_radar", "Id": Id, "On": On}
+        # setRadarAction = {"Type": "Set_radar", "Id": Id, "On": On}
         # self._exec_group_cmd(id, "Set_radar", setRadarAction)
+        # 这个也是，2025接口改了，难顶嗷
+        if type(On) == str:
+            # 兼容安排上
+            if ("on" in On) or ("On" in On) or ("ON" in On):
+                On_input = "1" # 开机
+            else:
+                On_input = "0" # 关了
+        else:
+            On_input = str(On)
+        setRadarAction = {"Type": "SetRadar", "Id": Id, "On": On_input}
         self.act.append(setRadarAction)
         return setRadarAction
 
@@ -291,8 +305,20 @@ class BaseAgent(object):
 
     # 干扰指令函数  0801ZY添加
     def _SetJammer_Action(self, Id, Pattern):
-        _SetJammer_Action = {"Type": "Set_Jammer", "Id": Id,  "Pattern": Pattern} # 合理推测，开关是0、1，反正代码里是int，管他呢。
-        self._exec_group_cmd(Id, "Set_Jammer", **_SetJammer_Action)
+        # _SetJammer_Action = {"Type": "Set_Jammer", "Id": Id,  "Pattern": Pattern} # 合理推测，开关是0、1，反正代码里是int，管他呢。
+        # self._exec_group_cmd(Id, "Set_Jammer", **_SetJammer_Action)
+
+        # 这个也是，2025接口改了，难顶嗷
+        if type(Pattern) == str:
+            # 兼容安排上
+            if ("on" in Pattern) or ("On" in Pattern) or ("ON" in Pattern):
+                On_input = "1" # 开机
+            else:
+                On_input = "0" # 关了
+        else:
+            On_input = str(Pattern)
+        
+        _SetJammer_Action = {"Type": "SetJammer", "Id": Id,  "Pattern": On_input}
         self.act.append(_SetJammer_Action)
         return _SetJammer_Action
 
@@ -809,7 +835,7 @@ class BaseAgent(object):
 
         # 雷达都开机吧。后续可以考虑雷达也放在任务那层统一地去调度。
         try:
-            radar_state = attacker_unit["VehicleState"]["雷达状态"]
+            radar_state = not(attacker_unit["VehicleState"]["isHideOn"]) # 说法是复用了一个标志位，hide就是没开雷达
         except:
             print("BaseAgent.__handle_anti_missile: 说好的雷达是否开关机标志位还没做")
             radar_state = 1 
@@ -1123,7 +1149,7 @@ class BaseAgent(object):
     def __handle_prepare_and_fire(self, attacker_ID, target_LLA,weapon_type):
         # 这个是齐射开火的。进入prepare_and_fire状态后立即停车、转状态、等CD，完成之后开火。
         try:
-            attacker_state = self.status[attacker_ID]["isHiddenFlag"]  # 隐藏的，说法是另有一个变量。
+            attacker_state = self.status[attacker_ID]["isHideOn"]  # 隐藏的，说法是另有一个变量。
         except:
             print("__handle_prepare_and_fire warning: 说好的isHiddenFlag还没做。")
             attacker_state = 0
@@ -1448,13 +1474,13 @@ class BaseAgent(object):
         # 搞细一点，如果CD还没转好且不是隐蔽，就转隐蔽，如果CD快转好了，就要转起竖
         # my_state = self.status[attacker_ID]["状态"]
         # weapon_CD = self.status[attacker_ID]["weapon_CD"]
+        my_state = self.status[attacker_ID]["VehicleState"]["isHideOn"]  # 隐藏的，说法是另有一个变量。
 
         try:
-            my_state = self.status[attacker_ID]["isHiddenFlag"]  # 隐藏的，说法是另有一个变量。
             weapon_CD = self.status[attacker_ID]["weapon_CD"]
         except:
-            print("__handle_open_fire2 warning: 说好的isHiddenFlag还没做。")
-            my_state = 0
+            print("__handle_open_fire2 warning: 说好的weapon_CD还没做。")
+            # my_state = 0
             weapon_CD = 0 
 
 
@@ -2100,10 +2126,11 @@ class BaseAgent(object):
         for missile_single in enemy_missile:
             # 从列表里找到剩下的里面离他最近的一个船，然后分配进去。然后把channel里面那个给删了。
             missile_channels = [] 
-            ID = missile_single["ID"]
+            # ID = missile_single["ID"]
+            ID = missile_single
             for i in range(N_lan_1):
                 # N拦1所以要找N次
-                arranged_channel, other_channels = self.get_nearest_channel(missile_single,other_channels)
+                arranged_channel, other_channels = self.get_nearest_channel(missile_single, other_channels)
                 missile_channels.append(arranged_channel)
             arrange_dict[ID] = missile_channels
             
@@ -2139,7 +2166,7 @@ class BaseAgent(object):
             for missile_single in enemy_missile:
                 # 判断距离。
                 ship_LLA = self.get_LLA(ship_ID)
-                missile_LLA = missile_single["LLA"]
+                missile_LLA = self.get_LLA(missile_single, status = self.detected_state)
                 if self.distance2(ship_LLA, missile_LLA) < 10000:
                     thread_num = thread_num + 1
             thread_num_list.append(thread_num)
@@ -2267,7 +2294,7 @@ class BaseAgent(object):
         # 这个是计算火力到达时间。干脆两种弹都弄出来反馈回去
         attacker_unit = self.status[attacker_ID] 
         try:
-            attacker_state = attacker_unit["isHiddenFlag"]  # 隐藏的，说法是另有一个变量。
+            attacker_state = attacker_unit["VehicleState"]["isHideOn"]  # 隐藏的，说法是另有一个变量。
         except:
             print("__handle_prepare_and_fire warning: 说好的isHiddenFlag还没做。")
             attacker_state = 1
@@ -3905,6 +3932,22 @@ class BaseAgent(object):
         
         return flag_detected, enemy_direction
 
+    def get_nearest_channel(self, missile_single, other_channels:list):
+        # 这个是从一堆火力通道里面找到离目标导弹最近的一个，然后选出来。
+        jvli_list = [] 
+        target_LLA = self.get_LLA(missile_single,status=self.detected_state)
+        for i in range(len(other_channels)):
+            # 逐个计算距离然后比较。来个最小的
+            candidate_channel = other_channels[i]
+            attacker_LLA = self.get_LLA(candidate_channel)
+            jvli_single = self.distance2(attacker_LLA,target_LLA)
+            jvli_list.append(jvli_single)
+        
+        jvli_min = min(jvli_list)
+        index_min = jvli_list.index(jvli_min)
+        arranged_channel = other_channels[index_min]
+        other_channels.pop(index_min)
+        return arranged_channel, other_channels
 
     # 后面是服务于大模型的
     def set_commands(self, command_list:list):
