@@ -1064,17 +1064,7 @@ class GlobalAgent(BaseAgent):
         return self.act 
 
     def step_LLM(self,status:dict):
-        # 用于配合大模型的。说白了就是啥也不干，只走一波抽象状态。      
-        # 为了配合演示，这里强行加一个开干扰的
-        ganraoche_status = self.select_by_type("JammingTruck")
-        jamming_LLA = [100.167, 13.6472, 0]
-        blue_deploy_LLA = [100.12472961, 13.66152304, 0]
-        # self.act = [] # 没必要在这里写，因为Gostep_abstract_state里面有了。
-        if (self.num > 5) :
-            self.set_move_and_jammer(ganraoche_status,jamming_LLA,-1) # 直接开干扰
-        if self.num > 3000:
-            # 完事儿了就直接开到点里去。# 原则上方案那层起效的话是不需要这层的。
-            self.group_A(blue_deploy_LLA,status=status)
+        # 用于配合大模型的。说白了就是啥也不干，只维护抽象状态和任务进展。
 
-        self.Gostep_abstract_state()
-        return self.act         
+        self.act = self.Gostep_all()
+        return self.act     
