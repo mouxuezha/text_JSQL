@@ -936,7 +936,7 @@ class command_processor(QtCore.QThread):
         return True
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 8
+    flag = 6 # 2025，准备开始调试连接的了。
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
@@ -971,7 +971,7 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/新的/jieguo0.pkl")
+        plan_location_list.append(r"C:/Users/yfzx/Desktop/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验1/jieguo0.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 

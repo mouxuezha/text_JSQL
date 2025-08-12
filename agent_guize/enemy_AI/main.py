@@ -196,7 +196,7 @@ class auto_run(object):
                 print(blueScore_str)
 
                 #  安排点画图的东西。
-                if timestep %100==0:
+                if timestep %10==0:
                     # 那就画图，狠狠地画图。
                     self.huatu.visual_status_2D(timestep,cur_redState,cur_blueState)
                 # tips = '\n get result: timestep =' + str(timestep) + '\n'

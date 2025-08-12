@@ -12,7 +12,7 @@ class plan_interface(BaseAgent):
     def __init__(self):
         super().__init__()
 
-        model2_location = r"D:/EnglishMulu/test_decision"
+        model2_location = r"C:/Users/yfzx/Desktop/EnglishMulu/test_decision"
         if not(os.path.exists(model2_location)):
             raise Exception("plan_interface：没能正确找到模块2相关代码")
         else:
@@ -25,7 +25,8 @@ class plan_interface(BaseAgent):
         # 这得琢磨一下咋弄。
 
         self.num = 0 
-        self.unit_type = ["坦克和自行迫榴炮", "装甲车等其他地面力量", "无人机和巡飞弹"]
+        # self.unit_type = ["坦克和自行迫榴炮", "装甲车等其他地面力量", "无人机和巡飞弹"]
+        self.unit_type = [["导弹发射车", "无人机群", "引导快艇群"]]
         pass
 
     def load_plans(self,plan_location_list:list):
