@@ -31,8 +31,8 @@ class TTS_interface():
         self.config["flag_TTS"] = False # 这个用False就是关闭大模型解说功能。
 
         self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
-        # self.model_communication = model_communication_debug(Comm_type ="jieshuo")
-        self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type ="jieshuo")
+        self.model_communication = model_communication_debug(Comm_type ="jieshuo")
+        # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type ="jieshuo")
         self.TTS_generator = TTS_generator()
         # 要用多个的话等后面再来改罢。        
         pass

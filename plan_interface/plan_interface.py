@@ -12,7 +12,7 @@ class plan_interface(BaseAgent):
     def __init__(self):
         super().__init__()
 
-        model2_location = r"D:/EnglishMulu/test_decision"
+        model2_location = r"C:/Users/yfzx/Desktop/EnglishMulu/test_decision"
         if not(os.path.exists(model2_location)):
             raise Exception("plan_interface：没能正确找到模块2相关代码")
         else:
@@ -25,7 +25,8 @@ class plan_interface(BaseAgent):
         # 这得琢磨一下咋弄。
 
         self.num = 0 
-        self.unit_type = ["坦克和自行迫榴炮", "装甲车等其他地面力量", "无人机和巡飞弹"]
+        # self.unit_type = ["坦克和自行迫榴炮", "装甲车等其他地面力量", "无人机和巡飞弹"]
+        self.unit_type = [["导弹发射车", "无人机群", "引导快艇群"]]
         pass
 
     def load_plans(self,plan_location_list:list):
@@ -80,7 +81,7 @@ class plan_interface(BaseAgent):
         # 搞专业点，这里做个异步的机制。这些命令在随后的一定步数中随机出。
         # 先加上随机数存到list里面。
         for command_single in commands_all:
-            num_randm = self.num + random.randint(0,50)
+            num_randm = self.num + random.randint(0,10)
             action_single = {"num":num_randm, "commands":command_single}
             self.action_list.append(action_single)
         
@@ -183,20 +184,19 @@ class plan_interface(BaseAgent):
         unit_selected = self.type_filter(submission.force_arrange,status)
         
         LLA_ave = self.get_LLA_ave(status=unit_selected)
-        blue_deploy_LLA = np.array([100.12472961, 13.66152304, 0])
-
-        # 做一个机制，让各路装备能往目标点靠过去。
-        # 2000秒已经早就完事了,得早一点开始这么干。
-        num_start = 1500
-        num_end = 2500
-        if self.num<num_start:
-            pass 
-        elif self.num > num_start and self.num < num_end:
-            # 这期间插值，让任务目标逐渐向着点去靠。
-            bili = (self.num-num_start)/(num_end-num_start)
-            LLA_ave = (1-bili)*LLA_ave + bili*blue_deploy_LLA
-        elif self.num > num_end:
-            LLA_ave = blue_deploy_LLA
+        # blue_deploy_LLA = np.array([100.12472961, 13.66152304, 0])
+        # # 做一个机制，让各路装备能往目标点靠过去。
+        # # 2000秒已经早就完事了,得早一点开始这么干。
+        # num_start = 1500
+        # num_end = 2500
+        # if self.num<num_start:
+        #     pass 
+        # elif self.num > num_start and self.num < num_end:
+        #     # 这期间插值，让任务目标逐渐向着点去靠。
+        #     bili = (self.num-num_start)/(num_end-num_start)
+        #     LLA_ave = (1-bili)*LLA_ave + bili*blue_deploy_LLA
+        # elif self.num > num_end:
+        #     LLA_ave = blue_deploy_LLA
 
 
         flag_time_check=self.time_check(submission)
@@ -204,74 +204,161 @@ class plan_interface(BaseAgent):
         commands = []
         index_local = 0 
         if flag_time_check:
-            for unit_id in unit_selected:
+            # for unit_id in unit_selected:
                 index_local = index_local + 1 
-                obj_id = unit_id
+                # obj_id = unit_id
                 LLA_target = copy.deepcopy(LLA_ave)
 
-                # 然后定制一系列的目标点。原则上这一步应该是之前就做好的，但是这里做一下也罢。
+                # 然后定制一系列的目标点。原则上这一步应该是之前就做好的，但是这里做一下也罢。# 2025,这一步要配置space_arrange了
                 direction = submission.config_json["出击方向"]
                 if direction == "偏东":
                     # 那就根据平均值往东边去一些。一样的，搞点随机数显得比较阳间
-                    LLA_target[0] = LLA_target[0] + 0.02 + random.randint(0,10) * 0.0005
-                    LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001
+                    space_arrange = [47.5+ random.randint(-10,10) * 0.03, 
+                                     13.5+ random.randint(-10,10) * 0.03, 
+                                     49+ random.randint(-10,10) * 0.03, 
+                                     11+ random.randint(-10,10) * 0.03]
+                    LLA_target[0] = 0.5*(space_arrange[0] + space_arrange[2])
+                    LLA_target[1] = 0.5*(space_arrange[1] + space_arrange[3])
                     pass
                 elif direction == "偏西":
                     # 那就根据平均值往西边去一些。
-                    LLA_target[0] = LLA_target[0] - 0.02 - random.randint(0,10) * 0.0005
-                    LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001            
+                    space_arrange = [45.5+ random.randint(-10,10) * 0.03, 
+                                     13+ random.randint(-10,10) * 0.03, 
+                                     47.5+ random.randint(-10,10) * 0.03, 
+                                     11+ random.randint(-10,10) * 0.03]
+                    LLA_target[0] = 0.5*(space_arrange[0] + space_arrange[2])
+                    LLA_target[1] = 0.5*(space_arrange[1] + space_arrange[3])         
                     pass
                 elif direction == "中间":
                     # 那就根据平均值往中间多去一些。
-                    LLA_target[0] = LLA_target[0] - 0.00005 + random.randint(0,10) * 0.0001  
-                    LLA_target[1] = LLA_target[1] + 0.01 + random.randint(0,10) * 0.0001     
+                    space_arrange = [46+ random.randint(-10,10) * 0.03, 
+                                     13+ random.randint(-10,10) * 0.03, 
+                                     49+ random.randint(-10,10) * 0.03, 
+                                     11+ random.randint(-10,10) * 0.03]                    
+                    LLA_target[0] = 0.5*(space_arrange[0] + space_arrange[2])
+                    LLA_target[1] = 0.5*(space_arrange[1] + space_arrange[3])
                     pass
+                
+                # 2025年加了明确定义的任务机制，这里可以用比较阳间的方法来实现了
+                force_arrange = submission.force_arrange
+                type_str = submission.type_str
+                ID_list = list(unit_selected.keys())
+                time_arrange = [self.num+1, self.num+1001]
+                # 还是直接分开算了，定制化就定制到极致，确保足够的修改空间。
+                if type_str == "前出侦打":
+                    if force_arrange == "导弹发射车":
+                        if self.num < 3000:
+                            command_single = {"type": "supresse_fire", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}
+                        else:
+                            command_single = {"type": "focus_fire", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange,"target_LLA":LLA_target}
+                        pass
+                    elif force_arrange == "无人机群":
+                        command_single = {"type": "scout", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}
+                        pass
+                    elif force_arrange == "引导快艇群":
+                        command_single = {"type": "scout", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}                        
+                        pass
+                    elif force_arrange == "旗舰":
+                        command_single = {"type": "supresse_fire", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange} 
+                        pass
+                    elif force_arrange == "巡洋舰和驱逐舰":
+                        command_single = {"type": "supresse_fire", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}                         
+                        pass
+                    elif force_arrange == "舰载机":
+                        command_single = {"type": "scout", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}                         
+                        pass
+                elif type_str == "避免交战":
+                    if force_arrange == "导弹发射车":
+                        command_single = {"type": "preserve", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}      
+                        pass
+                    elif force_arrange == "无人机群":
+                        command_single = {"type": "preserve", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}
+                        pass
+                    elif force_arrange == "引导快艇群":
+                        command_single = {"type": "preserve", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}
+                        pass
+                    elif force_arrange == "旗舰":
+                        # 这几个可能后续还得好好详细设计一下。
+                        command_single = {"type": "preserve", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}
+                        pass
+                    elif force_arrange == "巡洋舰和驱逐舰":
+                        command_single = {"type": "preserve", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}
+                        pass
+                    elif force_arrange == "舰载机":
+                        command_single = {"type": "preserve", "force_arrange_CN":force_arrange,"force_arrange": ID_list, "space_arrange":space_arrange,"time_arrange": time_arrange}
+                        pass
 
-                if submission.type_str == "陆地进攻":
-                    if LLA_target[1]>13.67:
-                        LLA_target[1] = 13.67        
-                    if self.num>3500:
-                        LLA_target=copy.deepcopy(blue_deploy_LLA)          
-                    command_single = {"type": "move", "obj_id": obj_id, "x": float(LLA_target[0]), "y": float(LLA_target[1])}
-                elif submission.type_str == "空中侦察":
-                    # 加一些check
-                    LLA_target[1] = LLA_target[1] + 0.001
-                    if LLA_target[1]>13.67:
-                        LLA_target[1] = 13.67
-                    LLA_target0_temp = LLA_target[0] + 0.01*(2-index_local)
-                    if LLA_target0_temp>100.175:
-                        LLA_target0_temp = 100.175
-                    command_single = {"type": "move", "obj_id": obj_id, "x":float(LLA_target0_temp) , "y": float(LLA_target[1])}
-                else:
-                    raise Exception("invalid submission type in generate_actions, G. ")
-
+                # if submission.type_str == "陆地进攻":
+                #     if LLA_target[1]>13.67:
+                #         LLA_target[1] = 13.67        
+                #     if self.num>3500:
+                #         LLA_target=copy.deepcopy(blue_deploy_LLA)          
+                #     command_single = {"type": "move", "obj_id": obj_id, "x": float(LLA_target[0]), "y": float(LLA_target[1])}
+                # elif submission.type_str == "空中侦察":
+                #     # 加一些check
+                #     LLA_target[1] = LLA_target[1] + 0.001
+                #     if LLA_target[1]>13.67:
+                #         LLA_target[1] = 13.67
+                #     LLA_target0_temp = LLA_target[0] + 0.01*(2-index_local)
+                #     if LLA_target0_temp>100.175:
+                #         LLA_target0_temp = 100.175
+                #     command_single = {"type": "move", "obj_id": obj_id, "x":float(LLA_target0_temp) , "y": float(LLA_target[1])}
+                # else:
+                #     raise Exception("invalid submission type in generate_actions, G. ")
                 commands.append(command_single)
         return commands
             
     
     def type_filter(self,force_arrange,status):
         self.status = status
-        bin_status = self.select_by_type("Infantry")
-        tank_status = self.select_by_type("MainBattleTank")
-        xiaoche_status = self.select_by_type("ArmoredTruck")
-        che_status = self.select_by_type("WheeledCmobatTruck")
-        feiji_status = self.select_by_type("ShipboardCombat_plane")
-        xunfeidan_status = self.select_by_type("CruiseMissile")
-        daodan_status = self.select_by_type("missile_truck")
-        pao_status = self.select_by_type("Howitzer")
-        ganraoche_status = self.select_by_type("JammingTruck")
-
-        if force_arrange == "坦克和自行迫榴炮":
-            # unit_selected = tank_status | pao_status | daodan_status
-            unit_selected = tank_status | pao_status # 导弹发射车先不要纳入里面，不然算平均值算的就有问题了。
-        elif force_arrange == "装甲车等其他地面力量":
-            unit_selected = xiaoche_status | che_status | ganraoche_status | bin_status
-        elif force_arrange == "无人机和巡飞弹":
-            unit_selected = xunfeidan_status | feiji_status
-        else:
-            raise Exception("invalid force_arrange type in submission, G. ")
-
+        truck_units = self.select_by_type("Truck_Ground")
+        UAV_unit = self.select_by_type("Recon_UAV_FixWing")
+        kuaiting_unit = self.select_by_type("Guide_Ship_Surface")
+        CG_units = self.select_by_type("Cruiser_Surface")
+        DD_unit = self.select_by_type("Destroyer_Surface")
+        CVN_unit = self.select_by_type("Flagship_Surface")
+        plan_unit = self.select_by_type("Shipboard_Aircraft_FixWing")
+        
+        if force_arrange == "导弹发射车":
+            unit_selected = truck_units
+        elif force_arrange == "无人机群":
+            unit_selected = UAV_unit
+        elif force_arrange == "引导快艇群":
+            unit_selected = kuaiting_unit
+        elif force_arrange == "旗舰":
+            unit_selected = CVN_unit
+        elif force_arrange == "巡洋舰和驱逐舰":
+            unit_selected = CG_units | DD_unit
+        elif force_arrange == "舰载机":
+            unit_selected = plan_unit
+        
         return unit_selected
+
+
+    # 果然这里有一堆硬编码的东西。这些还就得手动搞不然都没啥办法
+    # def type_filter(self,force_arrange,status):
+    #     self.status = status
+    #     bin_status = self.select_by_type("Infantry")
+    #     tank_status = self.select_by_type("MainBattleTank")
+    #     xiaoche_status = self.select_by_type("ArmoredTruck")
+    #     che_status = self.select_by_type("WheeledCmobatTruck")
+    #     feiji_status = self.select_by_type("ShipboardCombat_plane")
+    #     xunfeidan_status = self.select_by_type("CruiseMissile")
+    #     daodan_status = self.select_by_type("missile_truck")
+    #     pao_status = self.select_by_type("Howitzer")
+    #     ganraoche_status = self.select_by_type("JammingTruck")
+
+    #     if force_arrange == "坦克和自行迫榴炮":
+    #         # unit_selected = tank_status | pao_status | daodan_status
+    #         unit_selected = tank_status | pao_status # 导弹发射车先不要纳入里面，不然算平均值算的就有问题了。
+    #     elif force_arrange == "装甲车等其他地面力量":
+    #         unit_selected = xiaoche_status | che_status | ganraoche_status | bin_status
+    #     elif force_arrange == "无人机和巡飞弹":
+    #         unit_selected = xunfeidan_status | feiji_status
+    #     else:
+    #         raise Exception("invalid force_arrange type in submission, G. ")
+
+    #     return unit_selected
     
     def time_check(self,submission):
         # 检查这个是不是执行过了，执行过了的就别重复了，现在是有很多重复的在里面。

@@ -3,7 +3,8 @@ from agent_guize.enemy_AI.agent.agent_dispatch import agent_dispatch
 # from agent_guize.me_AI.agent.agent_dispatch import agent_dispatch
 # 原则上应该分开两个文件夹导入的，但是现在红蓝方都是我的，所以就也没什么所谓了。
 
-from agent_guize.Env import Env,Env_demo
+# from agent_guize.Env import Env,Env_demo
+from agent_guize.enemy_AI.support.Env import Env,Env_demo
 from agent_guize.tools import get_states, auto_state_filter, auto_state_compare2 , auto_save_overall, auto_save, auto_save_file_name, auto_state_compare
 from text_transfer.text_transfer import text_transfer, text_demo, text_demo_blue
 from text_transfer.stage_prompt import StagePrompt
@@ -15,7 +16,7 @@ from socket_communication.socket_client import *
 from socket_communication.socket_debug import *
 
 from TTS.TTS_interface import TTS_interface
-
+from image_manager.huatu import huatu
 from plan_interface.plan_interface import plan_interface
 
 import json
@@ -75,13 +76,13 @@ class command_processor(QtCore.QThread):
         self.text_transfer = text_transfer()
         self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage，开了可以用于调试。
         self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
-        # self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
+        self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
         # 这里还得把红蓝方作为一个参数传进去。
-        self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type,role=role)
+        # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type,role=role)
         # 要用多个的话等后面再来改罢。
 
         # 解说的直接弄进去也没啥不好的。都置为False就是直接不要解说功能了，应该能够不影响程序其他部分的使用
-        config_TTS = {"flag_generate":True,"flag_play":True}
+        config_TTS = {"flag_generate":False,"flag_play":False}
         self.shishi_TTS = TTS_interface(config =config_TTS )
         self.shishi_TTS.run_mul() # 反正启动线程嘛，在哪启动不是启动。
         
@@ -96,6 +97,9 @@ class command_processor(QtCore.QThread):
         self.fupan_pkl = {} # {timestep: {"command":command_list, "all_str":all_str, "response_str":response_str} }
         self.flag_fupan = False # 用来标记当前是否在复盘。
         self.flag_finished = False 
+
+        # 画图的
+        self.huatu = huatu()
         pass
     
     # def __init_dialog_box(self):
@@ -108,8 +112,11 @@ class command_processor(QtCore.QThread):
     #     pass
     
     def __init_env(self):
-        self.max_episode_len = self.args.max_episode_len
-        self.env = Env(self.args.ip, self.args.port)
+        self.max_episode_len = self.net_args.max_episode_len
+        # self.env = Env(self.net_args.ip, self.net_args.port)
+        # Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
+        Env_config={"red_ip":"192.168.1.115","red_port":"30001","blue_ip":"192.168.1.115","blue_port":"40001","control_ip":"192.168.1.115","control_port":"50005"}
+        self.env = Env(Env_config=Env_config)
 
     def __init_net(self):
         parser = argparse.ArgumentParser(description='Provide arguments for agent.')
@@ -119,6 +126,7 @@ class command_processor(QtCore.QThread):
         parser.add_argument("--epochs", type=int, default=200, help="Number of training epochs to run")  # 设置训练轮次数
         parser.add_argument("--max-episode-len", type=int, default=5000, help="maximum episode length")
         net_args = parser.parse_args()
+        self.net_args = net_args
         return net_args
 
     def __init_agent(self):
@@ -676,41 +684,40 @@ class command_processor(QtCore.QThread):
         
         # 训练环境初始化，并返回红蓝方舰船编号
         print("begin resetting")
-        unit_ids_dict = self.env.Reset()
-        unit_ids_dict = json.loads(unit_ids_dict)
+        env = self.env
+        env.Reset()
+        for i in range(3):
+            action = {"red_action":[],"blue_action":[]}
+            jieguo = env.Step(Action = action)
 
         redAgent = self.redAgent
         blueAgent = self.blueAgent
-
-        # 和去年的不同，这里要初始化global和local
+        # 获取红蓝方态势信息
+        cur_redState, cur_blueState = get_states(env)
+        
+        unit_ids_dict={}
+        unit_ids_dict['RedShipID'] = list(cur_redState.keys())
+        unit_ids_dict['BlueShipID'] = list(cur_blueState.keys())
+        # # 和去年的不同，这里要初始化global和local
         redAgent.init_agent(unit_ids_dict['RedShipID'])
         blueAgent.init_agent(unit_ids_dict['BlueShipID'])     
+
         # 红蓝方智能体全局变量初始化
         redAgent.reset()
         blueAgent.reset()
         print("finish resetting")
-        s= []
-        u = []
-        s_next = []
-
-        act = []
-        act += redAgent.deploy(unit_ids_dict['RedShipID'])
-        act += blueAgent.deploy(unit_ids_dict['BlueShipID'])
-        action = {"Action": act}
-        print("action ", action)
-        self.env.Step(Action = action)
 
         # 获取红蓝方态势信息
-        cur_redState, cur_blueState = get_states(self.env)
+        # cur_redState, cur_blueState = get_states(self.env)
         tips = '\n start main loop: \n'
-        cur_redState_str, start_redState_list = auto_state_filter(cur_redState)
-        cur_blueState_str, start_blueState_list = auto_state_filter(cur_blueState)
-        auto_save(log_file, tips, cur_redState_str, cur_blueState_str)
+        # cur_redState_str, start_redState_list = auto_state_filter(cur_redState)
+        # cur_blueState_str, start_blueState_list = auto_state_filter(cur_blueState)
+        # auto_save(log_file, tips, cur_redState_str, cur_blueState_str)
 
         # 开搞之前存一下本次测试的配置，xxh0920
         strbuffer = "\n\n现在是" + time.strftime("%Y-%m-%d %H:%M:%S", time.localtime()) + "，开始执行测试。\n 测试配置：\n"
 
-        auto_save_overall(strbuffer, log_file=self.log_file)
+        # auto_save_overall(strbuffer, log_file=self.log_file)
 
         # # 先和大模型互动一波，讲讲规则什么的。
         # self.the_embrace()
@@ -735,13 +742,17 @@ class command_processor(QtCore.QThread):
             print("debug, time delay in main_loop.")
 
             self.env.SetRender(True) # 训练界面可视化：False --> 关闭
-            act = []
-            action = {"Action": act}
+
             self.flag_human_interact = False
 
             # 红蓝方智能体产生动作
-            act += redAgent.step(cur_redState) # 这么玩要能成立，step里面得是空的，抽象状态都在run_one_step里面根据各人的命令来改。
-            act += blueAgent.step(cur_blueState)  # 所以抽象状态改了之后得到下一步才会真正生效，正常问题不大应该。
+            red_act = redAgent.step(cur_redState)
+            blue_act = blueAgent.step(cur_blueState)
+
+            action = {"red_action":red_act,"blue_action":blue_act}
+            env.Step(Action = action)
+            next_redState, next_blueState = get_states(env)
+
             if self.flag_fupan == False:
                 if self.role == "offline":
                     # 这个就是无事发生，和以前的一样正常跑
@@ -778,29 +789,30 @@ class command_processor(QtCore.QThread):
                 # 每100步就看看成色
                 self.model_communication.get_tokens()
                 self.text_transfer.get_num_commands()
+            if (self.timestep % 100 == 0) :
+                # 那就画图，狠狠地画图。
+                self.huatu.visual_status_2D(self.timestep,cur_redState,cur_blueState)
 
-            self.env.Step(Action = action)
-            next_redState, next_blueState = get_states(self.env)
 
-            # 这里来一段，识别一下这一帧是否有装备毁伤。
-            cur_redState_str, cur_redState_list = auto_state_filter(cur_redState)
-            cur_blueState_str, cur_blueState_list = auto_state_filter(cur_blueState)
-            next_redState_str, next_redState_list = auto_state_filter(next_redState)
-            next_blueState_str, next_blueState_list = auto_state_filter(next_blueState)
+            # # 这里来一段，识别一下这一帧是否有装备毁伤。
+            # cur_redState_str, cur_redState_list = auto_state_filter(cur_redState)
+            # cur_blueState_str, cur_blueState_list = auto_state_filter(cur_blueState)
+            # next_redState_str, next_redState_list = auto_state_filter(next_redState)
+            # next_blueState_str, next_blueState_list = auto_state_filter(next_blueState)
 
-            cur_result = json.loads(self.env.GetCurrentResult())
-            redState_diff_str, redState_diff_num = auto_state_compare2(cur_redState_list, next_redState_list)
-            blueState_diff_str, blueState_diff_num = auto_state_compare2(cur_blueState_list, next_blueState_list)
-            if blueState_diff_num>0:
-                # 说明在这一帧有蓝方装备被摧毁，值得写一条日志。
-                strbuffer = "在第"+str(self.timestep)+"帧有"+str(blueState_diff_num)+"个目标被摧毁，是" + blueState_diff_str
-                auto_save_overall(strbuffer, log_file=self.log_file)
+            # cur_result = json.loads(self.env.GetCurrentResult())
+            # redState_diff_str, redState_diff_num = auto_state_compare2(cur_redState_list, next_redState_list)
+            # blueState_diff_str, blueState_diff_num = auto_state_compare2(cur_blueState_list, next_blueState_list)
+            # if blueState_diff_num>0:
+            #     # 说明在这一帧有蓝方装备被摧毁，值得写一条日志。
+            #     strbuffer = "在第"+str(self.timestep)+"帧有"+str(blueState_diff_num)+"个目标被摧毁，是" + blueState_diff_str
+            #     auto_save_overall(strbuffer, log_file=self.log_file)
             # 红方就先不写了，不然全是导弹子弹被摧毁，乱的一B
 
             # 记录每一轮运行的日志。面向过程编程还是难受，应该一开始就别偷懒。
-            tips = '\n timestep now: ' + str(self.timestep) + '\n'
-            tips = tips + auto_state_compare(cur_blueState_list, start_blueState_list)
-            auto_save(self.log_file, tips, cur_redState_str, cur_blueState_str)
+            # tips = '\n timestep now: ' + str(self.timestep) + '\n'
+            # tips = tips + auto_state_compare(cur_blueState_list, start_blueState_list)
+            # auto_save(self.log_file, tips, cur_redState_str, cur_blueState_str)
             self.timestep += 1
 
             cur_redState = next_redState
@@ -936,7 +948,7 @@ class command_processor(QtCore.QThread):
         return True
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 8
+    flag = 6 # 2025，准备开始调试连接的了。
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
@@ -971,7 +983,7 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/新的/jieguo0.pkl")
+        plan_location_list.append(r"C:/Users/yfzx/Desktop/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验1/jieguo0.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 

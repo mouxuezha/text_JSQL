@@ -31,5 +31,11 @@
     {
         "name_list_red":["Guide_Ship_Surface", "Truck_Ground", "Recon_UAV_FixWing"],
         "name_list_blue":["Cruiser_Surface", "Destroyer_Surface", "Flagship_Surface", "Shipboard_Aircraft_FixWing"]  
+    },
+    "submision":
+    {
+        "submission_type_list":["前出侦打", "避免交战" ],
+        "unit_type":["导弹发射车", "无人机群", "引导快艇群"],
+        "direction_list": ["偏东", "偏西"]
     }
 }

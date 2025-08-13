@@ -80,11 +80,15 @@ class huatu():
         y = [] 
         ID_list = [] 
         for attacker_ID in status:
-            x_single = status[attacker_ID]["VehicleState"]["lon"]
-            y_single = status[attacker_ID]["VehicleState"]["lat"]
-            ID_single = attacker_ID
-            x.append(x_single)
-            y.append(y_single)
+            try:
+                x_single = status[attacker_ID]["VehicleState"]["lon"]
+                y_single = status[attacker_ID]["VehicleState"]["lat"]
+                ID_single = attacker_ID
+                x.append(x_single)
+                y.append(y_single)
+            except:
+                x.append(0)
+                y.append(0)
             ID_list.append(ID_single)
         
         return x,y,ID_list

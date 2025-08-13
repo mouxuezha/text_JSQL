@@ -27,3 +27,42 @@ class text_loader():
         jieguo = self.data[function_name][text_name]
         return jieguo
     
+    def check_state_candidate_2024(self,state_candidate_single):
+        # 先check掉一些不对的。# 这个是根据场景特征定制的，主要是通过这个check，来进行降维，不然维度太多就玩不了了。
+        # 难顶的是，这部分还不好弄到JSON里面去。只好整个函数挪过去了。
+        flag_check = True
+        state_enmueration_dict = self.get_certain_text("text_transfer.__init_DeLLMa","state_enmueration_dict")
+        if state_candidate_single["敌方经度"] != state_enmueration_dict["敌方经度"][1]:
+            flag_check = False
+        if not("北" in state_candidate_single["敌方纬度"]):
+            flag_check = False
+        if not("南" in state_candidate_single["我方纬度"]):
+            flag_check = False
+        if state_candidate_single["我方聚集程度"] != state_enmueration_dict["我方聚集程度"][2]:
+            flag_check = False
+        if state_candidate_single["敌方聚集程度"] != state_enmueration_dict["敌方聚集程度"][1]:
+            flag_check = False
+        return flag_check
+    
+    def check_state_candidate_2025_red(self,state_candidate_single ):
+        flag_check = True
+        state_enmueration_dict = self.get_certain_text("text_transfer.__init_DeLLMa","state_enmueration_dict")
+        if state_candidate_single["敌方航母经度"] != state_enmueration_dict["敌方航母经度"][0]:
+            flag_check = False
+        if state_candidate_single["敌方航母纬度"] ==  state_enmueration_dict["敌方航母纬度"][0]:
+            flag_check = False
+        if state_candidate_single["我方弹药余量"] ==  state_enmueration_dict["我方弹药余量"][0]:
+            flag_check = False
+        if state_candidate_single["敌方阵形"] !=  state_enmueration_dict["敌方阵形"][0]:
+            flag_check = False
+        if state_candidate_single["我方侦察进度"] ==  state_enmueration_dict["我方侦察进度"][0]:
+            flag_check = False            
+        return flag_check 
+    
+    def check_state_candidate_2025_blue(self,state_candidate_single ):
+        flag_check = True
+        state_enmueration_dict = self.get_certain_text("text_transfer.__init_DeLLMa","state_enmueration_dict")
+        raise Exception("unfinished yet")
+        return flag_check 
+    
+    
