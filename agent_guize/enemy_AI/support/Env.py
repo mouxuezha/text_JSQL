@@ -215,7 +215,7 @@ class Env():
         raise Exception("Env.get_state: unfinished yet.")
     
 class Env_demo():
-    def __init__(self, ip, port):
+    def __init__(self, Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}):
         # 这东西存在的意义只是为了调试的时候不报错。
         print("Env_demo initialized for debug.")
         pass 

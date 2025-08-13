@@ -145,9 +145,9 @@ class text_transfer(object):
 
             #然后生成一段话
             if count_red != 0:
-                result_text_red += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_red) + "个，obj_id为" + str(record_ID_red)
+                result_text_red += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_red) + "个，单位ID为" + str(record_ID_red)
             if count_blue != 0:
-                result_text_blue += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_blue) + "个，obj_id为" + str(record_ID_blue)
+                result_text_blue += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_blue) + "个，单位ID为" + str(record_ID_blue)
             result_text = result_text_red + result_text_blue
         return result_text        
 
@@ -563,7 +563,28 @@ class type_transfer(object):
             'WheeledCmobatTruck':'步战车', 
             'missile_truck' : '导弹发射车',
             'CruiseMissile': '巡飞弹',
-            'JammingTruck': '干扰车'
+            'JammingTruck': '干扰车',
+            "FixWing" : "飞机",
+            "Surface" : "舰船",
+            "GlideMissile" : "攻击弹",
+            "InterceptMissile" : "拦截弹",
+            "Ground" : "地面装备",
+            "Destroyer_Surface" : "驱逐舰",
+            "Flagship_Surface" : "旗舰",
+            "Guide_Ship_Surface" : "引导快艇",
+            "Short_Range_InterceptMissile" : "近程拦截弹",
+            "Long_Range_InterceptMissile" : "远程拦截弹",
+            "Truck_Ground" : "机动发射车",
+            "HighCostAttackMissile" : "高成本攻击弹",
+            "LowCostAttackMissile" : "低成本攻击弹",
+            "Recon_UAV_FixWing" : "侦察无人机",
+            "Shipboard_Aircraft_FixWing" : "舰载机",
+            "HighSatellite": "高轨卫星",
+            "ShipToGround_CruiseMissile" : "舰对地巡航导弹",
+            "AIM" : "空空导弹",
+            "JDAM" : "空面导弹",
+            "Merchant_Ship_Surface" : "商船"
+
         }
     def unit_type_transfer(self, unit_type:str):
         for key in list(self.unit_type_dict.keys()):
