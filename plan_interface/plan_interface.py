@@ -12,7 +12,7 @@ class plan_interface(BaseAgent):
     def __init__(self):
         super().__init__()
 
-        model2_location = r"C:/Users/yfzx/Desktop/EnglishMulu/test_decision"
+        model2_location = r"D:/XXH/EnglishMulu/test_decision"
         if not(os.path.exists(model2_location)):
             raise Exception("plan_interface：没能正确找到模块2相关代码")
         else:
