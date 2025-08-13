@@ -795,17 +795,17 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         # 这个是2025版本了，有了任务层之后直接上就是了。甚至没必要分步骤，完全可以开具的时候直接全都设置了。可怜24年那套复杂但好用的机制，现在成小丑了。
         mission_type = command_single["type"]
         if mission_type == "supress_fire":
-            self.global_agent.set_mission_supresse_fire(ID_list=command_single["ID_list"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"])
+            self.global_agent.set_mission_supresse_fire(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"])
         elif mission_type == "focus_fire":
-            self.global_agent.set_mission_focus_fire(ID_list=command_single["ID_list"],target_ID="",target_LLA=command_single["target_LLA"],time_arrange=command_single["time_arrange"])
+            self.global_agent.set_mission_focus_fire(ID_list=command_single["force_arrange"],target_ID="",target_LLA=command_single["target_LLA"],time_arrange=command_single["time_arrange"])
         elif mission_type == "scout":
-            self.global_agent.set_mission_scout(ID_list=command_single["ID_list"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"])
+            self.global_agent.set_mission_scout(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"])
         elif mission_type == "preserve":
             if self.player=="red":
                 enemy_direction = [0,-1,0]
             else:
                 enemy_direction = [0,1,0]
-            self.global_agent.set_mission_focus_fire(ID_list=command_single["ID_list"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],enemy_direction=enemy_direction)
+            self.global_agent.set_mission_preserve(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],enemy_direction=enemy_direction)
         pass
 if __name__ == "__main__":
     print("这个没法单独测试，构筑单独测试用例的意义也不是很大。直接去main.py里面测可也")

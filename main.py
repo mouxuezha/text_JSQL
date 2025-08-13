@@ -16,7 +16,7 @@ from socket_communication.socket_client import *
 from socket_communication.socket_debug import *
 
 from TTS.TTS_interface import TTS_interface
-
+from image_manager.huatu import huatu
 from plan_interface.plan_interface import plan_interface
 
 import json
@@ -97,6 +97,9 @@ class command_processor(QtCore.QThread):
         self.fupan_pkl = {} # {timestep: {"command":command_list, "all_str":all_str, "response_str":response_str} }
         self.flag_fupan = False # 用来标记当前是否在复盘。
         self.flag_finished = False 
+
+        # 画图的
+        self.huatu = huatu()
         pass
     
     # def __init_dialog_box(self):
@@ -786,9 +789,10 @@ class command_processor(QtCore.QThread):
                 # 每100步就看看成色
                 self.model_communication.get_tokens()
                 self.text_transfer.get_num_commands()
+            if (self.timestep % 100 == 0) :
+                # 那就画图，狠狠地画图。
+                self.huatu.visual_status_2D(self.timestep,cur_redState,cur_blueState)
 
-            self.env.Step(Action = action)
-            next_redState, next_blueState = get_states(self.env)
 
             # # 这里来一段，识别一下这一帧是否有装备毁伤。
             # cur_redState_str, cur_redState_list = auto_state_filter(cur_redState)

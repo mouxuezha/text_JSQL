@@ -601,7 +601,7 @@ class BaseAgent(object):
                 elif my_abstract_state["abstract_state"] == "open_fire":
                     self.__handle_open_fire2(my_ID, my_abstract_state["target_LLA"], my_abstract_state["detected_state"])  # 逻辑升级的open fire
                 elif my_abstract_state["abstract_state"] == "follow_and_defend":
-                    self.__handle_follow_and_defend(my_ID, my_abstract_state["VIP_ID"],
+                    self.__handle_follow_and_defend2(my_ID, my_abstract_state["VIP_ID"],
                                                     my_abstract_state["flag_stand_by"])
                 elif my_abstract_state["abstract_state"] == "none":
                     self.__handle_none(my_ID)  # 这个就是纯纯的停止。
@@ -1513,12 +1513,18 @@ class BaseAgent(object):
         # 如果VIP寄了，那也是藏好。
 
         # 首先自然是把自己和VIP的位置搞出来。
+        attacker_LLA = self.__get_LLA(attacker_ID)
+
         if VIP_ID in self.status:
             VIP_LLA = self.__get_LLA(VIP_ID)
         elif VIP_ID in self.detected_state2:
             VIP_LLA = self.get_LLA(VIP_ID,status = self.detected_state2)
-            
-        attacker_LLA = self.__get_LLA(attacker_ID)
+        elif VIP_ID in self.detected_state:
+            VIP_LLA = self.get_LLA(VIP_ID,status = self.detected_state)
+        else:
+            VIP_LLA = attacker_LLA # 原则上到这里是出问题了，VIP_ID拿进来但是不知道是哪里拿进来的，做个容错好了、
+
+        
 
         jvli = self.distance2(VIP_LLA,attacker_LLA)
 
@@ -1881,7 +1887,7 @@ class BaseAgent(object):
         # 生成轨迹，直接分一些条数然后开始扫就完事了，先搞个简单的。正好地图是横着的。
         geshu = len(UAV_units)    
 
-        if flag_modified:
+        if flag_modified and geshu>0:
             # 那就是需要重新规划。兵力分配发生了变化。            
             # 先根据探测半径生成一堆点列，然后分配一下大家去扫。东西方向扫好了。
             range_m = self.detect_range["Recon_UAV_FixWing"]
