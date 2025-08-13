@@ -78,11 +78,11 @@ class command_processor(QtCore.QThread):
             self.communicator = None
 
         self.text_transfer = text_transfer()
-        self.stage_prompt = StagePrompt(flag_kaiguan=False) # 这里可以改开不开stage，开了可以用于调试。
-        self.LLM_model = "qianfan" # 这里可以改，默认是qianfan,还有智谱啥的
-        self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
+        self.stage_prompt = StagePrompt(flag_kaiguan=True) # 这里可以改开不开stage，开了可以用于调试。
+        self.LLM_model = "local" # 这里可以改，默认是qianfan,还有智谱啥的
+        # self.model_communication = model_communication_debug() # 这里如果用debug就是实际上不开大模型
         # 这里还得把红蓝方作为一个参数传进去。
-        # self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type,role=role)
+        self.model_communication = ModelCommLangchain(model_name=self.LLM_model,Comm_type=Comm_type,role=role)
         # 要用多个的话等后面再来改罢。
 
         # 解说的直接弄进去也没啥不好的。都置为False就是直接不要解说功能了，应该能够不影响程序其他部分的使用
@@ -111,7 +111,9 @@ class command_processor(QtCore.QThread):
         self.send_queue = queue.Queue(114514) # 干脆上来先打好基础，发送的专门整个消息队列好了，不然不是就乱了嘛。
         # 感叹一句，再往下是不是就要来线程锁什么的了。
         self.receive_queue = queue.Queue(114514) # 接收过来的先不解析，先存着一下。
-        # 直接快进一波，直接快进到线程池处理各种handle。        
+        # 直接快进一波，直接快进到线程池处理各种handle。  
+
+        self.run_mul()      
         pass
     
     # def __init_dialog_box(self):
@@ -126,8 +128,8 @@ class command_processor(QtCore.QThread):
     def __init_env(self):
         self.max_episode_len = self.net_args.max_episode_len
         # self.env = Env(self.net_args.ip, self.net_args.port)
-        # Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
-        Env_config={"red_ip":"192.168.1.115","red_port":"30001","blue_ip":"192.168.1.115","blue_port":"40001","control_ip":"192.168.1.115","control_port":"50005"}
+        Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
+        # Env_config={"red_ip":"192.168.1.115","red_port":"30001","blue_ip":"192.168.1.115","blue_port":"40001","control_ip":"192.168.1.115","control_port":"50005"}
         self.env = Env(Env_config=Env_config)
 
         # 这个是抄过来的，
@@ -208,16 +210,16 @@ class command_processor(QtCore.QThread):
     def run_mul(self):
         # 和之前类似，这个就是开起来跑着就好的多线程不阻塞的
 
-        # 这些是依赖于跟前端通信的，然而现在前端并不具备状态，所以先不慌。
-        for env in self.env_dict.values():
-            env.init_socket()
+        # # 这些是依赖于跟前端通信的，然而现在前端并不具备状态，所以先不慌。
+        # for env in self.env_dict.values():
+        #     env.init_socket()
         
-        thread1 = threading.Thread(target=self.run_single_receive)
-        thread2 = threading.Thread(target=self.run_single_send)
+        # thread1 = threading.Thread(target=self.run_single_receive)
+        # thread2 = threading.Thread(target=self.run_single_send)
     
-        # 然后就启动线程呗
-        thread1.start()
-        thread2.start()   
+        # # 然后就启动线程呗
+        # thread1.start()
+        # thread2.start()   
 
         # 这个是和大模型异步并行交互的，
         thread3 = threading.Thread(target=self.run_single_dicision) 
@@ -361,13 +363,15 @@ class command_processor(QtCore.QThread):
     def run_one_step_2025(self,command_str="",**kargs):
         
         # 从agent把态势拿出来
-        self.status, self.detected_state= self.redAgent.get_status()
+        self.status, self.detected_state2= self.redAgent.get_status()
+        status_blue,  detected_state_blue2 = self.blueAgent.get_status()
 
         # 把态势转成大模型能看懂的文本形式
         # status_str = self.text_transfer.status_to_text(self.status) # 这个是原版的
-        status_str = self.text_transfer.status_to_text2(self.status) # 这个是简化版的
+        status_str ="红方："+ self.text_transfer.status_to_text2(self.status) # 这个是简化版的,只生成ID_list
+        status_str_blue ="蓝方："+ self.text_transfer.status_to_text2(status_blue) # 这个是简化版的,只生成ID_list
 
-        detected_str = self.text_transfer.detected_to_text(self.detected_state)
+        detected_str = self.text_transfer.detected_to_text(self.detected_state2)
 
 
         # # 把新的状态压入到解说的那一组线程里面去。# 如果是开着解说的话，这个得开了
@@ -380,7 +384,7 @@ class command_processor(QtCore.QThread):
         init_prompt = self.text_transfer.get_initial_prompt()
         guize_prompt = self.text_transfer.get_order_guize()
 
-        all_str = init_prompt + guize_prompt + "当前态势为：" + status_str + detected_str   + "请根据实时态势做出如下调整"+ command_str +"\n 请按照格式直接给出任务指令，省略描述和解释。" 
+        all_str = init_prompt + guize_prompt + "当前态势为：" + status_str + detected_str   + "请根据实时态势做出调整。"+ command_str +"\n 请按照格式直接给出任务指令，省略描述和解释。" 
 
         # 把文本发给大模型，获取返回来的文本
         try:
@@ -390,10 +394,10 @@ class command_processor(QtCore.QThread):
             print("command_processor.run_one_step_2025: 寄了")
             
         # 把文本里面的命令提取出来
-        commands = self.text_transfer.text_to_commands(response_str)
+        commands = self.text_transfer.text_to_commands2(response_str)
 
         # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
-        self.redAgent.set_commands(commands) # 2025:这样一来，这部分就和方案生成部分统一起来了，都是转化成任务机制
+        self.redAgent.set_commands(commands,model="realtime") # 2025:这样一来，这部分就和方案生成部分统一起来了，都是转化成任务机制
 
         self.add_fupan_info(self.timestep, commands, all_str, response_str)
         
@@ -993,9 +997,11 @@ class command_processor(QtCore.QThread):
     
     def using_test_commands(self):
         # 这个就是定时注入一些指令。
-        stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+        
         # 取出来之后压入到命令队列里面去。
-        if stage_str != "":
+        input_time = [11, 4514, 1919] 
+        if self.timestep in input_time :
+            stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
             # 那就说明是有的
             self.commands_queue.put(stage_str)
 
@@ -1109,7 +1115,7 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"C:/Users/yfzx/Desktop/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验1/jieguo0.pkl")
+        plan_location_list.append(r"D:/XXH/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验1/jieguo0.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 

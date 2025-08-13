@@ -697,7 +697,7 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         self.global_agent.load_test_config(test_config)
     
     def get_status(self):
-        return self.status, self.global_agent.detected_state
+        return self.status, self.global_agent.detected_state2
             
     def set_commands(self, command_list:list,model="plan"):
         # 2024年由于没有任务层而设计的这堆机制都可以不要了其实。24年的是这里就直接操作抽象状态了，虽然也不是不行但是不够丝滑。
@@ -723,7 +723,7 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
                 #     self.commands_queue.get()
 
                 comand_single = self.commands_queue.get()
-                self.set_commands_mission(comand_single)
+                self.set_commands_mission(comand_single,model=model)
 
         pass
     

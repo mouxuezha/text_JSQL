@@ -31,8 +31,8 @@ class StagePrompt:
         self.stage_dict_list = self.text_loader.get_certain_text(method_name,"stage_dict_list")  
         self.stage_now="默认"
         for i in range(len(self.stage_dict_list)):
-            if time_step<self.stage_dict_list[i]["time_step"]:
-                self.stage_now = self.stage_dict_list["stage_now"]
+            if time_step<self.stage_dict_list[len(self.stage_dict_list)-i-1]["time_step"]:
+                self.stage_now = self.stage_dict_list[len(self.stage_dict_list)-i-1]["stage_now"]
                 # 这样它就会覆盖到最后一个小于的，写的时候从小到大排列即可
                 
         # if time_step < 400:

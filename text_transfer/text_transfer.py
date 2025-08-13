@@ -14,11 +14,10 @@ class text_transfer(object):
         self.command_type_list = ["move", "stop", "off_board"]
         self.type_transfer = type_transfer()
         self.num_commands = [0,0] # 第一个是转化成功的commands，第二个是转化失败的commands 
-        self.ed_lat,  self.ed_lon =  39.70, 2.68984
-        self.tar_lat, self.tar_lon = 39.7600, 2.7100
-
-        self.__init_type()
+        
         self.text_loader = text_loader()
+        self.__init_type()
+        
     
     def __init_type(self):
         # 这个就是把那些ID的类型弄过来整成一个列表以备后用。
@@ -131,8 +130,10 @@ class text_transfer(object):
         # 这个把读出来的JSON文件转换成一段叙述。
         unit_all = status_json
         unit_all_list = list(unit_all.keys())
-        result_text_red = "红方："
-        result_text_blue = "蓝方："
+        # result_text_red = "红方："
+        # result_text_blue = "蓝方："
+        result_text_red = ""
+        result_text_blue =""
         for unit_type in self.type_list:
             count_red = 0 
             count_blue = 0 
@@ -145,22 +146,26 @@ class text_transfer(object):
                     
                     lon = unit_all[unit_id_single]["VehicleState"]["lon"]
                     lat = unit_all[unit_id_single]["VehicleState"]["lat"]
-                    
-                    if unit_all[unit_id_single]["PlayerName"] == "redPlayer":
-                        count_red += 1
-                        record_LLA_red.append([lon,lat])
-                        record_ID_red.append(unit_id_single)
-                    else:
-                        count_blue += 1
-                        record_LLA_blue.append([lon,lat])
-                        record_ID_blue.append(unit_id_single)
+
+                    count_red += 1
+                    record_LLA_red.append([lon,lat])
+                    record_ID_red.append(unit_id_single)
+
+                    # if unit_all[unit_id_single]["PlayerName"] == "redPlayer":
+                    #     count_red += 1
+                    #     record_LLA_red.append([lon,lat])
+                    #     record_ID_red.append(unit_id_single)
+                    # else:
+                    #     count_blue += 1
+                    #     record_LLA_blue.append([lon,lat])
+                    #     record_ID_blue.append(unit_id_single)
             # 1112增加的说法：得把坐标也想个办法弄进来
 
             #然后生成一段话
             if count_red != 0:
-                result_text_red += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_red) + "个，单位ID为" + str(record_ID_red)
+                result_text_red += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_red) + "个，单位ID为" + str(record_ID_red)+"。"
             if count_blue != 0:
-                result_text_blue += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_blue) + "个，单位ID为" + str(record_ID_blue)
+                result_text_blue += self.type_list_CN[self.type_list.index(unit_type)] + "有" + str(count_blue) + "个，单位ID为" + str(record_ID_blue)+"。"
             result_text = result_text_red + result_text_blue
         return result_text        
 
@@ -169,9 +174,10 @@ class text_transfer(object):
         detected_str = ""
         for obj_id in list(detected_state.keys()):
             detected_status = detected_state[obj_id]
-            lon = round(detected_status["targetLon"], 5)
-            lat = round(detected_status["targetLat"], 5)
-            alt = round(detected_status["targetAlt"], 5)
+            LLA = detected_status["this"]["LLA"]
+            lon = round(LLA[0], 5)
+            lat = round(LLA[1], 5)
+            alt = round(LLA[2], 5)
             detected_type_zhongwen = self.type_transfer.unit_type_transfer(detected_status["unitType"])
             if detected_type_zhongwen == "其他":
                 continue
@@ -298,17 +304,24 @@ class text_transfer(object):
     def text_to_commands2(self,text:str):
         # 这个是服务于补全的，2025的升级成JSON了，从这个返回去的必须是能执行的list[dict]
         commands_list = [] 
-        hou_list = self.find_all_str(text="}")
+        hou_list = self.find_all_str(text=text,sub_str="}")
         hou_list = [0] + hou_list # 第一个位置补个零
         for i in range(len(hou_list)-1):
             # 有几个方括号就应该有几条命令
-            sub_str = text[hou_list[i]:hou_list[i+1]]
+            sub_str = text[hou_list[i]+1:hou_list[i+1]+1]
 
             command_single = self.get_json_from_str(sub_str)
 
             # 然后进行一番补全，就是里面如果缺什么字段就补一下。
             if not("target_LLA" in command_single):
                 command_single["target_LLA"] = [0,0,0]
+            
+            if "space_arrange" in command_single:
+                # 安排一个排序的说法
+                space_arrange_raw = command_single["space_arrange"]
+                space_arrange_raw.sort()
+                space_arrange_new = [space_arrange_raw[2],space_arrange_raw[1],space_arrange_raw[3],space_arrange_raw[0]] 
+                command_single["space_arrange"] = space_arrange_new
             
             
             if ("type" in command_single) and ("force_arrange" in command_single):
@@ -347,12 +360,18 @@ class text_transfer(object):
         
         return index_list
     
-    def cut_from_str(self, text:str, str_qian:str, str_hou:str):
+    def cut_from_str(self, text:str, str_qian:str, str_hou:str,model ="normal"):
         # 需要把数字从字符串中抠出来
         # 先找到数字的起始位置
         index_qian = text.find(str_qian)
         sub_str = text[index_qian+len(str_qian):]
-        index_hou = sub_str.find(str_hou)
+        if model == "normal":
+            index_hou = sub_str.find(str_hou)
+        elif model == "json":
+            index_hou = sub_str.rfind(str_hou)
+        elif model == "infinite":
+            # 这个是没有后str，直接一波切到最后
+            index_hou = len(sub_str)
         # index_hou = text.find(str_hou)
         number_str = sub_str[0:index_hou]
         # number_float = float(number_str)
