@@ -3242,9 +3242,9 @@ class BaseAgent(object):
         # 整个过滤机制，时间太长的探测信息就直接不保存了。被打爆的也不存了。
         list_deleted = []
         for target_ID in self.detected_state2:
-            if (self.num - self.detected_state2[target_ID]["this"]["num"]) > 2000:
+            if (self.num - self.detected_state2[target_ID]["this"]["num"]) > 114514:
                 # 姑且是500帧之前的东西就认为是没用了。
-                # 2025，这个得多一点可能。
+                # 2025，这个得多一点可能。一不做二不休，干脆改成不限算了，不然后面不好搞。
                 list_deleted.append(target_ID)
             # 然后被打过且从态势里消失的东西也先不存了。就认为是炸了。
             elif "num_attacked" in self.detected_state2[target_ID]:
