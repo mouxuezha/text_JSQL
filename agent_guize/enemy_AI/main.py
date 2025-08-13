@@ -31,8 +31,8 @@ class auto_run(object):
     def __init_env(self):
         # self.max_episode_len = self.net_args.max_episode_len
         # self.env = Env(self.net_args.ip, self.net_args.port)
-        # Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
-        Env_config={"red_ip":"192.168.1.115","red_port":"30001","blue_ip":"192.168.1.115","blue_port":"40001","control_ip":"192.168.1.115","control_port":"50005"}
+        Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
+        # Env_config={"red_ip":"192.168.1.115","red_port":"30001","blue_ip":"192.168.1.115","blue_port":"40001","control_ip":"192.168.1.115","control_port":"50005"}
         self.env = Env(Env_config=Env_config)
 
 
