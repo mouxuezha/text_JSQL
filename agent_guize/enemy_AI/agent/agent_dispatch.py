@@ -699,20 +699,12 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
     def get_status(self):
         return self.status, self.global_agent.detected_state
             
-    def set_commands(self, command_list:list):
+    def set_commands(self, command_list:list,model="plan"):
         # 2024年由于没有任务层而设计的这堆机制都可以不要了其实。24年的是这里就直接操作抽象状态了，虽然也不是不行但是不够丝滑。
         # 首先把这些个command加入到queue里面去。增加一个键值对，当前时间。
         for comand_single in command_list:
             comand_single["step_num"] = self.num
             self.commands_queue.put(comand_single)
-        
-        # # 然后开始执行，具体的逻辑还得想想。
-        # # 拿出第一个，如果是这一步的，就给它执行了，如果不是，就结束退出。
-        # # 2024，还得检测一下是不是通联的。有点重复计算也不管了，就这样了。
-        # status_global, status_local_list, unit_ids_global, unit_ids_local = self.status_filter(self.status)
-
-        # # 怀疑平台有问题，在奇怪的敌方吃了干扰了。所以先别区分了，先写回去。
-        # unit_ids_global = unit_ids_global + unit_ids_local
 
         for i in range(114514): # 原则上这里应该是个while，但是保险起见防止死循环。
             if len(self.commands_queue.queue)==0:
@@ -734,7 +726,7 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
                 self.set_commands_mission(comand_single)
 
         pass
-
+    
     def set_commands_single(self,comand_single):
         # 这个是真的要开始解析命令了。
         obj_id = comand_single["obj_id"]
@@ -791,21 +783,28 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         else:
             raise Exception("undefined comand type in set_commands_single, G.")
     
-    def set_commands_mission(self,command_single):
+    def set_commands_mission(self,command_single,model="plan"):
         # 这个是2025版本了，有了任务层之后直接上就是了。甚至没必要分步骤，完全可以开具的时候直接全都设置了。可怜24年那套复杂但好用的机制，现在成小丑了。
         mission_type = command_single["type"]
+        if model =="plan":
+            priority = 1  # 这个机制终于要发挥作用了，真是可喜又可贺。
+        elif model == "realtime":
+            priority = 3
+        else:
+            raise Exception("agent_dispatch.set_commands_mission: invalid model, G.")
+        
         if mission_type == "supress_fire":
-            self.global_agent.set_mission_supresse_fire(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"])
+            self.global_agent.set_mission_supresse_fire(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],priority=priority)
         elif mission_type == "focus_fire":
-            self.global_agent.set_mission_focus_fire(ID_list=command_single["force_arrange"],target_ID="",target_LLA=command_single["target_LLA"],time_arrange=command_single["time_arrange"])
+            self.global_agent.set_mission_focus_fire(ID_list=command_single["force_arrange"],target_ID="",target_LLA=command_single["target_LLA"],time_arrange=command_single["time_arrange"],priority=priority)
         elif mission_type == "scout":
-            self.global_agent.set_mission_scout(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"])
+            self.global_agent.set_mission_scout(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],priority=priority)
         elif mission_type == "preserve":
             if self.player=="red":
                 enemy_direction = [0,-1,0]
             else:
                 enemy_direction = [0,1,0]
-            self.global_agent.set_mission_preserve(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],enemy_direction=enemy_direction)
+            self.global_agent.set_mission_preserve(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],enemy_direction=enemy_direction,priority=priority)
         pass
 if __name__ == "__main__":
     print("这个没法单独测试，构筑单独测试用例的意义也不是很大。直接去main.py里面测可也")

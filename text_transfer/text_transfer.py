@@ -1,8 +1,14 @@
 # 这个用来实现“JSON态势转化成文本态势”，以及约定一些命令的信息
+import os.path
+import sys
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # 需要约定一下命令格式了。
 import math
 import json
+from examples.text_loader import text_loader
+import inspect
+
 class text_transfer(object):
     def __init__(self) -> None:
         self.command_type_list = ["move", "stop", "off_board"]
@@ -12,13 +18,20 @@ class text_transfer(object):
         self.tar_lat, self.tar_lon = 39.7600, 2.7100
 
         self.__init_type()
+        self.text_loader = text_loader()
     
     def __init_type(self):
         # 这个就是把那些ID的类型弄过来整成一个列表以备后用。
         # 红方坦克：MainBattleTank_ZTZ100，蓝方坦克：MainBattleTank_ZTZ200，红方步兵战车：WheeledCmobatTruck_ZB100，蓝方步兵战车：WheeledCmobatTruck_ZB200，步兵班：Infantry，自行迫榴炮：Howitzer_C100，无人突击车：ArmoredTruck_ZTL100，无人机：ShipboardCombat_plane，导弹发射车：missile_truck。
-        self.type_list = ["MainBattleTank_ZTZ100","MainBattleTank_ZTZ200","WheeledCmobatTruck_ZB100","WheeledCmobatTruck_ZB200","Infantry","Howitzer_C100","ArmoredTruck_ZTL100","ShipboardCombat_plane","missile_truck","JammingTruck","RedCruiseMissile","BlueCruiseMissile"]
-        self.type_list_CN = ["坦克","坦克","步兵战车","步兵战车","步兵班","自行迫榴炮","无人突击车","无人机","导弹发射车","电子干扰车","巡飞弹","巡飞弹"]
-        self.command_type_list = ["move","stop","offboard"] # 
+        method_name = self.__class__.__name__ + "." + inspect.stack()[0][3]
+        self.type_list = self.text_loader.get_certain_text(method_name,"type_list")
+        self.type_list_CN = self.text_loader.get_certain_text(method_name,"type_list_CN")
+        self.command_type_list = self.text_loader.get_certain_text(method_name,"command_type_list")
+    
+        # self.type_list = ["MainBattleTank_ZTZ100","MainBattleTank_ZTZ200","WheeledCmobatTruck_ZB100","WheeledCmobatTruck_ZB200","Infantry","Howitzer_C100","ArmoredTruck_ZTL100","ShipboardCombat_plane","missile_truck","JammingTruck","RedCruiseMissile","BlueCruiseMissile"]
+        # self.type_list_CN = ["坦克","坦克","步兵战车","步兵战车","步兵班","自行迫榴炮","无人突击车","无人机","导弹发射车","电子干扰车","巡飞弹","巡飞弹"]
+        # self.command_type_list = ["move","stop","offboard"] # 
+        
     def LLA2XYZ(self, lon, lat, alt):
         Earthe = 0.0818191908426
         Radius_Earth = 6378140.0
@@ -169,67 +182,6 @@ class text_transfer(object):
         return detected_str
         pass 
 
-    #  把态势翻译成人话
-    def turn_taishi_to_renhua(self, status, detected_state):
-        our_status = dict()
-        for obj_id in list(status.keys()):
-            unit_status = status[obj_id]
-            lon = round(unit_status["VehicleState"]["lon"], 5) 
-            lat = round(unit_status["VehicleState"]["lat"], 5)
-            alt = round(unit_status["VehicleState"]["alt"], 5)
-            unit_type_zhongwen = self.type_transfer.unit_type_transfer(unit_status["UnitType"])
-            if unit_type_zhongwen == "其他":
-                # 什么BMC3那些就别拿进来了
-                continue
-            else:
-                our_status[obj_id] = {"type": unit_type_zhongwen, "lon": lon, "lat":lat, "alt": alt}
-        detect_state = dict()
-        for obj_id in list(detected_state.keys()):
-            detected_status = detected_state[obj_id]
-            lon = detected_status["targetLon"]
-            lat = detected_status["targetLat"]
-            alt = detected_status["targetAlt"]
-            detected_type_zhongwen = self.type_transfer.unit_type_transfer(detected_status["unitType"])
-            if detected_type_zhongwen == "其他":
-                continue
-            else:
-                detect_state[obj_id] = {"type": detected_type_zhongwen, "lon":lon, "lat":lat, "alt":alt}
-        # 怎么翻译成人话  从哪些角度翻译
-        # 这几个点吧  主力位置 敌方集群向哪个方向移动  是主力还是啥  意图可能是啥  都有啥装备  我方大概需要怎么配合
-        keypoints = None
-        enemy_tank_id = self.select_by_type(detect_state, "坦克")
-        enemy_tank_lat_avg, enemy_tank_lon_avg  = self.get_avg_pos(enemy_tank_id, detect_state)
-        our_tank_id = self.select_by_type(our_status, "坦克")
-        our_tank_lat_avg, our_tank_lon_avg = self.get_avg_pos(our_tank_id, our_status)
-        enemy_direct = self.relative_pos(our_tank_lat_avg, our_tank_lon_avg, enemy_tank_lat_avg, enemy_tank_lon_avg)
-        group_dis = self.distance(enemy_tank_lon_avg, enemy_tank_lat_avg, 0, our_tank_lon_avg, our_tank_lat_avg, 0)
-        enemy_in_range_dict = self.find_nearest_enemy(our_tank_lat_avg, our_tank_lon_avg, detect_state, 2500)
-        enemy_in_range_renhua =  self.turn_dict_to_renhua(enemy_in_range_dict)
-        # messages = f"""
-        #     当前探测到对方主力装备位于我方装备的{enemy_direct}方向，我方平均距离为{group_dis} , 敌方在我方射程范围内的装备有 {enemy_in_range_renhua}, 
-        # """
-
-        # xxh20241122:如果没有探测到就别要这段了。
-        if len(detect_state)>0:
-            # 有探测再来这个，没有探测就别来了。
-            messages = f"探测到敌方在{enemy_direct}方向，平均距离" + str(round(group_dis,1)) + "米"
-            if len(enemy_in_range_renhua)>0:
-                messages = messages + ", 射程内敌人有" +str(enemy_in_range_renhua)+","
-            if self.check_enemy_closer_to_target(enemy_tank_lon_avg, enemy_tank_lat_avg):
-                left_time = self.distance(enemy_tank_lon_avg, enemy_tank_lat_avg, 0, self.tar_lon, self.tar_lat, 0)/20
-                left_time = int(left_time)
-                messages += f" 敌预计 {left_time}后到达夺控点" 
-        else:
-            messages = "注意，尚未探测到敌人。"
-        return messages 
-    # 加一个用来判断是不是靠近夺控点的方法
-    def check_enemy_closer_to_target(self, elon, elat):
-        std_dis = self.distance(self.ed_lon, self.ed_lat,0,  self.tar_lon, self.tar_lat, 0)
-        cur_dis = self.distance(self.tar_lon, self.tar_lat, 0, elon, elat, 0)
-        if std_dis > cur_dis:
-            return True
-        return False
-
     def select_by_type(self, status, type = "坦克"):
         return [ obj_id for obj_id , values_ in status.items() if type in values_["type"]]
     
@@ -273,50 +225,6 @@ class text_transfer(object):
         elif olat < elat:
             rdir += "北"
         return rdir 
-
-
-    #@szh 0607 将我方装备信息转化为JSON 发送给LLM
-    def status_to_text_tojson(self, status):
-        print("status_to_text unfinished yet,return a demo")
-        status_str = ""
-        our_status = dict()
-        for obj_id in list(status.keys()):
-            unit_status = status[obj_id]
-            lon = unit_status["VehicleState"]["lon"]
-            lat = unit_status["VehicleState"]["lat"]
-            alt = unit_status["VehicleState"]["alt"]
-            unit_type_zhongwen = self.type_transfer.unit_type_transfer(unit_status["UnitType"])
-            if unit_type_zhongwen == "其他":
-                # 什么BMC3那些就别拿进来了
-                continue
-            else:
-                # status_str +="我方obj_id为"+str(obj_id)+"的"
-                # status_str += f"{unit_type_zhongwen}位置在({lon},{lat})处 \n"
-                our_status[obj_id] = {"type": unit_type_zhongwen, "lon": lon, "lat":lat, "alt": alt}
-        our_status_json = json.dumps(our_status)      
-        return our_status_json
-    
-    #@szh 0607 将detect 信息转化为json
-    def detected_to_text_tojson(self, detected_state):
-        # 这里面的探测到的数据结构还不太一样，所以需要另外开一个函数来实现
-        detected_str = ""
-        detect_state = dict()
-        for obj_id in list(detected_state.keys()):
-            detected_status = detected_state[obj_id]
-            lon = detected_status["targetLon"]
-            lat = detected_status["targetLat"]
-            alt = detected_status["targetAlt"]
-            
-            detected_type_zhongwen = self.type_transfer.unit_type_transfer(detected_status["unitType"])
-            if detected_type_zhongwen == "其他":
-                continue
-            else:
-                # detected_str +="敌方obj_id为"+str(obj_id)+"的"
-                # detected_str += f"{detected_type_zhongwen}位置在({lon},{lat})处 \n"
-                detect_state[obj_id] = {"type": detected_type_zhongwen, "lon":lon, "lat":lat, "alt":alt}
-        detect_json = json.dumps(detect_state)
-        return detect_json
-        pass 
 
     def text_to_commands(self, text:str):
         
@@ -387,19 +295,47 @@ class text_transfer(object):
         print("text_to_commands: valid commands number: "+str(len(commands)))      
         return commands
     
+    def text_to_commands2(self,text:str):
+        # 这个是服务于补全的，2025的升级成JSON了，从这个返回去的必须是能执行的list[dict]
+        commands_list = [] 
+        hou_list = self.find_all_str(text="}")
+        hou_list = [0] + hou_list # 第一个位置补个零
+        for i in range(len(hou_list)-1):
+            # 有几个方括号就应该有几条命令
+            sub_str = text[hou_list[i]:hou_list[i+1]]
+
+            command_single = self.get_json_from_str(sub_str)
+
+            # 然后进行一番补全，就是里面如果缺什么字段就补一下。
+            if not("target_LLA" in command_single):
+                command_single["target_LLA"] = [0,0,0]
+            
+            
+            if ("type" in command_single) and ("force_arrange" in command_single):
+                # 那就说明是成功生成并识别出来了，鉴定为好。
+                commands_list.append(command_single)
+        return commands_list
+    
     def get_initial_prompt(self):
         print("get_initial_prompt unfinished yet,return a demo")
-        initial_prompt = '请作为兵棋推演游戏的玩家，设想一个陆战攻防场景。'
-        '我方为红方，拥有坦克、步兵战车、步兵、自行迫榴炮、无人突击车、巡飞弹、无人机、导弹发射车、电子干扰车等装备，步兵下车后作战，'
-        '我方需要攻取位于经纬度坐标(100.1247, 13.6615)的夺控点，将陆战装备移动到夺控点处并消灭夺控点附近敌人可占领夺控点，地图范围为经度100.0923到100.18707，纬度范围为13.6024到13.6724，导弹发射车不能机动。'
-        '每隔一定步数，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。\n'
-        # 还需要一些描述地图的prompt
-        initial_prompt = initial_prompt + "地图大部分为陆地，具有河流、桥梁和路网，在经纬度坐标(100.137,13.644),(100.116,13.643),(100.164,13.658)有可供步兵占领和建立防线的建筑物。"
+        method_name = self.__class__.__name__ + "." + inspect.stack()[0][3]
+        initial_prompt = self.text_loader.get_certain_text(method_name,"initial_prompt")   
+        initial_prompt2 = self.text_loader.get_certain_text(method_name,"initial_prompt2")   
+
+        # initial_prompt = '请作为兵棋推演游戏的玩家，设想一个陆战攻防场景。'
+        # '我方为红方，拥有坦克、步兵战车、步兵、自行迫榴炮、无人突击车、巡飞弹、无人机、导弹发射车、电子干扰车等装备，步兵下车后作战，'
+        # '我方需要攻取位于经纬度坐标(100.1247, 13.6615)的夺控点，将陆战装备移动到夺控点处并消灭夺控点附近敌人可占领夺控点，地图范围为经度100.0923到100.18707，纬度范围为13.6024到13.6724，导弹发射车不能机动。'
+        # '每隔一定步数，我将告诉你敌我态势和其他信息，并由你来尝试生成作战指令。\n'
+        # # 还需要一些描述地图的prompt
+        # initial_prompt = initial_prompt + "地图大部分为陆地，具有河流、桥梁和路网，在经纬度坐标(100.137,13.644),(100.116,13.643),(100.164,13.658)有可供步兵占领和建立防线的建筑物。"
+        initial_prompt = initial_prompt + initial_prompt2
         return initial_prompt
-    
+
     def get_order_guize(self):
         # 这里面是给大模型设定的规则的格式。
-        order_guize = '请按照以下格式给出作战指令。进攻指令：[move, obj_id , x=int, y=int], 如坦克mbt_1进攻坐标(100.1247, 13.6615)，则指令为[move, obj_id=mbt_1, x=100.1247, y=13.6615] \n停止指令：[stop, obj_id], 如坦克mbt_1停止当前行动，则指令为[stop, obj_id=mbt_1] \n步兵下车指令: [off_board, obj_id],如步战车ifv_1内步兵立刻下车,则指令为[off_board, obj_id=ifv_1]'
+        method_name = self.__class__.__name__ + "." + inspect.stack()[0][3]
+        order_guize = self.text_loader.get_certain_text(method_name,"order_guize")   
+        # order_guize = '请按照以下格式给出作战指令。进攻指令：[move, obj_id , x=int, y=int], 如坦克mbt_1进攻坐标(100.1247, 13.6615)，则指令为[move, obj_id=mbt_1, x=100.1247, y=13.6615] \n停止指令：[stop, obj_id], 如坦克mbt_1停止当前行动，则指令为[stop, obj_id=mbt_1] \n步兵下车指令: [off_board, obj_id],如步战车ifv_1内步兵立刻下车,则指令为[off_board, obj_id=ifv_1]'
         return order_guize
     
     def find_all_str(self, text:str, sub_str:str):
@@ -550,6 +486,19 @@ class text_transfer(object):
             message_json = {"command":"结束推演"}
         
         return message_json
+    
+    def get_json_from_str(self, input_str:str):
+        # 切出来，然后转成JSON，转不成就报错。反正是实验代码，要什么稳定性，该报错报错就是了。
+        json_str = self.cut_from_str(input_str, "{", "}",model="json")
+        json_str = self.del_note_from_str(json_str)
+        json_str = "{" + json_str + "}"
+        try:
+            json_jieguo = json.loads(json_str)
+        except:
+            print("text_transfer: json_str is not a valid json, please check the input_str")
+            json_jieguo = {} 
+        return json_jieguo
+        
 
 class type_transfer(object):
     # 这个是用来把抽象的装备类型化简一下的，搞成中文的。
@@ -584,7 +533,6 @@ class type_transfer(object):
             "AIM" : "空空导弹",
             "JDAM" : "空面导弹",
             "Merchant_Ship_Surface" : "商船"
-
         }
     def unit_type_transfer(self, unit_type:str):
         for key in list(self.unit_type_dict.keys()):

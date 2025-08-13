@@ -118,12 +118,14 @@ class ModelCommLangchain():
         load_dotenv()
         chat_model = CHAT_MODELS[model_name](**MODEL_KWARGS[model_name])
         if Comm_type == "duizhan": # TODO: 从这里来分红蓝方。
-            if role == "red_player":
-                system_template = PROMPT_TEMPLATES['llm_chat']['embrace_red']
-            elif role == "blue_player":
-                system_template = PROMPT_TEMPLATES['llm_chat']['embrace_blue']
-            else:
-                system_template = PROMPT_TEMPLATES['llm_chat']['embrace']
+            # 2025: PROMPT_TEMPLATES过于难以维护，后续逐渐弃用，把场景规则描述挪到更加可控的地方去
+            # if role == "red_player":
+            #     system_template = PROMPT_TEMPLATES['llm_chat']['embrace_red']
+            # elif role == "blue_player":
+            #     system_template = PROMPT_TEMPLATES['llm_chat']['embrace_blue']
+            # else:
+            #     system_template = PROMPT_TEMPLATES['llm_chat']['embrace']
+            system_template = PROMPT_TEMPLATES['llm_chat']['embrace_none']
         elif Comm_type == "jieshuo":
             system_template = PROMPT_TEMPLATES['llm_chat']['jieshuo_embrace']
         elif Comm_type == "DeLLMa":

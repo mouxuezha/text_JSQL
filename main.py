@@ -68,6 +68,9 @@ class command_processor(QtCore.QThread):
             # 没有的话补充默认值。
             self.config["flag_server_waiting"]=False
         
+        self.config["flag_dicision_waiting"] = False # False就是不需要等。
+        
+        
         if "communicator" in kargs:
             # 这个不是和大模型通信，这个是和前端交互的。
             self.communicator = kargs["communicator"]
@@ -202,6 +205,26 @@ class command_processor(QtCore.QThread):
         else:
             raise Exception("undifined socket_model")
 
+    def run_mul(self):
+        # 和之前类似，这个就是开起来跑着就好的多线程不阻塞的
+
+        # 这些是依赖于跟前端通信的，然而现在前端并不具备状态，所以先不慌。
+        for env in self.env_dict.values():
+            env.init_socket()
+        
+        thread1 = threading.Thread(target=self.run_single_receive)
+        thread2 = threading.Thread(target=self.run_single_send)
+    
+        # 然后就启动线程呗
+        thread1.start()
+        thread2.start()   
+
+        # 这个是和大模型异步并行交互的，
+        thread3 = threading.Thread(target=self.run_single_dicision) 
+        thread3.start()
+
+        print("auto_run_communicator: successfully started, wuhu, qifei")    
+
     def get_agent_out(self,role="blue",location = r""):
         # 这个是搞一个方便地装载外部agent的接口。从去年劳动竞赛的craft manager的基础上开发出来的。
         # 2024，这个还得改，但是等用的时候再改吧，效率优先
@@ -310,10 +333,13 @@ class command_processor(QtCore.QThread):
         while(True):
             time.sleep(1.14514)
             if not self.commands_queue.empty():
+                self.config["flag_dicision_waiting"] = True # 用来切换阻塞还是不阻塞的。最傻逼的用标志位同步的搞法。
                 command_str = self.commands_queue.get()
                 # 这里反正在线程里，就把交互的部分在这安排上了，这里就可以阻塞了。
                 # 这里其实直接复用run_one_step应该就行了，鉴定为好。
-                self.run_one_step(command_str)
+                commands = self.run_one_step_2025(command_str)
+                self.command_response_queue.put(commands) # 这个目前看只是单纯的记录的作用。
+                self.config["flag_dicision_waiting"] = False # 用来切换阻塞还是不阻塞的。
 
     
     def run(self):
@@ -343,13 +369,18 @@ class command_processor(QtCore.QThread):
 
         detected_str = self.text_transfer.detected_to_text(self.detected_state)
 
+
         # # 把新的状态压入到解说的那一组线程里面去。# 如果是开着解说的话，这个得开了
         # self.shishi_TTS.add_status_list(status_str+detected_str)        
 
-        # 增加态势阶段的提示。
-        stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
-        # all_str = status_str + detected_str + status_str_new  +additional_str + stage_str + "\n 请按照格式直接给出指令，省略描述和解释。" 
-        all_str = "当前态势为：" + status_str + detected_str  + stage_str + "我方指挥员根据实时态势做出如下调整"+ command_str +"\n 请按照格式直接给出指令，省略描述和解释。" 
+        # # 增加态势阶段的提示。
+        # stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+
+        # 得加一段规则描述的东西。这段东西古早版本里面是写在prompts.py里面的，现在别那么搞了，挪到JSON里面。
+        init_prompt = self.text_transfer.get_initial_prompt()
+        guize_prompt = self.text_transfer.get_order_guize()
+
+        all_str = init_prompt + guize_prompt + "当前态势为：" + status_str + detected_str   + "请根据实时态势做出如下调整"+ command_str +"\n 请按照格式直接给出任务指令，省略描述和解释。" 
 
         # 把文本发给大模型，获取返回来的文本
         try:
@@ -362,11 +393,11 @@ class command_processor(QtCore.QThread):
         commands = self.text_transfer.text_to_commands(response_str)
 
         # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
-        self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
+        self.redAgent.set_commands(commands) # 2025:这样一来，这部分就和方案生成部分统一起来了，都是转化成任务机制
 
         self.add_fupan_info(self.timestep, commands, all_str, response_str)
         
-        pass
+        return commands
     
     def run_one_step(self,additional_str="",**kargs):
         # 以前的还是先留着一下，不要为了一时方便就把以前的都破坏完。
@@ -761,7 +792,17 @@ class command_processor(QtCore.QThread):
             elif self.config["flag_server_waiting"] == False:
                 # 那就是无事发生
                 self.main_loop()
-
+    
+    def dicision_join(self):
+        # 这个是用来同步的，阻塞直到大模型完成交互。或者说如果大模型在交互，就停着等着。
+        while(True):
+            if self.config["flag_dicision_waiting"] == False:
+                # 不用等待的时候丝滑退出。
+                break
+            else:
+                time.sleep(1.14514*1.919)
+                print("主线程已堵塞，等待大模型完成决策")
+        pass
 
     def main_loop(self,**kargs):
         # 这个是类似之前的auto_run的东西，跟平台那边要保持交互的。
@@ -834,12 +875,9 @@ class command_processor(QtCore.QThread):
         self.flag_finished = False # 这个是用来给其他线程看的。
         # 智能体与环境交互生成训练数据
         while True:
-            
-            # 调试的时候，这里每一步加一个比较大的时间延迟，让它别太快推完。
-            time.sleep(0.5)
-            print("debug, time delay in main_loop.")
 
-            self.env.SetRender(True) # 训练界面可视化：False --> 关闭
+            self.dicision_join() # 这个管是不是同步
+            self.using_test_commands()  # 这个管往命令里面塞东西用来测试。
 
             self.flag_human_interact = False
 
@@ -891,26 +929,6 @@ class command_processor(QtCore.QThread):
                 # 那就画图，狠狠地画图。
                 self.huatu.visual_status_2D(self.timestep,cur_redState,cur_blueState)
 
-
-            # # 这里来一段，识别一下这一帧是否有装备毁伤。
-            # cur_redState_str, cur_redState_list = auto_state_filter(cur_redState)
-            # cur_blueState_str, cur_blueState_list = auto_state_filter(cur_blueState)
-            # next_redState_str, next_redState_list = auto_state_filter(next_redState)
-            # next_blueState_str, next_blueState_list = auto_state_filter(next_blueState)
-
-            # cur_result = json.loads(self.env.GetCurrentResult())
-            # redState_diff_str, redState_diff_num = auto_state_compare2(cur_redState_list, next_redState_list)
-            # blueState_diff_str, blueState_diff_num = auto_state_compare2(cur_blueState_list, next_blueState_list)
-            # if blueState_diff_num>0:
-            #     # 说明在这一帧有蓝方装备被摧毁，值得写一条日志。
-            #     strbuffer = "在第"+str(self.timestep)+"帧有"+str(blueState_diff_num)+"个目标被摧毁，是" + blueState_diff_str
-            #     auto_save_overall(strbuffer, log_file=self.log_file)
-            # 红方就先不写了，不然全是导弹子弹被摧毁，乱的一B
-
-            # 记录每一轮运行的日志。面向过程编程还是难受，应该一开始就别偷懒。
-            # tips = '\n timestep now: ' + str(self.timestep) + '\n'
-            # tips = tips + auto_state_compare(cur_blueState_list, start_blueState_list)
-            # auto_save(self.log_file, tips, cur_redState_str, cur_blueState_str)
             self.timestep += 1
 
             cur_redState = next_redState
@@ -926,10 +944,10 @@ class command_processor(QtCore.QThread):
                     print(redScore_str)
                     print(blueScore_str)
                     tips = '\n get result: timestep =' + str(self.timestep) + '\n'
-                    # auto_save(log_file, tips, cur_result)
-                    auto_save(self.log_file, tips, redScore_str, blueScore_str)
-                    # result = env.Terminal()
-                    auto_save_overall(blueScore_str + '\n' + redScore_str, log_file=self.log_file)
+                    # # auto_save(log_file, tips, cur_result)
+                    # auto_save(self.log_file, tips, redScore_str, blueScore_str)
+                    # # result = env.Terminal()
+                    # auto_save_overall(blueScore_str + '\n' + redScore_str, log_file=self.log_file)
                 except:
                     print("G!,返回值里面并不包含分数，该不会还要自己从态势去算吧，下次一定。")
                 self.flag_finished = True # 这个是用来给其他线程看的。
@@ -972,6 +990,16 @@ class command_processor(QtCore.QThread):
     def the_embrace_jieshuo(self):
         all_str = "请作为解说员，解说一场兵棋推演比赛，尽量讲清楚双方作战过程和行动逻辑，准备好了吗？"
         return all_str
+    
+    def using_test_commands(self):
+        # 这个就是定时注入一些指令。
+        stage_str = self.stage_prompt.get_stage_prompt(self.timestep)
+        # 取出来之后压入到命令队列里面去。
+        if stage_str != "":
+            # 那就说明是有的
+            self.commands_queue.put(stage_str)
+
+        return
 
     def jieshuo_mul_thread(self):
         # 这个试图用来实现游戏解说。其实和态势认知几乎是一回事。
@@ -1081,7 +1109,7 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"D:/XXH/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验1/jieguo0.pkl")
+        plan_location_list.append(r"C:/Users/yfzx/Desktop/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验1/jieguo0.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 

@@ -11,11 +11,6 @@
 #   - history: 用户和Agent的对话历史
 #   - input: 用户输入内容
 #   - agent_scratchpad: Agent的思维记录
-from text_transfer.prompt import PromptJSQL
-promptJSQL = PromptJSQL()
-embrace_background_dict =  promptJSQL.generate_prompt()
-embrace_lang =  embrace_background_dict["sys_prompt"] + embrace_background_dict["background_prompt"] +\
-      embrace_background_dict["parsestatus_prompt"] + embrace_background_dict["test_example"] + embrace_background_dict["output_prompt"]
 
 PROMPT_TEMPLATES = {
         "llm_chat": {

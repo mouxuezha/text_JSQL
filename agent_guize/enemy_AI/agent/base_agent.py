@@ -1197,7 +1197,11 @@ class BaseAgent(object):
             weapon_type = kargs["weapon_type"]
         else:
             attacker_type = self.get_unit_type(attacker_ID)
-            weapon_type = self.WeaponState_list_all[attacker_type][0]
+            try:
+                weapon_type = self.WeaponState_list_all[attacker_type][0]
+            except:
+                print("this unit do not have weapon, can not run __handle_one_shot_attack")
+                return
         if "target_LLA" in kargs:
             target_LLA = kargs["target_LLA"]
         else:

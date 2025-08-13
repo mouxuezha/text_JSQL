@@ -1,4 +1,10 @@
 {
+    "text_transfer.__init_type" : 
+    {
+        "type_list":["Truck_Ground", "Recon_UAV_FixWing", "Guide_Ship_Surface"],
+        "type_list_CN":["导弹发射车", "无人机", "引导快艇"],
+        "command_type_list":["scout","focus_fire","supress_fire","preserve"]
+    },
     "BaseAgent.__init__" : 
     {
         "weapon_list":["HighCostAttackMissile", "LowCostAttackMissile", "AIM_AirMissile", "JDAM","Short_Range_InterceptMissile","Long_Range_InterceptMissile","ShipToGround_CruiseMissile"],
@@ -37,5 +43,32 @@
         "submission_type_list":["前出侦打", "避免交战" ],
         "unit_type":["导弹发射车", "无人机群", "引导快艇群"],
         "direction_list": ["偏东", "偏西"]
+    },
+    "StagePrompt.get_stage_now":
+    {
+        "stage_dict_list" : [{"time_step":1500,"stage_now":"侦察"},
+        {"time_step":3000,"stage_now":"集火"},
+        {"time_step":5000,"stage_now":"撤收"}]
+    },
+    "StagePrompt.get_stage_prompt_red":
+    {
+        "stage_prompt_dict":{"侦察":"分析认为，敌方舰机主要在偏东方向活动。请生成两个任务，一个为我方所有导弹车设定隐蔽任务，另一个根据当前已有情报确定新的侦察区域，派出无人机进行侦察。",
+        "集火":"请生成一个任务，命令我方所有导弹车，使用高成本攻击弹，对已发现的敌方目标组织集火打击",
+        "撤收":"请分别生成两个任务，其中一个命令我方所有导弹车进入隐蔽，另一个命令我方所有无人机采取回避姿态。"}
+    },
+    "StagePrompt.get_stage_prompt_blue":
+    {
+        "stage_prompt_dict":{"侦察":"分析认为，敌方舰机主要在偏东方向活动。请生成两个任务，一个为我方所有导弹车设定隐蔽任务，另一个根据当前已有情报确定新的侦察区域，派出无人机进行侦察。",
+        "集火":"请生成一个任务，命令我方所有导弹车，使用高成本攻击弹，对已发现的敌方目标组织集火打击",
+        "撤收":"请分别生成两个任务，其中一个命令我方所有导弹车进入隐蔽，另一个命令我方所有无人机采取回避姿态。"}
+    },
+    "text_transfer.get_initial_prompt":
+    {
+        "initial_prompt" : "请作为兵棋推演游戏的玩家，设想一个未来的对海导弹打击场景。我方为红方（设定为也门胡塞武装），拥有导弹发射车、无人机、引导快艇等装备，导弹发射车可发射高成本和低成本两种弹，其中前者具备侦察能力，且速度较快。无人艇具有引导能力，可提高武器对被锁定敌舰的命中率。无人机则发挥其低成本、损失可接受的优势，在较大范围内搜索敌方舰机。我方需要侦察并打击敌方（设定为美国海军）的舰船，包括航母、巡洋舰、驱逐舰等，应该合理搭配使用我方侦察、打击力量，以较少的弹药消耗，尽量完成我方作战意图。导弹发射车需要合理进行机动和隐蔽，以防敌舰载机打击，在发射前需要完成起竖准备。\n",
+        "initial_prompt2" : "任务区域为亚丁湾海域及周边陆、空区域，经纬度范围为东经45°到50°，北纬10°到15°。根据我方先期情报，敌方航母编队将出现在亚丁湾，初始位置为曼德海峡附近海域，并向东方航行。航道内存在商船，打击敌舰时应该避免波及商船，否则将会扣除分数。地图中间为亚丁湾，北面为我方部署和机动地域（也门境内）。"
+    },
+    "text_transfer.get_order_guize":
+    {
+        "order_guize" :"请按照格式进行任务设定，生成JSON格式的指令数据。JSON格式字段如下\n{\"type\": str, \"force_arrange\": list, \"space_arrange\":[float1,float2,float3,float4],\"time_arrange\": [int1,int1], \"target_LLA\":[float1,float2,0]}\n其中，type字段为当前任务种类，字符串类型，有四种可选项，侦察任务为scout，集火打击任务为focus_fire，压制打击任务为supresse_fire，避免交战任务为preserve。  \nforce_arrange字段为为该任务分配的兵力ID列表，例如将Truck_Ground-0、Truck_Ground-1两辆发射车分配至当前任务，则force_arrange为[\"Truck_Ground-0\",\"Truck_Ground-1\"] \n space_arrange 字段为任务区域分配，需指定左上和右下两个坐标点，例如，任务区域为(46.0,12.0)和(47.0,11.0)两点确定的矩形区域，则space_arrange为[46.0,12.0,47.0,11.0]，\ntime_arrange字段为任务时间分配，需指定任务开始和结束时间，例如，若任务开始于推演第1000帧，结束于第2000帧，则time_arrange为[1000, 2000].\n target_LLA为目标经纬高，例如，若目标在(46.5,11.5)处，高度为海平面0米，则target_LLA为[46.5,11.5,0] \n 下面给出一个完整的例子供参考，为Truck_Ground-0、Truck_Ground-1两个发射车分配一个集火打击任务，开始于推演第1000帧，结束于第2000帧，任务区域为(46.0,12.0)和(47.0,11.0)两点确定的矩形区域,目标在(46.5,11.5)处，高度为海平面0米，则JSON指令应该为：\n{\"type\": \"focus_fire\", \"force_arrange\": [\"Truck_Ground-0\",\"Truck_Ground-1\"], \"space_arrange\":[46.0,12.0,47.0,11.0],\"time_arrange\": [1000, 2000],\"target_LLA\":[46.5,11.5,0]}。若要设置多个任务指令，则不同JSON文件之间以三个换行隔开\n"
     }
 }
