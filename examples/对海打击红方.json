@@ -7,17 +7,17 @@
     },
     "BaseAgent.__init__" : 
     {
-        "weapon_list":["HighCostAttackMissile", "LowCostAttackMissile", "AIM_AirMissile", "JDAM","Short_Range_InterceptMissile","Long_Range_InterceptMissile","ShipToGround_CruiseMissile"],
+        "weapon_list":["HighCostAttackMissile", "LowCostAttackMissile", "AIM_AirMissile","AIM", "JDAM","Short_Range_InterceptMissile","Long_Range_InterceptMissile","ShipToGround_CruiseMissile"],
         "landform_list":["land", "sea"],
         "unit_type_list":["Guide_Ship_Surface", "Truck_Ground", "Recon_UAV_FixWing","Cruiser_Surface", "Destroyer_Surface", "Flagship_Surface", "Shipboard_Aircraft_FixWing"],
         "weapon_V": {"HighCostAttackMissile": 1200, "LowCostAttackMissile": 500,
-                         "AIM_AirMissile": 1000, "JDAM": 170,"Short_Range_InterceptMissile":1360,"Long_Range_InterceptMissile":1360,"ShipToGround_CruiseMissile":250},
+                         "AIM_AirMissile": 1000,"AIM": 1000, "JDAM": 170,"Short_Range_InterceptMissile":1360,"Long_Range_InterceptMissile":1360,"ShipToGround_CruiseMissile":250},
         "weapon_range":{"HighCostAttackMissile": 600000, "LowCostAttackMissile": 300000,
-        "AIM_AirMissile": 10000, "JDAM": 10000,"Short_Range_InterceptMissile":20000,"Long_Range_InterceptMissile":50000,"ShipToGround_CruiseMissile":200000},
+        "AIM_AirMissile": 10000, "AIM": 10000,"JDAM": 10000,"Short_Range_InterceptMissile":20000,"Long_Range_InterceptMissile":50000,"ShipToGround_CruiseMissile":200000},
         "unit_V": {"Guide_Ship_Surface":18, "Truck_Ground":16, "Recon_UAV_FixWing":50, "Cruiser_Surface": 15, "Destroyer_Surface":18, "Flagship_Surface":12, "Shipboard_Aircraft_FixWing":250},
         "detect_range": {"Guide_Ship_Surface":50000, "Truck_Ground":1, "Recon_UAV_FixWing":20000, "Cruiser_Surface":50000, "Destroyer_Surface" : 50000, "Flagship_Surface":50000, "Shipboard_Aircraft_FixWing":20000},
         "map_range":[45,15,50,10],
-        "WeaponState_list":{"Guide_Ship_Surface":[], "Truck_Ground":["HighCostAttackMissile","LowCostAttackMissile"], "Recon_UAV_FixWing":[],"Cruiser_Surface":["Short_Range_InterceptMissile","Long_Range_InterceptMissile","ShipToGround_CruiseMissile"], "Destroyer_Surface":["Short_Range_InterceptMissile","Long_Range_InterceptMissile"], "Flagship_Surface":["ShipToGround_CruiseMissile"], "Shipboard_Aircraft_FixWing":["AIM_AirMissile", "JDAM"]}
+        "WeaponState_list":{"Guide_Ship_Surface":[], "Truck_Ground":["HighCostAttackMissile","LowCostAttackMissile"], "Recon_UAV_FixWing":[],"Cruiser_Surface":["Short_Range_InterceptMissile","Long_Range_InterceptMissile","ShipToGround_CruiseMissile"], "Destroyer_Surface":["Short_Range_InterceptMissile","Long_Range_InterceptMissile"], "Flagship_Surface":["ShipToGround_CruiseMissile"], "Shipboard_Aircraft_FixWing":["AIM", "JDAM"]}
     },
     "BaseAgent.check_enemy_direction" : 
     {
@@ -28,6 +28,7 @@
         "HighCostAttackMissile": ["Flagship_Surface", "Cruiser_Surface", "Destroyer_Surface"],
         "LowCostAttackMissile": ["Flagship_Surface", "Cruiser_Surface", "Destroyer_Surface"],
         "AIM_AirMissile" : ["Recon_UAV_FixWing","LowCostAttackMissile","HighCostAttackMissile" ],
+        "AIM" : ["Recon_UAV_FixWing","LowCostAttackMissile","HighCostAttackMissile" ],
         "JDAM" : ["Truck_Ground","Guide_Ship_Surface"],
         "ShipToGround_CruiseMissile" : ["Truck_Ground","Guide_Ship_Surface"],
         "Short_Range_InterceptMissile" : ["HighCostAttackMissile","LowCostAttackMissile", "Recon_UAV_FixWing"],

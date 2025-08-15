@@ -247,11 +247,11 @@ class BaseAgent(object):
     
     # 拦截的得专门整一个，因为拦截的指令是发目标ID的，这个的具体实现还得看平台里到底怎么解析。
     # 好像又变回去了，不是发目标ID了，变成发
-    def _Anti_missile_Action(self, Id, Target_LLA, weapon_type):
-        # AntiMissileAction = {"Type": "Anti_missile", "Id": Id, "Target_ID": Target_ID, "weapon_type": weapon_type}
+    def _Anti_missile_Action(self, Id, Target_ID, weapon_type):
+        AntiMissileAction = {"Type": "LaunchInterceptor", "Id": Id, "TargetID": Target_ID, "WeaponType": weapon_type}
         # if  "CruiseMissile" in weapon_type:
         #     weapon_type = "CruiseMissile"         
-        AntiMissileAction = {"Type": "Launch", "Id": Id, "Lon": str(Target_LLA[0]), "Lat": str(Target_LLA[1]), "Alt": str(Target_LLA[2]), "WeaponType": weapon_type}
+        # AntiMissileAction = {"Type": "Launch", "Id": Id, "Lon": str(Target_LLA[0]), "Lat": str(Target_LLA[1]), "Alt": str(Target_LLA[2]), "WeaponType": weapon_type}
         self.act.append(AntiMissileAction)
         return AntiMissileAction
 
@@ -869,8 +869,10 @@ class BaseAgent(object):
                 target_here = target_list.pop(0)
                 # 来个自适应武器类型，就是根据距离判断是要打远程拦截弹还是近程拦截弹
                 weapon_type = self.__weapon_select2(attacker_ID, target_here)
-                target_LLA = self.get_LLA(target_here,status = self.detected_state)
-                self._Anti_missile_Action(attacker_ID, target_LLA, weapon_type) # 来哥说这个也要发LLA
+                # target_LLA = self.get_LLA(target_here,status = self.detected_state)
+                # self._Anti_missile_Action(attacker_ID, target_LLA, weapon_type) # 来哥说这个也要发LLA
+                # 变了，这个又变成发ID了。
+                self._Anti_missile_Action(attacker_ID, target_here, weapon_type)
                 break
 
         # raise Exception("__handle_anti_missile unfinished yet")
@@ -1272,12 +1274,16 @@ class BaseAgent(object):
                             # flag_ganrao = self.check_CruiseMissile_ganrao(attacker_ID, target_ID_local)
                             # flag_done = flag_done and flag_ganrao
                             if flag_done:  # 根据策略，武器类型和直瞄间瞄是不是匹配。如果判出来彳亍就打
+                                
+                                # # 这里得做一层兼容，对天和对地的说法是不一样的。
+                                # if weapon_selected == "AIM" or "JDAM":
+                                #     pass 
+                                # self._Attack_Action(attacker_ID, target_LLA_local_modified[0], target_LLA_local_modified[1],
+                                #                     target_LLA_local_modified[2], weapon_selected)
+                                
+                                # 没必要了，到这的全是制导弹。直接用那个反导的
+                                self._Anti_missile_Action(attacker_ID,target_ID_local,weapon_selected)
 
-                                self._Attack_Action(attacker_ID, target_LLA_local_modified[0], target_LLA_local_modified[1],
-                                                    target_LLA_local_modified[2], weapon_selected)
-                                
-                                # self.__handle_mul_shot_attack(attacker_ID, target_ID_local,target_LLA_local_modified, weapon_selected) # 这个是补刀用的。
-                                
                                 # # 2024，增加一个记录函数，用来记打了几次导弹车，从而间接判断毁伤了多少导弹车。
                                 # self.check_attack_missile_truck(weapon_selected, target_ID_local)
                                 self.check_attack_all(weapon_selected, target_ID_local) # 干脆都记录了算了。
