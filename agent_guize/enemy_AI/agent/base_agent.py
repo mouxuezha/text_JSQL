@@ -507,7 +507,11 @@ class BaseAgent(object):
         for attacker_ID in ID_list:
             if type in attacker_ID:
                 # 说明是这个种类的不假
-                jieguo_status[attacker_ID] = status[attacker_ID]
+                try:
+                    jieguo_status[attacker_ID] = status[attacker_ID]
+                except:
+                    jieguo_status[attacker_ID] = {} 
+                    print("select_by_type: fail to get true status")
 
         return jieguo_status
     
@@ -845,9 +849,10 @@ class BaseAgent(object):
             print("BaseAgent.__handle_anti_missile: 说好的雷达是否开关机标志位还没做")
             radar_state = 1 
 
-        if radar_state == 0:
-            # 如果关了就开起来.
-            self._Set_Radar_Action(attacker_ID, 1)
+        # if radar_state == 0:
+        #     # 如果关了就开起来.
+        #     self._Set_Radar_Action(attacker_ID, 1)
+        # 雷达开关机挪到任务那层去统一判断了。理论上现在只要读取到敌方导弹ID就可以电磁静默了，完全不需要持续照射
 
         # 干扰的去任务那层统一判断去了。
 
@@ -855,16 +860,18 @@ class BaseAgent(object):
         N_lan_1= self.abstract_state[attacker_ID]["N_lan_1"]
         N_channel = self.abstract_state[attacker_ID]["N_channel"] # 这个应该是场景里写死的了。
 
-        
+        flag_standingby, num_standingby = self.check_Interceptor_CD(attacker_ID)
 
-        for i in range(N_channel):
+        for i in range(num_standingby):
             # 这里欠缺一个怎么从态势里看到各个火力通道的CD的机制，最好把每个火力通道的CD时间弄出来，如果是多个launcher的话就好弄了
-            try:
-                channel_CD = attacker_unit["火力通道"+str(i)]
-            except:
-                channel_CD = 0 
+            # try:
+            #     channel_CD = attacker_unit["火力通道"+str(i)]
+            # except:
+            #     channel_CD = 0 
+            
+            # flag_standingby, num_standingby = self.check_Interceptor_CD(attacker_ID)
 
-            if (channel_CD == 0) and (len(target_list)>0): # 一样的，这些中文的都是等着看最后平台给过来的态势到底是什么样的。
+            if (flag_standingby == True) and (len(target_list)>0): # 一样的，这些中文的都是等着看最后平台给过来的态势到底是什么样的。
                 # 有可用的火力通道，那就具备发射条件，那就狠狠地发射。
                 target_here = target_list.pop(0)
                 # 来个自适应武器类型，就是根据距离判断是要打远程拦截弹还是近程拦截弹
@@ -1804,10 +1811,12 @@ class BaseAgent(object):
                 # 那就是没分配到，那就巡逻
                 # self.set_partrol_and_monitor()
                 # self.set_UAV_scout2(attacker_ID, LLA_list, mission_ID=mission_ID)
-                flag_ordered = self.abstract_state[attacker_ID]["abstract_state"] == "UAV_scout2" 
-                flag_ordered = flag_ordered and self.abstract_state[attacker_ID]["mission_ID"] == mission_ID # 那就进一步检查是不是是同一个任务，是的话就不管了，不是的话就重新下指令。
-                if not(flag_ordered):
-                    self.set_UAV_scout2(attacker_ID, LLA_list, mission_ID=mission_ID)                
+                if attacker_ID in self.status:
+                    # 防止要是有被打了报错
+                    flag_ordered = self.abstract_state[attacker_ID]["abstract_state"] == "UAV_scout2" 
+                    flag_ordered = flag_ordered and self.abstract_state[attacker_ID]["mission_ID"] == mission_ID # 那就进一步检查是不是是同一个任务，是的话就不管了，不是的话就重新下指令。
+                    if not(flag_ordered):
+                        self.set_UAV_scout2(attacker_ID, LLA_list, mission_ID=mission_ID)                
             else: 
                 # 那就是分到目标了，那就开过去。
                 self.set_follow_and_defend(attacker_ID, target_ID)# 这次本质上是follow and attack了，但是也无所谓，复用一下
@@ -3850,9 +3859,26 @@ class BaseAgent(object):
             enemy_direction = "right"
         
         return flag_detected, enemy_direction
+    
+    def check_Interceptor_CD(self, attacker_ID):
+        # 严格执行，只要用到两次以上的功能都拉出来写个子函数。
+        # 这个的作用是，给定舰船ID，判断该舰船是否还有火力通道数，还有的话有几个。
+        # 看CD
+        flag_standingby = False
+        num_standingby = 0
+        for launcher_single in self.status[attacker_ID]["LauncherState"]:
+            if (launcher_single["launcherCD"] == 0) and (launcher_single["launcherType"]=="Interceptor_Launcher"):
+                # 那这个就是能用的.找到一个能用的，就把它标记为不能用，然后拿出去
+                flag_standingby = True 
+                # launcher_single["launcherCD"] = 114514  # 这个操作是有风险的，相当于内存溢出了
+                # 但是不要的话就会出现火力通道占了一个之后仍然被识别为两个都开着的可能。罢了，先不钻这个牛角尖 TODO
+                num_standingby = num_standingby + 1
+        return flag_standingby, num_standingby
+                
 
     def get_nearest_channel(self, missile_single, other_channels:list):
         # 这个是从一堆火力通道里面找到离目标导弹最近的一个，然后选出来。
+        # 这里面得check，是不是有空的火力通道
         jvli_list = [] 
         target_LLA = self.get_LLA(missile_single,status=self.detected_state)
         for i in range(len(other_channels)):
@@ -3860,7 +3886,13 @@ class BaseAgent(object):
             candidate_channel = other_channels[i]
             attacker_LLA = self.get_LLA(candidate_channel)
             jvli_single = self.distance2(attacker_LLA,target_LLA)
-            jvli_list.append(jvli_single)
+            # 看CD
+            flag_standingby, num_standingby = self.check_Interceptor_CD(candidate_channel)
+
+            if flag_standingby:
+                jvli_list.append(jvli_single)
+            else:
+                jvli_list.append(1145141919) # 给个巨大无比的距离，表示这个火力通道是用不了的
         
         jvli_min = min(jvli_list)
         index_min = jvli_list.index(jvli_min)
