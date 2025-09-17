@@ -1204,8 +1204,11 @@ class BaseAgent(object):
 
         if flag_done:
             # 开完火了，转入隐蔽状态。
-            self.set_hidden_and_alert(attacker_ID) # 复苏一下之前的说法，打完之后机动到周围一定范围处，然后隐蔽起来。
+            # self.set_hidden_and_alert(attacker_ID) # 复苏一下之前的说法，打完之后机动到周围一定范围处，然后隐蔽起来。
             # 仍然得试，是闪来闪去效果好还是隐蔽起来效果好。
+            print("__handle_prepare_and_fire, finish attacking, hide")
+            self._Change_State(attacker_ID,"hide")
+            pass
         pass 
 
     def __handle_one_shot_attack(self, attacker_ID, **kargs):
@@ -1336,7 +1339,7 @@ class BaseAgent(object):
                 # weapon_selected = self.__weapon_select(attacker_ID, target_ID_local)
                 weapon_selected = weapon_type
                 if len(weapon_selected) > 0:
-                    if (self.check_effect(target_ID_local, weapon_selected)):
+                    if (self.check_effect(target_ID_local, weapon_selected) and self.check_weapon_CD(attacker_ID,weapon_selected)):
                         # 如果有合适的武器，再考虑计算修正目标打提前量
                         target_LLA_local_modified = \
                             self.__target_LLA_local_modification(target_ID_local, target_LLA_local,
@@ -1344,22 +1347,25 @@ class BaseAgent(object):
                                                                  , attacker_ID, weapon_selected)
                         # 历史的印记了，第一版在pycharm里面写的，给哥们整了一堆的换行和缩进
                         
-                        if flag_done:  
+                        if not flag_done:  
                             self._Attack_Action(attacker_ID, target_LLA_local_modified[0], target_LLA_local_modified[1],
                                                 target_LLA_local_modified[2], weapon_selected)
                             
                             # 2024，增加一个记录函数，用来记打了几次导弹车，从而间接判断毁伤了多少导弹车。
                             # 2025，既然都记录了，那后面就也可以用呗。
                             self.check_attack_all(weapon_selected, target_ID_local) # 干脆都记录了算了。
-
+                            flag_done = True
                             break  # 打出来了，那就完事了
             if flag_done:
                 pass 
         else:
             # 看不到的话就只好盲打一发了
             print("warning: no enough target information, using raw target_LLA")
-            self._Attack_Action(attacker_ID, target_LLA[0], target_LLA[1],target_LLA[2], weapon_type)
-            flag_done = True
+            # self._Attack_Action(attacker_ID, target_LLA[0], target_LLA[1],target_LLA[2], weapon_type)
+            # # 盲打先关了，影响调试。这个是删除一切check，硬打一发的设置，其实不是很有必要、
+            # flag_done = True
+
+            print("__handle_target_attack: turn off the forced launch.")
             pass
 
         return flag_done
@@ -1749,11 +1755,19 @@ class BaseAgent(object):
             
             # 然后分配给各个无人机，让它们探去。如果被打了就重新规划之类的。
             LLA_list_part_list = []
-            n_single = round(len(LLA_list)/geshu)
+            # 这里得做个容错，如果飞机太多点数太少，就会出问题。
+            geshu_clip = min(geshu,len(LLA_list)/3) # 这么改就是至少分三份，接受重复。不改的话是不接受重复的。
+
+            n_single = round(len(LLA_list)/geshu_clip)
             for i in range(geshu):
                 index_qian = i * n_single
                 index_hou = min((i+1)*n_single, len(LLA_list)) 
                 LLA_list_part_single = LLA_list[index_qian:index_hou]
+
+                if len(LLA_list_part_single) == 0:
+                    # 这个是配合前面那个做容错的。如果没分配到，那就随机一个前面的。
+                    LLA_list_part_single = random.choice(LLA_list_part_list)
+                    print("attention, more UAV than points, not good.")
                 LLA_list_part_list.append(LLA_list_part_single)
             
             # 然后开始真正的操作了，下达指令给各个参与单位。
@@ -2071,7 +2085,7 @@ class BaseAgent(object):
         for i in range(N_lan_1):
             channel = channel + ID_list   # 这样通道里就是一些ID。
         
-        other_channels = channel
+        other_channels = copy.deepcopy(channel)
         arrange_dict = {}
         for missile_single in enemy_missile:
             # 从列表里找到剩下的里面离他最近的一个船，然后分配进去。然后把channel里面那个给删了。
@@ -2166,7 +2180,8 @@ class BaseAgent(object):
 
         status = {} 
         for ID_single in ID_list:
-            status[ID_single] = self.status[ID_single]
+            if ID_single in self.status:
+                status[ID_single] = self.status[ID_single]
 
         # 先找一个目标点，这里找的是开出去了之后的位置
         if "target_LLA" in kargs:
@@ -3413,6 +3428,22 @@ class BaseAgent(object):
         
         return flag_far
     
+    def check_weapon_CD(self,attacker_ID, weapon_selected:str):
+        LauncherState = self.status[attacker_ID]["LauncherState"]
+
+        flag_weapon_CD = False
+
+        for LauncherState_single in LauncherState:
+            if weapon_selected in LauncherState_single["launcherType"]:
+                # 那就是有这个武器，鉴定为好。
+                launcherCD = LauncherState_single["launcherCD"]
+                if launcherCD == 0:
+                    flag_weapon_CD=True
+                    break 
+        return flag_weapon_CD
+
+
+
     def __status_filter(self, status,model="me"):
         # 这个用于滤除奇怪的东西.为了保持兼容，稍微改一下
         status_new = self._status_filter(status,model=model)
@@ -3866,13 +3897,18 @@ class BaseAgent(object):
         # 看CD
         flag_standingby = False
         num_standingby = 0
-        for launcher_single in self.status[attacker_ID]["LauncherState"]:
-            if (launcher_single["launcherCD"] == 0) and (launcher_single["launcherType"]=="Interceptor_Launcher"):
-                # 那这个就是能用的.找到一个能用的，就把它标记为不能用，然后拿出去
-                flag_standingby = True 
-                # launcher_single["launcherCD"] = 114514  # 这个操作是有风险的，相当于内存溢出了
-                # 但是不要的话就会出现火力通道占了一个之后仍然被识别为两个都开着的可能。罢了，先不钻这个牛角尖 TODO
-                num_standingby = num_standingby + 1
+        if not(attacker_ID in self.status):
+            # 这东西都没了那说明是被干烂了已经，那这种时候自然是没有通道啥的了。
+            pass 
+        else: 
+            for launcher_single in self.status[attacker_ID]["LauncherState"]:
+                if (launcher_single["launcherCD"] == 0) and ("Intercept" in launcher_single["launcherType"]):
+                    # 那这个就是能用的.找到一个能用的，就把它标记为不能用，然后拿出去
+                    flag_standingby = True 
+                    # launcher_single["launcherCD"] = 114514  # 这个操作是有风险的，相当于内存溢出了
+                    # 但是不要的话就会出现火力通道占了一个之后仍然被识别为两个都开着的可能。罢了，先不钻这个牛角尖 TODO
+                    num_standingby = num_standingby + 1
+                    # break
         return flag_standingby, num_standingby
                 
 
@@ -3893,11 +3929,16 @@ class BaseAgent(object):
                 jvli_list.append(jvli_single)
             else:
                 jvli_list.append(1145141919) # 给个巨大无比的距离，表示这个火力通道是用不了的
-        
-        jvli_min = min(jvli_list)
-        index_min = jvli_list.index(jvli_min)
-        arranged_channel = other_channels[index_min]
-        other_channels.pop(index_min)
+
+        if len(other_channels)==0:
+            # 那就是通道已经没了       
+            arranged_channel = None
+            other_channels = other_channels 
+        else:
+            jvli_min = min(jvli_list)
+            index_min = jvli_list.index(jvli_min)
+            arranged_channel = other_channels[index_min]
+            other_channels.pop(index_min)
         return arranged_channel, other_channels
 
     # 后面是服务于大模型的

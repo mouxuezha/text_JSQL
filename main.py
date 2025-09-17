@@ -128,7 +128,9 @@ class command_processor(QtCore.QThread):
     def __init_env(self):
         self.max_episode_len = self.net_args.max_episode_len
         # self.env = Env(self.net_args.ip, self.net_args.port)
-        Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
+        # Env_config={"red_ip":"169.254.64.50","red_port":"30001","blue_ip":"169.254.64.50","blue_port":"40001","control_ip":"169.254.64.50","control_port":"50005"}
+        Env_config={"red_ip":"127.0.0.1","red_port":"30001","blue_ip":"127.0.0.1","blue_port":"40001","control_ip":"127.0.0.1","control_port":"50005"}
+        
         # Env_config={"red_ip":"192.168.1.115","red_port":"30001","blue_ip":"192.168.1.115","blue_port":"40001","control_ip":"192.168.1.115","control_port":"50005"}
         self.env = Env(Env_config=Env_config)
 
@@ -644,7 +646,12 @@ class command_processor(QtCore.QThread):
         commands = plan_input.get_action_one_step(self.timestep,self.status)
 
         # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
-        self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
+        flag_LLM_command = False
+        if flag_LLM_command:
+            # self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
+            pass 
+        else:
+            print("run_one_step_model3: debug, disabled the commands from LLM.")
 
         all_str = "no all_str, this is " + self.role
         response_str = "no response_str, this is " + self.role
@@ -881,7 +888,7 @@ class command_processor(QtCore.QThread):
         while True:
 
             self.dicision_join() # 这个管是不是同步
-            self.using_test_commands()  # 这个管往命令里面塞东西用来测试。
+            # self.using_test_commands()  # 这个管往命令里面塞东西用来测试。# 这个关了就是不来战中的人机协同决策
 
             self.flag_human_interact = False
 
@@ -941,8 +948,9 @@ class command_processor(QtCore.QThread):
             # 一个对战回合结束进入下一回合
             if self.timestep > self.max_episode_len:
                 # 获取当前分数
-                cur_result = json.loads(self.env.GetCurrentResult())
+                
                 try:
+                    cur_result = json.loads(self.env.GetCurrentResult())
                     blueScore_str = "blueScore: " + str(cur_result["blueScore"])
                     redScore_str = "redScore: " + str(cur_result["redScore"])
                     print(redScore_str)
