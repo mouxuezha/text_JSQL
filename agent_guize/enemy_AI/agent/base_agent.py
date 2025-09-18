@@ -1231,7 +1231,7 @@ class BaseAgent(object):
                 target_LLA = [46.340332,11.296934,0] # 随便写的坐标，实在不行就用这个
 
         # 这里的逻辑稍微改改，对自己有的所有武器都做一遍range_estimate4，然后取一个最好的
-        if not("WeaponState" in self.status[attacker_ID]):
+        if not("LauncherState" in self.status[attacker_ID]):
             # 没武器就直接返回了。
             return False
         
@@ -1965,7 +1965,13 @@ class BaseAgent(object):
         # 得弄一个退出机制，比如记录所有的车都发过了就可以退出了、。
         num_finished = len(self.mission_set[mission_ID]["force_launched"])
         num_all = len(self.mission_set[mission_ID]["force_arrange_real"])
-        if num_finished>=num_all:
+        # 新增一个上限机制：可设定集火打击目标的上限。作为任务的一个属性参数，做好容错。
+        if "num_max" in self.mission_set[mission_ID]:
+            num_max = self.mission_set[mission_ID]["num_max"]
+        else:
+            num_max = 114514
+
+        if num_finished>=min(num_all,num_max):
             # 指令已经发了一圈了，理论上它应该能够进行一波集火打击。就可以准备退出了。后面设一下prepare and fire状态,让它别会被覆盖，基本就好使了
             self.mission_set[mission_ID]["flag_finished"] = True
             self.mission_set[mission_ID]["flag_active"] = False
@@ -2410,9 +2416,14 @@ class BaseAgent(object):
         else:
             weapon_type = "LowCostAttackMissile"
         
+        if "num_max" in kargs:
+            num_max = kargs["num_max"]
+        else:
+            num_max = 5
+        
         time_arrange = [self.num + 1, self.num + 1 + running_time]
 
-        self.mission_set[mission_ID] = {"type":"focus_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "force_launched":[],"time_arrange":time_arrange,"weapon_type":weapon_type, "target_ID":target_ID,"target_LLA":target_LLA,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
+        self.mission_set[mission_ID] = {"type":"focus_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "force_launched":[],"time_arrange":time_arrange,"weapon_type":weapon_type, "target_ID":target_ID,"target_LLA":target_LLA,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe,"num_max":num_max}
 
     def set_mission_supresse_fire(self, ID_list, space_arrange, **kargs):
         # 这个是设想中的对特定区域压制射击模式，持续一段时间，好了就发射好了就发射。
