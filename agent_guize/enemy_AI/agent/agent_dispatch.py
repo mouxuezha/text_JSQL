@@ -793,18 +793,19 @@ class agent_dispatch(object):  # 这个是用来处理分级态势的，注意�
         else:
             raise Exception("agent_dispatch.set_commands_mission: invalid model, G.")
         
-        if mission_type == "supress_fire":
-            self.global_agent.set_mission_supresse_fire(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],priority=priority)
+        # 注意任务优先级，先全都设成默认开的，然后在那里面要关再关。
+        if mission_type == "supress_fire" or mission_type == "supresse_fire": # 菜完了，拼写错误
+            self.global_agent.set_mission_supresse_fire(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],priority=priority,flag_active=True,flag_modified=True)
         elif mission_type == "focus_fire":
-            self.global_agent.set_mission_focus_fire(ID_list=command_single["force_arrange"],target_ID="",target_LLA=command_single["target_LLA"],time_arrange=command_single["time_arrange"],priority=priority)
+            self.global_agent.set_mission_focus_fire(ID_list=command_single["force_arrange"],target_ID="",target_LLA=command_single["target_LLA"],time_arrange=command_single["time_arrange"],priority=priority,flag_active=True,flag_modified=True)
         elif mission_type == "scout":
-            self.global_agent.set_mission_scout(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],priority=priority)
+            self.global_agent.set_mission_scout(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],priority=priority,flag_active=True,flag_modified=True)
         elif mission_type == "preserve":
             if self.player=="red":
                 enemy_direction = [0,-1,0]
             else:
                 enemy_direction = [0,1,0]
-            self.global_agent.set_mission_preserve(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],enemy_direction=enemy_direction,priority=priority)
+            self.global_agent.set_mission_preserve(ID_list=command_single["force_arrange"],space_arrange=command_single["space_arrange"],time_arrange=command_single["time_arrange"],enemy_direction=enemy_direction,priority=priority,flag_active=True,flag_modified=True)
         pass
 if __name__ == "__main__":
     print("这个没法单独测试，构筑单独测试用例的意义也不是很大。直接去main.py里面测可也")

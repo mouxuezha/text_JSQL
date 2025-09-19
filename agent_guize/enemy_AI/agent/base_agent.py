@@ -1781,6 +1781,9 @@ class BaseAgent(object):
                 if not(flag_ordered):
                     self.set_UAV_scout2(force_arrange_real[i], LLA_list_part_list[i], mission_ID=mission_ID)
 
+            # 完事了应该把modified这个改成False吧，不然就一直进了。
+            self.mission_set[mission_ID]["flag_modified"] = False
+
         else:
             # 那就是任务检测那里认为没有修改，不需要重新生成一遍。
             pass
@@ -1847,6 +1850,7 @@ class BaseAgent(object):
             if abstract_state_single["abstract_state"] != "UAV_scout2":
                 # 按理说不应该进到这里，进到这里说明出问题了。
                 raise Exception("__handle_mission_scout: 按理说不应该执行到这里，执行到这里说明出问题了")
+                pass
             else:
                 flag_all_finished = flag_all_finished and abstract_state_single["flag_finished"]
         
@@ -1988,6 +1992,7 @@ class BaseAgent(object):
         # 这个就不是modified才改了，应该是每一帧都刷一下目标分配。
         
         enemy_in = [] 
+        detected_state_part = {} 
         for enemy_ID in self.detected_state:
             if "_Surface" in enemy_ID:
                 # 只针对对面的船，别的先不慌。
@@ -1997,17 +2002,23 @@ class BaseAgent(object):
 
                 if flag_in:
                     # 在范围内，那就加1。
-                    enemy_in.append(self.detected_state[enemy_ID])
+                    enemy_in.append(self.detected_state[enemy_ID])# 这不知道之前是写来干啥的，看起来并不对。
+                    realID = self.detected_state[enemy_ID]["realID"]
+                    detected_state_part[realID] = self.detected_state[realID]
 
-        enemy_LLA_ave = self.get_LLA_ave(status=enemy_in)
+        enemy_LLA_ave = self.get_LLA_ave(status=detected_state_part)
 
         # 然后分配目标。应该是对每个目标，找剩下的车里离它最近的。尝试复用一下open_fire
-        if len(enemy_in) > 0:
+        if len(detected_state_part) > 0:
             for attacker_ID in ID_list:
                 # 直接来。
                 if self.abstract_state[attacker_ID]["abstract_state"] != "open_fire":
                     # 没有开火，那就开火。
-                    self.set_open_fire(attacker_ID,target_LLA=enemy_LLA_ave, detected_state=enemy_in)
+                    self.set_open_fire(attacker_ID,target_LLA=enemy_LLA_ave, detected_state=detected_state_part)
+        else:
+            # 找不到目标就就地隐蔽呗，或者往前开一开。
+            for attacker_ID in ID_list:
+                self.set_hidden_and_alert(attacker_ID)
 
         # 然后结束条件：持续时间到了，或者分配的单位没了。
         if self.num>self.mission_set[mission_ID]["time_arrange"][1]:
@@ -2332,8 +2343,12 @@ class BaseAgent(object):
             describe = kargs["describe"]
         else:
             describe = "协同侦察"
-
-        time_arrange = [self.num + 1, self.num + 1 + running_time]
+        
+        if "time_arrange" in kargs:
+            time_arrange = kargs["time_arrange"]
+        else:
+            time_arrange = [self.num + 1, self.num + 1 + running_time]
+        # time_arrange = [self.num + 1, self.num + 1 + running_time]
 
         self.mission_set[mission_ID] = {"type":"scout", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "space_arrange":space_arrange, "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
         # 后面还需要啥额外的属性再来这里定义。flag_modified初始化为True，让它第一波开始的时候能进去。
@@ -2561,6 +2576,10 @@ class BaseAgent(object):
             else:
                 # 没有变化，那就把标志位刷回来。
                 self.mission_set[mission_ID_single]["flag_modified"] = False
+                # 这么写有问题，第一步的时候会进不去执行。
+                
+                if self.num<self.mission_set[mission_ID_single]["time_arrange"][0]+3:
+                    self.mission_set[mission_ID_single]["flag_modified"] = True # 至少让它先启动起来一下。
             
         else:
             # 当前任务不活跃，检测一下时间，如果能启动那就启动。# 这个不可以过几步检测一次，不然就跳了可能。
@@ -3718,7 +3737,7 @@ class BaseAgent(object):
         # 就是整一下平均数。
 
         if len(status) == 0:
-            LLA_defualt = np.array([2.71, 39.76, 0])
+            LLA_defualt = np.array([47.7, 12.8, 0])
             return LLA_defualt
 
         # 整个自己的平均位置,后面这部分等子航他们聚类要是整好了就换个高级的

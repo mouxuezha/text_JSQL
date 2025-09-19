@@ -55,8 +55,8 @@ class GlobalAgent(BaseAgent):
             # self.act = self.step_red_shishi2(status)
             # self.act = self.step_red_xunfeidan(status)
             # self.act = self.step_red_shangxiache(status)
-            self.act = self.step_red_2025_test(status)
-            # self.act = self.step_LLM(status)
+            # self.act = self.step_red_2025_test(status)
+            self.act = self.step_LLM(status)
             pass
         elif self.player == "blue":
             # 当前智能体是蓝方
@@ -91,7 +91,7 @@ class GlobalAgent(BaseAgent):
         if self.num == 10:
             target_LLA = [46.9897,12.0050,0]
             self.set_mission_focus_fire(truck_units, "", target_LLA=target_LLA,weapon_type="HighCostAttackMissile",num_max=4) # 这个有一个问题就是依赖于探测。没探测了就歇了。
-            # self.set_mission_focus_fire(truck_units, "", target_LLA=target_LLA,weapon_type="LowCostAttackMissile") # 这个有一个问题就是依赖于探测。没探测了就歇了。
+            # self.set_mission_focus_fire(truck_units, "", target_LLA=target_LLA,weapon_type="LowCostAttackMissile",num_max=4) # 这个有一个问题就是依赖于探测。没探测了就歇了。
             
             self.set_mission_scout((UAV_unit | kuaiting_unit),space_arrange=[46.0,12.0,48.0,11.0]) # 好，几乎完事了. 
             # self.set_mission_supresse_fire(truck_units,space_arrange=[46.0,12.0,48.0,11.0],)

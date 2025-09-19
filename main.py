@@ -646,12 +646,13 @@ class command_processor(QtCore.QThread):
         commands = plan_input.get_action_one_step(self.timestep,self.status)
 
         # 把提取出来的命令发给agent，让它里面设定抽象状态啥的。
-        flag_LLM_command = False
+        flag_LLM_command = True
         if flag_LLM_command:
-            # self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
+            self.redAgent.set_commands(commands) # 得专门给它定制一个发命令的才行，不然不行。
             pass 
         else:
-            print("run_one_step_model3: debug, disabled the commands from LLM.")
+            # print("run_one_step_model3: debug, disabled the commands from LLM.")
+            pass
 
         all_str = "no all_str, this is " + self.role
         response_str = "no response_str, this is " + self.role
@@ -1123,7 +1124,7 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"D:/XXH/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验1/jieguo0.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验3/jieguo0.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 
