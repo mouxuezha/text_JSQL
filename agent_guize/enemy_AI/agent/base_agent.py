@@ -1783,6 +1783,7 @@ class BaseAgent(object):
 
             # 完事了应该把modified这个改成False吧，不然就一直进了。
             self.mission_set[mission_ID]["flag_modified"] = False
+            self.mission_set[mission_ID]["flag_started"] = True # 这就算开了。
 
         else:
             # 那就是任务检测那里认为没有修改，不需要重新生成一遍。
@@ -1795,55 +1796,56 @@ class BaseAgent(object):
         #  维护一个“哪个快艇盯防哪个船”的关系。
         ship_units = self.select_by_type("_Surface",ID_list=force_arrange_real)
         ship_ID_list = list(ship_units.keys())
+        
+        if flag_modified and len(ship_units)>0:
+            # 又是一个简化的贪心、后面可以优化的那种，对所有的船，找最近的目标。这样方便后面set_state.
+            selected_ID_list = [] # 算完之后这里面的和ship_ID_list这里面的一一对应就是了。
+            for ship_ID in ship_units:
+                attacker_LLA = self.get_LLA(ship_ID)
+                jvli_min = 114514 
+                selected_ID = "None"
+                # 因为总共也没几个单位，所以循环了也就循环了，消耗不了多少计算量。
+                for target_ID in self.detected_state2:
+                    if ("_Surface" in target_ID) and not(target_ID in selected_ID_list):
+                        # 对面是船才做这个，否则没啥好跟的。
+                        target_LLA = self.get_LLA(target_ID,status = self.detected_state2)
+                        jvli_single = self.distance2(target_LLA,attacker_LLA)
+                        if jvli_single<jvli_min:
+                            selected_ID = target_ID
+                selected_ID_list.append(selected_ID)
+                        
 
-        # 又是一个简化的贪心、后面可以优化的那种，对所有的船，找最近的目标。这样方便后面set_state.
-        selected_ID_list = [] # 算完之后这里面的和ship_ID_list这里面的一一对应就是了。
-        for ship_ID in ship_units:
-            attacker_LLA = self.get_LLA(ship_ID)
-            jvli_min = 114514 
-            selected_ID = "None"
-            # 因为总共也没几个单位，所以循环了也就循环了，消耗不了多少计算量。
-            for target_ID in self.detected_state2:
-                if ("_Surface" in target_ID) and not(target_ID in selected_ID_list):
-                    # 对面是船才做这个，否则没啥好跟的。
-                    target_LLA = self.get_LLA(target_ID,status = self.detected_state2)
-                    jvli_single = self.distance2(target_LLA,attacker_LLA)
-                    if jvli_single<jvli_min:
-                        selected_ID = target_ID
-            selected_ID_list.append(selected_ID)
-                    
+            # 如果范围内有已经探明的目标，快艇就上去跟住。# 甚至可以先简化一下"范围内"，就是如果有已探明的目标就贴上去。
+            LLA_list = [] # 这个顺序其实可以改，也不一定非要是顺着来
+            LLA_list.append([space_arrange[0],space_arrange[1],0]) 
+            LLA_list.append([space_arrange[0],space_arrange[3],0])
+            LLA_list.append([space_arrange[2],space_arrange[3],0])
+            LLA_list.append([space_arrange[2],space_arrange[1],0])
 
-        # 如果范围内有已经探明的目标，快艇就上去跟住。# 甚至可以先简化一下"范围内"，就是如果有已探明的目标就贴上去。
-        LLA_list = [] # 这个顺序其实可以改，也不一定非要是顺着来
-        LLA_list.append([space_arrange[0],space_arrange[1],0]) 
-        LLA_list.append([space_arrange[0],space_arrange[3],0])
-        LLA_list.append([space_arrange[2],space_arrange[3],0])
-        LLA_list.append([space_arrange[2],space_arrange[1],0])
-
-        for i in range(len(ship_ID_list)):
-            # 这回开始真正意义上的分配任务了。
-            attacker_ID = ship_ID_list[i]
-            target_ID = selected_ID_list[i]
-            if target_ID == "None":
-                # 那就是没分配到，那就巡逻
-                # self.set_partrol_and_monitor()
-                # self.set_UAV_scout2(attacker_ID, LLA_list, mission_ID=mission_ID)
-                if attacker_ID in self.status:
-                    # 防止要是有被打了报错
-                    flag_ordered = self.abstract_state[attacker_ID]["abstract_state"] == "UAV_scout2" 
-                    flag_ordered = flag_ordered and self.abstract_state[attacker_ID]["mission_ID"] == mission_ID # 那就进一步检查是不是是同一个任务，是的话就不管了，不是的话就重新下指令。
-                    if not(flag_ordered):
-                        self.set_UAV_scout2(attacker_ID, LLA_list, mission_ID=mission_ID)                
-            else: 
-                # 那就是分到目标了，那就开过去。
-                self.set_follow_and_defend(attacker_ID, target_ID)# 这次本质上是follow and attack了，但是也无所谓，复用一下
+            for i in range(len(ship_ID_list)):
+                # 这回开始真正意义上的分配任务了。
+                attacker_ID = ship_ID_list[i]
+                target_ID = selected_ID_list[i]
+                if target_ID == "None":
+                    # 那就是没分配到，那就巡逻
+                    # self.set_partrol_and_monitor()
+                    # self.set_UAV_scout2(attacker_ID, LLA_list, mission_ID=mission_ID)
+                    if attacker_ID in self.status:
+                        # 防止要是有被打了报错
+                        flag_ordered = self.abstract_state[attacker_ID]["abstract_state"] == "UAV_scout2" 
+                        flag_ordered = flag_ordered and self.abstract_state[attacker_ID]["mission_ID"] == mission_ID # 那就进一步检查是不是是同一个任务，是的话就不管了，不是的话就重新下指令。
+                        if not(flag_ordered):
+                            self.set_UAV_scout2(attacker_ID, LLA_list, mission_ID=mission_ID)                
+                else: 
+                    # 那就是分到目标了，那就开过去。
+                    self.set_follow_and_defend(attacker_ID, target_ID)# 这次本质上是follow and attack了，但是也无所谓，复用一下
 
 
-        # 剩下的快艇则是沿着边缘巡逻。
+            # 剩下的快艇则是沿着边缘巡逻。
 
         # 检测是不是都完成了，都完成了就算是这个任务完成了，并且把侦察单位撤到特定的地方。
         flag_all_finished = True
-        UAV_ID_list = list(UAV_units.keys())
+        UAV_ID_list = list(UAV_units.keys())+list(ship_units.keys()) # 两个都完成了就完成了
         for i in range(len(UAV_ID_list)):
             # 检查是不是都完成了。
             abstract_state_single = self.abstract_state[UAV_ID_list[i]]
@@ -1909,6 +1911,10 @@ class BaseAgent(object):
                 flag_ordered = flag_ordered and abstract_state_single["mission_ID"] == mission_ID # 那就进一步检查是不是是同一个任务，是的话就不管了，不是的话就重新下指令。
                 if not(flag_ordered):
                     self.set_UAV_scout2(force_arrange_real[i], point_list_depart_list[i], mission_ID=mission_ID)
+            
+            # 完事了应该把modified这个改成False吧，不然就一直进了。
+            self.mission_set[mission_ID]["flag_modified"] = False
+            self.mission_set[mission_ID]["flag_started"] = True # 这就算开了。
         else:
             # 任务没变化，那就无事发生
             pass     
@@ -1954,6 +1960,9 @@ class BaseAgent(object):
             else:
                 # 那就是已经初始化了发射时间了。
                 pass
+            # 完事了应该把modified这个改成False吧，不然就一直进了。
+            self.mission_set[mission_ID]["flag_modified"] = False
+            self.mission_set[mission_ID]["flag_started"] = True # 这就算开了。
         
         start_time_dict = self.mission_set[mission_ID]["start_time_dict"]
         # 然后看当前发射时间,轮到谁了，谁就开始
@@ -2009,8 +2018,13 @@ class BaseAgent(object):
         enemy_LLA_ave = self.get_LLA_ave(status=detected_state_part)
 
         # 然后分配目标。应该是对每个目标，找剩下的车里离它最近的。尝试复用一下open_fire
+        
+        # 这里也加一下，来个最大的发弹的数量
+        num_max = self.mission_set[mission_ID]["num_max"]
+        ID_list_clip = ID_list[:num_max]
+
         if len(detected_state_part) > 0:
-            for attacker_ID in ID_list:
+            for attacker_ID in ID_list_clip:
                 # 直接来。
                 if self.abstract_state[attacker_ID]["abstract_state"] != "open_fire":
                     # 没有开火，那就开火。
@@ -2019,6 +2033,10 @@ class BaseAgent(object):
             # 找不到目标就就地隐蔽呗，或者往前开一开。
             for attacker_ID in ID_list:
                 self.set_hidden_and_alert(attacker_ID)
+        
+        # 完事了应该把modified这个改成False吧，不然就一直进了。
+        # self.mission_set[mission_ID]["flag_modified"] = False
+        self.mission_set[mission_ID]["flag_started"] = True # 这就算开了。
 
         # 然后结束条件：持续时间到了，或者分配的单位没了。
         if self.num>self.mission_set[mission_ID]["time_arrange"][1]:
@@ -2040,6 +2058,11 @@ class BaseAgent(object):
             pass
         else:
             raise Exception("role error")
+    
+        # 完事了应该把modified这个改成False吧，不然就一直进了。
+        self.mission_set[mission_ID]["flag_modified"] = False
+        self.mission_set[mission_ID]["flag_started"] = True # 这就算开了。
+    
         pass
 
     def __handle_mission_preserve_red(self,mission_ID, ID_list):
@@ -2384,7 +2407,11 @@ class BaseAgent(object):
         else:
             describe = "空中优势"
         
-        time_arrange = [self.num + 1, self.num + 1 + running_time]
+        if "time_arrange" in kargs:
+            time_arrange = kargs["time_arrange"]
+        else:
+            time_arrange = [self.num + 1, self.num + 1 + running_time]
+        # time_arrange = [self.num + 1, self.num + 1 + running_time]
 
         self.mission_set[mission_ID] = {"type":"patrol", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "space_arrange":space_arrange, "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
         pass 
@@ -2436,7 +2463,11 @@ class BaseAgent(object):
         else:
             num_max = 5
         
-        time_arrange = [self.num + 1, self.num + 1 + running_time]
+        if "time_arrange" in kargs:
+            time_arrange = kargs["time_arrange"]
+        else:
+            time_arrange = [self.num + 1, self.num + 1 + running_time]
+        # time_arrange = [self.num + 1, self.num + 1 + running_time]
 
         self.mission_set[mission_ID] = {"type":"focus_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "force_launched":[],"time_arrange":time_arrange,"weapon_type":weapon_type, "target_ID":target_ID,"target_LLA":target_LLA,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe,"num_max":num_max}
 
@@ -2471,10 +2502,19 @@ class BaseAgent(object):
             describe = kargs["describe"]
         else:
             describe = "区域火力压制"
-        
-        time_arrange = [self.num + 1, self.num + 1 + running_time]
 
-        self.mission_set[mission_ID] = {"type":"supresse_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "space_arrange":space_arrange,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe }
+        if "num_max" in kargs:
+            num_max = kargs["num_max"]
+        else:
+            num_max = 5
+
+        if "time_arrange" in kargs:
+            time_arrange = kargs["time_arrange"]
+        else:
+            time_arrange = [self.num + 1, self.num + 1 + running_time]
+        # time_arrange = [self.num + 1, self.num + 1 + running_time]
+
+        self.mission_set[mission_ID] = {"type":"supresse_fire", "force_arrange":ID_list,"force_arrange_real":ID_list, "time_arrange":time_arrange, "space_arrange":space_arrange,  "flag_active": flag_active, "priority":priority, "flag_finished":False, "flag_modified":True, "describe":describe,"num_max":num_max }
         pass
 
     def set_mission_preserve(self, ID_list, enemy_direction = [0,1,0],**kargs):
@@ -2529,6 +2569,14 @@ class BaseAgent(object):
         # 逻辑应该是：开着的任务中，如果单位都被占用了，就关闭。关了的任务中，如果时间到了，就开起来。
         # 后面要是想加事件触发任务的话，也是加在这里面。如果是临机决策给出的任务，就直接把标志位安排成true，实现某种意义上的事件触发
         # 没办法边调试边写，只好采取了目前这种相对傻逼的、隐患比较多的，写一大堆等具备条件再测的。智者所不取。
+        
+        # 专门搞一个标志位来处理“当前任务是否已经启动”这一事情。
+        if "flag_started" in self.mission_set[mission_ID_single]:
+            flag_started = self.mission_set[mission_ID_single]["flag_started"]
+        else:
+            self.mission_set[mission_ID_single]["flag_started"] = False
+            # 默认新设定的任务没有启动。
+
         flag_active = self.mission_set[mission_ID_single]["flag_active"]
         if flag_active:
             # 这个其实可以过几步检测一次，不用每一步都检测。
@@ -2539,7 +2587,7 @@ class BaseAgent(object):
             # 蠢一点儿就蠢一点儿吧，遍历每一个Active的任务。
             flag_occupy = True # 所有单位都占用完了，才认为是占用完了。有一个没占用都没占用完，任务都可以继续生效。
 
-            force_arrange_real = [] # 每一步重新刷一遍，看分给这个任务的力量还剩多少。
+            force_arrange_real = copy.deepcopy(self.mission_set[mission_ID_single]["force_arrange"]) # 每一步重新刷一遍，看分给这个任务的力量还剩多少。
             
             for ID_single in ID_list_single:
                 # 然后遍历任务，先比较优先级，看每个开始时间比当前的晚的、Active的任务里面里面，是不是用到这个单位了。
@@ -2553,9 +2601,13 @@ class BaseAgent(object):
                         flag_occupy = flag_occupy and True
                         # 按理说这个单位被占用了之后，应该从force arrange那个list里面给它删了。但是这样的话就丢失信息了。
                         # 所以重新搞一个列表来实现这个事情
+                        if ID_single in force_arrange_real:
+                            # 本来有，但是被占了，那就得删除了。
+                            force_arrange_real.remove(ID_single)
                     else:
                         flag_occupy = flag_occupy and False # 有一个没占用完，都算是没占用完，都可以继续往下。
-                        force_arrange_real.append(ID_single) # 没被占用的话，就重新记录一下。
+                        if not(ID_single in force_arrange_real):
+                            force_arrange_real.append(ID_single) # 没被占用的话，就重新记录一下。  # List机制没有唯一性，所以搞个去重的，不然就是每个任务不占用都往里面刷一个
                 
                 # 然后check一下当前时间。过了就认为是结束了
                 if (self.num > self.mission_set[mission_ID_single]["time_arrange"][1]):
@@ -2578,7 +2630,8 @@ class BaseAgent(object):
                 self.mission_set[mission_ID_single]["flag_modified"] = False
                 # 这么写有问题，第一步的时候会进不去执行。
                 
-                if self.num<self.mission_set[mission_ID_single]["time_arrange"][0]+3:
+                if self.mission_set[mission_ID_single]["flag_started"]==False:
+                    # 没启动的就认为是flag_modified为True，至少先给它启动起来
                     self.mission_set[mission_ID_single]["flag_modified"] = True # 至少让它先启动起来一下。
             
         else:
