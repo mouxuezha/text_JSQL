@@ -939,7 +939,9 @@ class command_processor(QtCore.QThread):
                 self.text_transfer.get_num_commands()
             if (self.timestep % 100 == 0) :
                 # 那就画图，狠狠地画图。
-                self.huatu.visual_status_2D(self.timestep,cur_redState,cur_blueState)
+                # self.huatu.visual_status_2D(self.timestep,cur_redState,cur_blueState)
+                print("command_processor: huatu.visual_status_2D disabled.")
+                pass 
 
             self.timestep += 1
 
@@ -1124,7 +1126,7 @@ if __name__ == "__main__":
         # 这个是一个简化的模块3，用于先连起来。
         shishi_interface = plan_interface()
         plan_location_list = [] 
-        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/2025劳动竞赛实验3/jieguo0.pkl")
+        plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo0.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo1.pkl")
         # plan_location_list.append(r"D:/EnglishMulu/test_decision/auto_test/jieguo2.pkl")
         shishi_interface.load_plans(plan_location_list) 

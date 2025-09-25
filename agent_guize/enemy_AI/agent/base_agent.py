@@ -1817,10 +1817,17 @@ class BaseAgent(object):
 
             # 如果范围内有已经探明的目标，快艇就上去跟住。# 甚至可以先简化一下"范围内"，就是如果有已探明的目标就贴上去。
             LLA_list = [] # 这个顺序其实可以改，也不一定非要是顺着来
-            LLA_list.append([space_arrange[0],space_arrange[1],0]) 
-            LLA_list.append([space_arrange[0],space_arrange[3],0])
-            LLA_list.append([space_arrange[2],space_arrange[3],0])
-            LLA_list.append([space_arrange[2],space_arrange[1],0])
+            # 舰艇的缩小一圈，为了防止卡边儿
+            zhongdian = [(space_arrange[0]+space_arrange[2])/2 , (space_arrange[1]+space_arrange[3])/2,0 ]
+            bili = 0.3
+            LLA_list.append([(bili*space_arrange[0]+(1-bili)*zhongdian[0]),(bili*space_arrange[1]+(1-bili)*zhongdian[1]),0]) 
+            LLA_list.append([(bili*space_arrange[0]+(1-bili)*zhongdian[0]),(bili*space_arrange[3]+(1-bili)*zhongdian[1]),0]) 
+            LLA_list.append([(bili*space_arrange[2]+(1-bili)*zhongdian[0]),(bili*space_arrange[3]+(1-bili)*zhongdian[1]),0]) 
+            LLA_list.append([(bili*space_arrange[2]+(1-bili)*zhongdian[0]),(bili*space_arrange[1]+(1-bili)*zhongdian[1]),0]) 
+
+            # LLA_list.append([space_arrange[0],space_arrange[3],0])
+            # LLA_list.append([space_arrange[2],space_arrange[3],0])
+            # LLA_list.append([space_arrange[2],space_arrange[1],0])
 
             for i in range(len(ship_ID_list)):
                 # 这回开始真正意义上的分配任务了。
@@ -1849,12 +1856,13 @@ class BaseAgent(object):
         for i in range(len(UAV_ID_list)):
             # 检查是不是都完成了。
             abstract_state_single = self.abstract_state[UAV_ID_list[i]]
-            if abstract_state_single["abstract_state"] != "UAV_scout2":
+            if not(abstract_state_single["abstract_state"] in ["UAV_scout2", "follow_and_defend"]):  # 这里按说只能是这两个状态。
                 # 按理说不应该进到这里，进到这里说明出问题了。
                 raise Exception("__handle_mission_scout: 按理说不应该执行到这里，执行到这里说明出问题了")
                 pass
             else:
-                flag_all_finished = flag_all_finished and abstract_state_single["flag_finished"]
+                if "flag_finished" in abstract_state_single:
+                    flag_all_finished = flag_all_finished and abstract_state_single["flag_finished"]
         
         if flag_all_finished:
             # 这样的话就算是完成了，标志位先改一下。
@@ -2074,15 +2082,19 @@ class BaseAgent(object):
         if len(UAV_units)>0:
             for UAV_ID in UAV_units:
                 # 无人机飞回去。在车头上盘旋可以检测来袭导弹。
-                if(self.abstract_state[che_ID]["abstract_state"] != "UAV_scout"):
-                    self.set_UAV_scout(UAV_ID, target_LLA=che_LLA_ave)
+                if(self.abstract_state[UAV_ID]["abstract_state"] != "UAV_scout"):
+                    self.set_UAV_scout(UAV_ID, center_LLA=che_LLA_ave)
 
         if len(che_units)>0:
             # 车隐蔽一下。
             for che_ID in che_units:
                 if(self.abstract_state[che_ID]["abstract_state"] != "hidden_and_alert"):
                     # 没有隐蔽，那就隐蔽
-                    self.set_hidden_and_alert(che_ID)
+                    # self.set_hidden_and_alert(che_ID)
+                    
+                    # 车先别隐蔽，感觉会影响发弹
+                    pass
+
         
 
         pass 

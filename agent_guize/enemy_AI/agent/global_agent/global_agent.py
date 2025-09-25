@@ -105,7 +105,7 @@ class GlobalAgent(BaseAgent):
         DD_unit = self.select_by_type("Destroyer_Surface")
         CVN_unit = self.select_by_type("Flagship_Surface")
         plan_unit = self.select_by_type("Shipboard_Aircraft_FixWing")
-        ship_unit = CG_units | DD_unit 
+        ship_unit = CG_units | DD_unit  | CVN_unit
 
         if self.num == 11:
             # 蓝方主要是得把拦截的测了，不然玩不了。态势过滤的时候打鸡蛋得在里面
