@@ -1856,7 +1856,7 @@ class BaseAgent(object):
         for i in range(len(UAV_ID_list)):
             # 检查是不是都完成了。
             abstract_state_single = self.abstract_state[UAV_ID_list[i]]
-            if not(abstract_state_single["abstract_state"] in ["UAV_scout2", "follow_and_defend"]):  # 这里按说只能是这两个状态。
+            if not(abstract_state_single["abstract_state"] in ["UAV_scout2", "follow_and_defend","move_and_attack"]):  # 这里按说只能是这两个状态。
                 # 按理说不应该进到这里，进到这里说明出问题了。
                 raise Exception("__handle_mission_scout: 按理说不应该执行到这里，执行到这里说明出问题了")
                 pass

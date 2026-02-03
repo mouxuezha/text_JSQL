@@ -1091,7 +1091,7 @@ class command_processor(QtCore.QThread):
         return True
 if __name__ == "__main__":
     # # 这个是总的测试的了
-    flag = 6 # 2025，准备开始调试连接的了。
+    flag = 8 # 2025，准备开始调试连接的了。
     shishi_debug = MyWidget_debug() # 无人干预
     # shishi_debug = MyWidget_debug2() # 模拟有人干预
     
